@@ -59,6 +59,10 @@ export async function GET(
     <meta name="theme-color" content="#10b981">
     <link rel="manifest" href="/api/wallet/pwa/${customerCardId}/manifest">
     <link rel="icon" href="/favicon.ico">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="${stampCard.name}">
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
@@ -155,8 +159,43 @@ export async function GET(
     </div>
 
     <script>
+        // Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => {
+                        console.log('SW registered: ', registration);
+                        
+                        // Check for updates
+                        registration.addEventListener('updatefound', () => {
+                            console.log('New service worker available');
+                            showUpdatePrompt();
+                        });
+                    })
+                    .catch(registrationError => {
+                        console.log('SW registration failed: ', registrationError);
+                    });
+            });
+        }
+
+        // Offline/Online status handling
+        window.addEventListener('online', () => {
+            document.body.classList.remove('offline');
+            showNotification('Back online! Syncing data...', 'success');
+            refreshCard();
+        });
+
+        window.addEventListener('offline', () => {
+            document.body.classList.add('offline');
+            showNotification('You are offline. Data will sync when back online.', 'warning');
+        });
+
         function refreshCard() {
-            window.location.reload();
+            if (navigator.onLine) {
+                window.location.reload();
+            } else {
+                showNotification('Cannot refresh while offline', 'warning');
+            }
         }
 
         function shareCard() {
@@ -169,13 +208,73 @@ export async function GET(
             } else {
                 // Fallback: copy to clipboard
                 navigator.clipboard.writeText(window.location.href).then(() => {
-                    alert('Card link copied to clipboard!');
+                    showNotification('Card link copied to clipboard!', 'success');
+                }).catch(() => {
+                    showNotification('Failed to copy link', 'error');
                 });
             }
         }
 
-        // Auto-refresh every 30 seconds to sync stamps
-        setInterval(refreshCard, 30000);
+        // Auto-refresh every 30 seconds when online
+        setInterval(() => {
+            if (navigator.onLine) {
+                refreshCard();
+            }
+        }, 30000);
+
+        // Notification system
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            const colors = {
+                success: 'bg-green-500',
+                warning: 'bg-yellow-500', 
+                error: 'bg-red-500',
+                info: 'bg-blue-500'
+            };
+            
+            notification.className = \`fixed top-4 left-4 right-4 \${colors[type]} text-white p-3 rounded-lg shadow-lg z-50 transform transition-transform duration-300 translate-y-[-100px]\`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            // Animate in
+            setTimeout(() => {
+                notification.style.transform = 'translateY(0)';
+            }, 100);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                notification.style.transform = 'translateY(-100px)';
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }, 3000);
+        }
+
+        function showUpdatePrompt() {
+            const updatePrompt = document.createElement('div');
+            updatePrompt.className = 'fixed bottom-4 left-4 right-4 bg-purple-600 text-white p-3 rounded-lg shadow-lg z-50';
+            updatePrompt.innerHTML = \`
+                <div class="flex items-center justify-between">
+                    <span class="text-sm">App update available</span>
+                    <button onclick="updateApp()" class="bg-purple-500 hover:bg-purple-400 px-3 py-1 rounded text-sm font-semibold">Update</button>
+                </div>
+            \`;
+            document.body.appendChild(updatePrompt);
+        }
+
+        function updateApp() {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistration().then(registration => {
+                    if (registration) {
+                        registration.update().then(() => {
+                            window.location.reload();
+                        });
+                    }
+                });
+            }
+        }
         
         // Add to home screen prompt
         let deferredPrompt;

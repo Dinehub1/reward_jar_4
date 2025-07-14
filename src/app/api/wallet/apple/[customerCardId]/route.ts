@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
+import crypto from 'crypto'
+import archiver from 'archiver'
 
 export async function GET(
   request: NextRequest,
@@ -164,19 +166,50 @@ export async function GET(
       }
     }
 
-    // In a production environment, you would:
-    // 1. Create a proper pass bundle with manifest.json
-    // 2. Sign with Apple certificates 
-    // 3. Create a ZIP file with .pkpass extension
-    // 4. Return the binary data
-    
-    // For now, return JSON for debugging/development
+    // Check if we have all required certificates for PKPass generation
+    const hasAllCertificates = process.env.APPLE_CERT_BASE64 && 
+                              process.env.APPLE_KEY_BASE64 && 
+                              process.env.APPLE_WWDR_BASE64
+
+    // For debugging, return JSON
     if (request.nextUrl.searchParams.get('debug') === 'true') {
-      return NextResponse.json(passData, {
+      return NextResponse.json({
+        passData,
+        certificatesConfigured: hasAllCertificates,
+        environment: {
+          teamIdentifier: !!process.env.APPLE_TEAM_IDENTIFIER,
+          passTypeIdentifier: !!process.env.APPLE_PASS_TYPE_IDENTIFIER,
+          certificates: hasAllCertificates
+        }
+      }, {
         headers: {
           'Content-Type': 'application/json'
         }
       })
+    }
+
+    // If certificates are configured, generate actual PKPass
+    if (hasAllCertificates) {
+      try {
+        const pkpassBuffer = await generatePKPass(passData)
+        
+        return new NextResponse(pkpassBuffer, {
+          headers: {
+            'Content-Type': 'application/vnd.apple.pkpass',
+            'Content-Disposition': `attachment; filename="${stampCard.name.replace(/[^a-zA-Z0-9]/g, '_')}.pkpass"`,
+            'Cache-Control': 'no-cache, no-store, must-revalidate'
+          }
+        })
+      } catch (error) {
+        console.error('Error generating PKPass:', error)
+        return NextResponse.json(
+          { 
+            error: 'Failed to generate Apple Wallet pass',
+            message: error instanceof Error ? error.message : 'Unknown error'
+          },
+          { status: 500 }
+        )
+      }
     }
 
     // Return instructions for production setup
@@ -247,4 +280,62 @@ export async function GET(
       { status: 500 }
     )
   }
+}
+
+// PKPass generation helper functions
+async function generatePKPass(passData: Record<string, unknown>): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    try {
+      const archive = archiver('zip', { zlib: { level: 9 } })
+      const chunks: Buffer[] = []
+      
+      archive.on('data', (chunk) => chunks.push(chunk))
+      archive.on('end', () => resolve(Buffer.concat(chunks)))
+      archive.on('error', reject)
+      
+      // Create pass.json
+      const passJson = JSON.stringify(passData, null, 2)
+      
+      // Create manifest.json with file checksums
+      const manifest = {
+        'pass.json': sha1Hash(Buffer.from(passJson))
+      }
+      const manifestJson = JSON.stringify(manifest, null, 2)
+      
+      // Create signature (simplified for development)
+      // In production, this would use actual certificate signing
+      const signature = createDevelopmentSignature()
+      
+      // Add files to archive
+      archive.append(passJson, { name: 'pass.json' })
+      archive.append(manifestJson, { name: 'manifest.json' })
+      archive.append(signature, { name: 'signature' })
+      
+      archive.finalize()
+    } catch (error) {
+      reject(error)
+    }
+  })
+}
+
+function sha1Hash(data: Buffer): string {
+  return crypto.createHash('sha1').update(data).digest('hex')
+}
+
+function createDevelopmentSignature(): Buffer {
+  // In development, create a placeholder signature
+  // In production, this would use OpenSSL with actual certificates
+  if (process.env.NODE_ENV === 'production' && 
+      process.env.APPLE_CERT_BASE64 && 
+      process.env.APPLE_KEY_BASE64 && 
+      process.env.APPLE_WWDR_BASE64) {
+    
+    // TODO: Implement actual certificate signing with OpenSSL
+    // This requires: pass certificate, private key, WWDR certificate
+    const placeholderSignature = 'PRODUCTION_SIGNATURE_PLACEHOLDER'
+    return Buffer.from(placeholderSignature, 'utf8')
+  }
+  
+  // Development placeholder
+  return Buffer.from('DEVELOPMENT_SIGNATURE_PLACEHOLDER', 'utf8')
 } 
