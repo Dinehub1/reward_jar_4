@@ -11,7 +11,8 @@ const joinCardSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
+    const cookieStore = await cookies()
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
     
     // Check authentication
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()

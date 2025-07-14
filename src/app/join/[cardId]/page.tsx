@@ -177,24 +177,42 @@ export default function JoinCardPage() {
 
   // If user is authenticated but not a customer
   if (isAuthenticated && userRole !== 3) {
+    const handleSignOut = async () => {
+      await supabase.auth.signOut()
+      window.location.reload() // Reload to show the unauthenticated customer signup flow
+    }
+
     return (
       <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-amber-100 flex items-center justify-center py-12 px-4">
         <Card className="max-w-md w-full">
           <CardContent className="text-center py-8">
             <User className="w-16 h-16 text-amber-500 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Wrong Account Type</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Business Account Detected</h2>
             <p className="text-gray-600 mb-6">
-              You&apos;re signed in as a business account. Please sign in with a customer account to join loyalty programs.
+              You&apos;re signed in as a business owner. To test the customer experience or join loyalty programs, you have these options:
             </p>
             <div className="space-y-3">
-              <Link href={`/auth/login?role=customer&next=/join/${cardId}`}>
-                <Button className="w-full bg-green-600 hover:bg-green-700">
-                  Sign In as Customer
+              <Button 
+                onClick={handleSignOut}
+                className="w-full bg-green-600 hover:bg-green-700"
+              >
+                Test as Customer (Sign Out)
+              </Button>
+              <Link href={`/auth/customer-signup?next=/join/${cardId}`}>
+                <Button variant="outline" className="w-full border-green-600 text-green-600 hover:bg-green-50">
+                  Create Customer Account
                 </Button>
               </Link>
-              <Link href="/">
-                <Button variant="outline" className="w-full">Back to Home</Button>
+              <Link href="/business/dashboard">
+                <Button variant="outline" className="w-full">
+                  Back to Business Dashboard
+                </Button>
               </Link>
+            </div>
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <p className="text-xs text-gray-500">
+                {stampCard ? `Testing: ${stampCard.name}` : 'Testing QR Code'}
+              </p>
             </div>
           </CardContent>
         </Card>
