@@ -21,6 +21,8 @@ interface StampCard {
 export default function StampCardsPage() {
   const [stampCards, setStampCards] = useState<StampCard[]>([])
   const [loading, setLoading] = useState(true)
+  const [showQRModal, setShowQRModal] = useState(false)
+  const [selectedCard, setSelectedCard] = useState<StampCard | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
@@ -86,6 +88,46 @@ export default function StampCardsPage() {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
+    })
+  }
+
+  const handleViewQRCode = (cardId: string) => {
+    const card = stampCards.find(c => c.id === cardId)
+    if (card) {
+      setSelectedCard(card)
+      setShowQRModal(true)
+    }
+  }
+
+  const handleViewCustomers = (cardId: string) => {
+    // TODO: Implement customer view page
+    console.log('View customers for card:', cardId)
+  }
+
+  const getJoinUrl = (cardId: string) => {
+    const baseUrl = window.location.origin
+    return `${baseUrl}/join/${cardId}`
+  }
+
+  const downloadQRCode = (cardId: string) => {
+    const joinUrl = getJoinUrl(cardId)
+    // Generate QR code download
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(joinUrl)}&format=png`
+    
+    // Create download link
+    const link = document.createElement('a')
+    link.href = qrCodeUrl
+    link.download = `${selectedCard?.name || 'stamp-card'}-qr-code.png`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  const copyJoinUrl = (cardId: string) => {
+    const joinUrl = getJoinUrl(cardId)
+    navigator.clipboard.writeText(joinUrl).then(() => {
+      // You could add a toast notification here
+      alert('Join URL copied to clipboard!')
     })
   }
 
@@ -232,11 +274,21 @@ export default function StampCardsPage() {
 
                     {/* Actions */}
                     <div className="flex space-x-2 pt-2">
-                      <Button variant="outline" size="sm" className="flex-1">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1"
+                        onClick={() => handleViewQRCode(card.id)}
+                      >
                         <QrCode className="w-3 h-3 mr-1" />
                         QR Code
                       </Button>
-                      <Button variant="outline" size="sm" className="flex-1">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1"
+                        onClick={() => handleViewCustomers(card.id)}
+                      >
                         <Users className="w-3 h-3 mr-1" />
                         View Customers
                       </Button>
@@ -277,6 +329,72 @@ export default function StampCardsPage() {
               </div>
             </CardContent>
           </Card>
+        )}
+
+        {/* QR Code Modal */}
+        {showQRModal && selectedCard && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">QR Code for {selectedCard.name}</h3>
+                <button
+                  onClick={() => setShowQRModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              <div className="text-center space-y-4">
+                {/* QR Code Image */}
+                <div className="flex justify-center">
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(getJoinUrl(selectedCard.id))}`}
+                    alt="QR Code"
+                    className="border border-gray-200 rounded-lg"
+                  />
+                </div>
+                
+                {/* Join URL */}
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <p className="text-xs text-gray-600 mb-1">Join URL:</p>
+                  <p className="text-sm font-mono text-gray-900 break-all">
+                    {getJoinUrl(selectedCard.id)}
+                  </p>
+                </div>
+                
+                {/* Instructions */}
+                <div className="text-left bg-blue-50 rounded-lg p-3">
+                  <h4 className="font-medium text-blue-900 mb-2">How to use:</h4>
+                  <ol className="text-sm text-blue-800 space-y-1">
+                    <li>1. Print this QR code or display it on a screen</li>
+                    <li>2. Place it where customers can easily scan it</li>
+                    <li>3. Customers scan to join your loyalty program</li>
+                    <li>4. They&apos;ll automatically get a digital stamp card</li>
+                  </ol>
+                </div>
+                
+                {/* Actions */}
+                <div className="flex space-x-3">
+                  <Button 
+                    variant="outline" 
+                    className="flex-1"
+                    onClick={() => copyJoinUrl(selectedCard.id)}
+                  >
+                    Copy URL
+                  </Button>
+                  <Button 
+                    className="flex-1 bg-blue-600 hover:bg-blue-700"
+                    onClick={() => downloadQRCode(selectedCard.id)}
+                  >
+                    Download QR
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </BusinessLayout>

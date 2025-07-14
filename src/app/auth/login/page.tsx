@@ -56,6 +56,10 @@ export default function LoginPage() {
     setSuccessMessage(null)
 
     try {
+      // Get the next parameter and role parameter from URL
+      const nextUrl = searchParams.get('next')
+      const roleParam = searchParams.get('role')
+      
       // Step 1: Sign in with Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: data.email,
@@ -79,32 +83,52 @@ export default function LoginPage() {
 
       if (userError) {
         console.error('Error fetching user role:', userError)
-        // If user doesn't exist in users table, create it with business role
+        
+        // If user doesn't exist in users table, create it based on context
+        const defaultRole = roleParam === 'customer' ? 3 : 2 // Customer or Business
         const { error: insertError } = await supabase
           .from('users')
           .insert({
             id: authData.user.id,
             email: data.email,
-            role_id: 2 // Default to business role
+            role_id: defaultRole
           })
         
         if (insertError) {
           console.error('Error creating user record:', insertError)
         }
         
-        // Continue with business dashboard redirect
-        router.push('/business/dashboard')
+        // Redirect based on role and next parameter
+        if (defaultRole === 3 && nextUrl) {
+          router.push(nextUrl)
+        } else if (defaultRole === 3) {
+          router.push('/customer/dashboard')
+        } else {
+          router.push('/business/dashboard')
+        }
         return
       }
 
-      // Step 3: Redirect based on role
+      // Step 3: Redirect based on role and context
       if (userData.role_id === 2) {
-        // Business user - redirect to business dashboard
+        // Business user
+        if (roleParam === 'customer') {
+          await supabase.auth.signOut()
+          throw new Error('Please use a customer account to join loyalty programs.')
+        }
         router.push('/business/dashboard')
+      } else if (userData.role_id === 3) {
+        // Customer user
+        if (roleParam === 'business') {
+          await supabase.auth.signOut()
+          throw new Error('Please use a business account to access the business dashboard.')
+        }
+        // Redirect to next URL or customer dashboard
+        router.push(nextUrl || '/customer/dashboard')
       } else {
-        // Other roles not supported yet
+        // Unsupported role
         await supabase.auth.signOut()
-        throw new Error('This login portal is for business accounts only.')
+        throw new Error('Account type not supported.')
       }
 
     } catch (err) {
