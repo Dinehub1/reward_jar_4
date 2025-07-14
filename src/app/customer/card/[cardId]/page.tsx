@@ -295,9 +295,21 @@ export default function CustomerCardPage() {
         {/* Wallet Options */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center">
-              <Smartphone className="w-5 h-5 mr-2 text-green-600" />
-              Add to Wallet
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center">
+                <Smartphone className="w-5 h-5 mr-2 text-green-600" />
+                Add to Wallet
+              </div>
+              {customerCard.wallet_type && (
+                <div className="flex items-center text-sm text-gray-600">
+                  <span className="mr-1">Current:</span>
+                  <span className="font-medium">
+                    {customerCard.wallet_type === 'apple' && '🍎 Apple Wallet'}
+                    {customerCard.wallet_type === 'google' && '🤖 Google Wallet'}
+                    {customerCard.wallet_type === 'pwa' && '🌐 Web App'}
+                  </span>
+                </div>
+              )}
             </CardTitle>
             <CardDescription>
               Save this card to your mobile wallet for easy access
@@ -308,15 +320,20 @@ export default function CustomerCardPage() {
               <Button
                 onClick={() => handleAddToWallet('apple')}
                 disabled={walletLoading}
-                variant="outline"
-                className="flex items-center justify-center h-12"
+                variant={customerCard.wallet_type === 'apple' ? 'default' : 'outline'}
+                className={`flex items-center justify-center h-12 ${
+                  customerCard.wallet_type === 'apple' ? 'bg-blue-600 hover:bg-blue-700' : ''
+                }`}
               >
                 {walletLoading ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   <>
                     <Download className="w-4 h-4 mr-2" />
-                    Apple Wallet
+                    🍎 Apple Wallet
+                    {customerCard.wallet_type === 'apple' && (
+                      <CheckCircle className="w-4 h-4 ml-2" />
+                    )}
                   </>
                 )}
               </Button>
@@ -324,15 +341,20 @@ export default function CustomerCardPage() {
               <Button
                 onClick={() => handleAddToWallet('google')}
                 disabled={walletLoading}
-                variant="outline"
-                className="flex items-center justify-center h-12"
+                variant={customerCard.wallet_type === 'google' ? 'default' : 'outline'}
+                className={`flex items-center justify-center h-12 ${
+                  customerCard.wallet_type === 'google' ? 'bg-blue-600 hover:bg-blue-700' : ''
+                }`}
               >
                 {walletLoading ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   <>
                     <Download className="w-4 h-4 mr-2" />
-                    Google Wallet
+                    🤖 Google Wallet
+                    {customerCard.wallet_type === 'google' && (
+                      <CheckCircle className="w-4 h-4 ml-2" />
+                    )}
                   </>
                 )}
               </Button>
@@ -340,15 +362,20 @@ export default function CustomerCardPage() {
               <Button
                 onClick={() => handleAddToWallet('pwa')}
                 disabled={walletLoading}
-                variant="outline"
-                className="flex items-center justify-center h-12"
+                variant={customerCard.wallet_type === 'pwa' ? 'default' : 'outline'}
+                className={`flex items-center justify-center h-12 ${
+                  customerCard.wallet_type === 'pwa' ? 'bg-green-600 hover:bg-green-700' : ''
+                }`}
               >
                 {walletLoading ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   <>
                     <Smartphone className="w-4 h-4 mr-2" />
-                    Web App
+                    🌐 Web App
+                    {customerCard.wallet_type === 'pwa' && (
+                      <CheckCircle className="w-4 h-4 ml-2" />
+                    )}
                   </>
                 )}
               </Button>

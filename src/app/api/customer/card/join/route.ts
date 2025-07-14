@@ -5,7 +5,7 @@ import { z } from 'zod'
 // Validation schema
 const joinCardSchema = z.object({
   stampCardId: z.string().uuid('Invalid stamp card ID'),
-  walletType: z.enum(['apple', 'google', 'pwa']).optional().default('pwa')
+  walletType: z.enum(['apple', 'google', 'pwa']).optional()
 })
 
 export async function POST(request: NextRequest) {
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const validatedData = joinCardSchema.parse(body)
     
-    const { stampCardId, walletType } = validatedData
+    const { stampCardId, walletType: requestedWalletType } = validatedData
 
     // Check if user is a customer
     const { data: userData, error: userError } = await supabase
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     // Verify stamp card exists and is active
     const { data: stampCard, error: cardError } = await supabase
       .from('stamp_cards')
-      .select('id, business_id, name, total_stamps, reward_description')
+      .select('id, business_id, name, total_stamps, reward_description, preferred_wallet_type')
       .eq('id', stampCardId)
       .eq('status', 'active')
       .single()
@@ -70,6 +70,9 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       )
     }
+
+    // Determine wallet type (requested type or business preference)
+    const walletType = requestedWalletType || stampCard.preferred_wallet_type || 'pwa'
 
     // Check if customer has already joined this card
     const { data: existingCard, error: checkError } = await supabase

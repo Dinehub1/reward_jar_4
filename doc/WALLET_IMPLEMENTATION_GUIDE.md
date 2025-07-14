@@ -899,7 +899,32 @@ export async function GET() {
 }
 ```
 
-#### End-to-End Testing Scripts
+#### Wallet Testing Interface
+
+#### Interactive Test Page: `/test/wallet-preview`
+RewardJar includes a comprehensive wallet testing interface for developers and administrators:
+
+**Features:**
+- **Customer Card Selection**: Browse all customer cards or search by ID
+- **Real-time Status**: View Apple Wallet, Google Wallet, and PWA configuration status
+- **One-click Testing**: Test all three wallet types with actual customer data
+- **Debug Mode**: Inspect wallet generation data and troubleshoot issues
+- **Card Information**: Display current stamps, progress, and reward details
+
+**Usage:**
+```bash
+# Access the testing interface
+http://localhost:3000/test/wallet-preview
+
+# Test workflow:
+# 1. Select a customer card from the list or enter a card ID
+# 2. View card details and current wallet type
+# 3. Click "Test Apple Wallet" to download .pkpass file
+# 4. Click "Test Google Wallet" to open Google Pay integration
+# 5. Click "Test PWA Wallet" to view progressive web app
+```
+
+#### Automated Testing Scripts
 ```bash
 #!/bin/bash
 # test-wallet-integration.sh

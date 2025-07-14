@@ -122,6 +122,12 @@ graph TD
 /api/wallet/google/[id]    # Google Wallet pass generation
 /api/wallet/pwa/[id]       # PWA wallet functionality
 /api/health                # System health check
+/api/health/wallet         # Wallet configuration status
+```
+
+### Testing & Development Routes
+```
+/test/wallet-preview       # Interactive wallet testing interface
 ```
 
 ---
@@ -156,6 +162,7 @@ CREATE TABLE stamp_cards (
   name TEXT NOT NULL,
   total_stamps INTEGER NOT NULL,          -- CRITICAL: Use total_stamps
   reward_description TEXT NOT NULL,
+  preferred_wallet_type TEXT DEFAULT 'pwa' CHECK (preferred_wallet_type IN ('apple', 'google', 'pwa')),
   status TEXT DEFAULT 'active',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
