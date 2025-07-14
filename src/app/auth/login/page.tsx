@@ -60,13 +60,18 @@ export default function LoginPage() {
       const nextUrl = searchParams.get('next')
       const roleParam = searchParams.get('role')
       
+      console.log('🔐 Login attempt:', { email: data.email, nextUrl, roleParam })
+      
       // Step 1: Sign in with Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: data.email,
         password: data.password
       })
 
+      console.log('🔐 Auth result:', { authData: authData ? 'success' : 'null', authError })
+
       if (authError) {
+        console.error('🔐 Auth error:', authError)
         throw new Error(authError.message)
       }
 
@@ -75,11 +80,14 @@ export default function LoginPage() {
       }
 
       // Step 2: Check user role from users table
+      console.log('🔐 Fetching user role for:', authData.user.id)
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('role_id')
         .eq('id', authData.user.id)
         .single()
+
+      console.log('🔐 User role query result:', { userData, userError })
 
       if (userError) {
         console.error('Error fetching user role:', userError)
@@ -132,8 +140,21 @@ export default function LoginPage() {
       }
 
     } catch (err) {
-      console.error('Login error:', err)
-      setError(err instanceof Error ? err.message : 'Login failed. Please try again.')
+      console.error('🔐 Complete login error:', err)
+      console.error('🔐 Error type:', typeof err)
+      console.error('🔐 Error structure:', JSON.stringify(err, null, 2))
+      
+      let errorMessage = 'Login failed. Please try again.'
+      
+      if (err instanceof Error) {
+        errorMessage = err.message
+      } else if (typeof err === 'string') {
+        errorMessage = err
+      } else if (err && typeof err === 'object' && 'message' in err) {
+        errorMessage = String(err.message)
+      }
+      
+      setError(errorMessage)
     } finally {
       setIsSubmitting(false)
     }

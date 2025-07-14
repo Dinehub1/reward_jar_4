@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import BusinessLayout from '@/components/layouts/BusinessLayout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -23,6 +24,7 @@ export default function StampCardsPage() {
   const [loading, setLoading] = useState(true)
   const [showQRModal, setShowQRModal] = useState(false)
   const [selectedCard, setSelectedCard] = useState<StampCard | null>(null)
+  const router = useRouter()
   const supabase = createClient()
 
   useEffect(() => {
@@ -100,8 +102,7 @@ export default function StampCardsPage() {
   }
 
   const handleViewCustomers = (cardId: string) => {
-    // TODO: Implement customer view page
-    console.log('View customers for card:', cardId)
+    router.push(`/business/stamp-cards/${cardId}/customers`)
   }
 
   const getJoinUrl = (cardId: string) => {

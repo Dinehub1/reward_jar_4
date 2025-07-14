@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createClient } from '@/lib/supabase-server'
 
 export async function GET(
   request: NextRequest,
@@ -8,7 +7,7 @@ export async function GET(
 ) {
   try {
     const resolvedParams = await params
-    const supabase = createRouteHandlerClient({ cookies })
+    const supabase = await createClient()
     const customerCardId = resolvedParams.customerCardId
 
     // Get customer card with stamp card details
