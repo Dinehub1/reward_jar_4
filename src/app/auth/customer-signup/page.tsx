@@ -123,7 +123,7 @@ function CustomerSignupContent() {
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
             <p className="text-red-800 text-sm">{error}</p>
-          </div>
+            </div>
         )}
 
         {/* Signup Form */}
@@ -142,13 +142,13 @@ function CustomerSignupContent() {
                   <User className="h-4 w-4" />
                   Full Name
                 </Label>
-                <Input
-                  id="name"
-                  type="text"
-                  placeholder="Enter your full name"
-                  {...form.register('name')}
+                  <Input
+                    id="name"
+                    type="text"
+                    placeholder="Enter your full name"
+                    {...form.register('name')}
                   className={form.formState.errors.name ? 'border-red-500' : ''}
-                />
+                  />
                 {form.formState.errors.name && (
                   <p className="text-red-500 text-sm">{form.formState.errors.name.message}</p>
                 )}
@@ -160,13 +160,13 @@ function CustomerSignupContent() {
                   <Mail className="h-4 w-4" />
                   Email
                 </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  {...form.register('email')}
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="Enter your email"
+                    {...form.register('email')}
                   className={form.formState.errors.email ? 'border-red-500' : ''}
-                />
+                  />
                 {form.formState.errors.email && (
                   <p className="text-red-500 text-sm">{form.formState.errors.email.message}</p>
                 )}
@@ -178,13 +178,13 @@ function CustomerSignupContent() {
                   <Lock className="h-4 w-4" />
                   Password
                 </Label>
-                <Input
-                  id="password"
-                  type="password"
+                  <Input
+                    id="password"
+                    type="password"
                   placeholder="Create a password"
-                  {...form.register('password')}
+                    {...form.register('password')}
                   className={form.formState.errors.password ? 'border-red-500' : ''}
-                />
+                  />
                 {form.formState.errors.password && (
                   <p className="text-red-500 text-sm">{form.formState.errors.password.message}</p>
                 )}
@@ -194,8 +194,8 @@ function CustomerSignupContent() {
               </div>
 
               {/* Submit Button */}
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 className="w-full bg-green-600 hover:bg-green-700" 
                 disabled={isSubmitting}
               >
@@ -206,12 +206,12 @@ function CustomerSignupContent() {
             {/* Links */}
             <div className="mt-6 space-y-3">
               <div className="text-center">
-                <p className="text-sm text-gray-600">
-                  Already have an account?{' '}
+              <p className="text-sm text-gray-600">
+                Already have an account?{' '}
                   <Link href="/auth/login" className="text-green-600 hover:text-green-500 font-medium">
-                    Sign in
-                  </Link>
-                </p>
+                  Sign in
+                </Link>
+              </p>
               </div>
               
               <div className="text-center">

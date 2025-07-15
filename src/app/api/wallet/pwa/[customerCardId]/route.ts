@@ -202,7 +202,7 @@ export async function GET(
 
         function refreshCard() {
             if (navigator.onLine) {
-                window.location.reload();
+            window.location.reload();
             } else {
                 showNotification('Cannot refresh while offline', 'warning');
             }

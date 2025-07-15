@@ -130,13 +130,13 @@ export default function StampCardRewardsPage() {
           const formattedRewards: CompletedReward[] = rewardsData.map(reward => {
             const customer = (reward.customers as { name: string; email: string }[])[0]
             return {
-              id: reward.id,
-              customer_id: reward.customer_id,
+            id: reward.id,
+            customer_id: reward.customer_id,
               customer_name: customer.name,
               customer_email: customer.email,
-              reward_earned_date: reward.created_at,
-              redeemed_at: reward.redeemed_at,
-              is_redeemed: !!reward.redeemed_at
+            reward_earned_date: reward.created_at,
+            redeemed_at: reward.redeemed_at,
+            is_redeemed: !!reward.redeemed_at
             }
           })
 

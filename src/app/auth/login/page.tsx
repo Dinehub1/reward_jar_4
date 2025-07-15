@@ -103,7 +103,7 @@ function LoginContent() {
           setError('Please check your email and click the confirmation link before logging in.')
         } else {
           setError(err.message)
-        }
+      }
       } else {
         setError('An unexpected error occurred. Please try again.')
       }
@@ -134,7 +134,7 @@ function LoginContent() {
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-2">
             <AlertCircle className="h-5 w-5 text-red-600" />
             <p className="text-red-800 text-sm">{error}</p>
-          </div>
+        </div>
         )}
 
         {/* Login Form */}
@@ -184,8 +184,8 @@ function LoginContent() {
               </div>
 
               {/* Submit Button */}
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 className="w-full" 
                 disabled={isSubmitting}
               >
@@ -200,17 +200,17 @@ function LoginContent() {
                   Don&apos;t have an account?{' '}
                   <Link href="/auth/signup" className="text-blue-600 hover:text-blue-500 font-medium">
                     Sign up
-                  </Link>
+              </Link>
                 </p>
-              </div>
-              
+            </div>
+
               <div className="text-center">
-                <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-600">
                   Are you a customer?{' '}
                   <Link href="/auth/customer-signup" className="text-green-600 hover:text-green-500 font-medium">
                     Customer Sign Up
-                  </Link>
-                </p>
+                </Link>
+              </p>
               </div>
             </div>
           </CardContent>
@@ -229,7 +229,7 @@ function LoginContent() {
       </div>
     </div>
   )
-}
+} 
 
 // Main page component with Suspense wrapper
 export default function LoginPage() {

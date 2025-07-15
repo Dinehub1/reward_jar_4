@@ -315,8 +315,8 @@ export default function CustomerCardPage() {
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center">
-                <Smartphone className="w-5 h-5 mr-2 text-green-600" />
-                Add to Wallet
+              <Smartphone className="w-5 h-5 mr-2 text-green-600" />
+              Add to Wallet
               </div>
               {customerCard.wallet_type && (
                 <div className="flex items-center text-sm text-gray-600">

@@ -129,14 +129,14 @@ export default function StampCardCustomersPage() {
           const formattedCustomers: Customer[] = customerData.map(cc => {
             const customer = (cc.customers as { name: string; email: string }[])[0]
             return {
-              id: cc.id,
-              customer_id: cc.customer_id,
+            id: cc.id,
+            customer_id: cc.customer_id,
               name: customer.name,
               email: customer.email,
-              current_stamps: cc.current_stamps,
-              wallet_type: cc.wallet_type,
-              joined_date: cc.created_at,
-              is_completed: cc.current_stamps >= cardData.total_stamps
+            current_stamps: cc.current_stamps,
+            wallet_type: cc.wallet_type,
+            joined_date: cc.created_at,
+            is_completed: cc.current_stamps >= cardData.total_stamps
             }
           })
 

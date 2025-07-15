@@ -193,8 +193,8 @@ export default function WalletPreviewPage() {
           apple: {
             configured: data.wallet_availability?.apple === 'available',
             certificates: data.checks?.apple_wallet || false,
-            teamId: !!data.environment?.APPLE_TEAM_ID,
-            passTypeId: !!data.environment?.APPLE_PASS_TYPE_ID
+            teamId: !!data.environment?.APPLE_TEAM_IDENTIFIER,
+            passTypeId: !!data.environment?.APPLE_PASS_TYPE_IDENTIFIER
           },
           google: {
             configured: data.wallet_availability?.google === 'available',

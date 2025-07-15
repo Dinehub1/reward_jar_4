@@ -82,8 +82,8 @@ export default function CustomerDashboard() {
             const business = stampCard.businesses[0]
             
             return {
-              ...card,
-              stamp_card: {
+            ...card,
+            stamp_card: {
                 id: stampCard.id,
                 name: stampCard.name,
                 total_stamps: stampCard.total_stamps,
