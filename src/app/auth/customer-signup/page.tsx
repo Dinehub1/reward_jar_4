@@ -110,7 +110,13 @@ function CustomerSignupContent() {
       console.error('Signup error:', err)
       if (err instanceof Error) {
         if (err.message.includes('User already registered')) {
-          setError('An account with this email already exists. Please sign in instead.')
+          // Redirect to login with the same next URL
+          if (nextUrl) {
+            router.push(`/auth/login?message=Account already exists. Please sign in.&next=${encodeURIComponent(nextUrl)}`)
+          } else {
+            router.push('/auth/login?message=Account already exists. Please sign in.')
+          }
+          return
         } else if (err.message.includes('Password should be at least 6 characters')) {
           setError('Password must be at least 6 characters long.')
         } else {

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -26,9 +26,11 @@ export default function JoinCardPage() {
   const [userRole, setUserRole] = useState<number | null>(null)
   const router = useRouter()
   const params = useParams()
+  const searchParams = useSearchParams()
   const supabase = createClient()
   
   const cardId = params.cardId as string
+  const autoJoin = searchParams.get('autoJoin') === 'true'
 
   useEffect(() => {
     const checkAuthAndCard = async () => {
@@ -47,6 +49,38 @@ export default function JoinCardPage() {
           if (userData) {
             setUserRole(userData.role_id)
             setIsAuthenticated(true)
+            
+            // If user is a customer and we have a valid card, check if they've already joined
+            if (userData.role_id === 3 && cardId) {
+              try {
+                const { data: customerData } = await supabase
+                  .from('customers')
+                  .select('id')
+                  .eq('user_id', session.user.id)
+                  .single()
+                
+                if (customerData) {
+                  const { data: existingCard } = await supabase
+                    .from('customer_cards')
+                    .select('id')
+                    .eq('customer_id', customerData.id)
+                    .eq('stamp_card_id', cardId)
+                    .single()
+                  
+                  if (existingCard) {
+                    // User has already joined this card, redirect to card view
+                    router.push(`/customer/card/${cardId}`)
+                    return
+                  } else if (autoJoin) {
+                    // Auto-join the card if user is returning from auth flow
+                    handleJoinCard()
+                    return
+                  }
+                }
+              } catch (error) {
+                console.error('Error checking existing card:', error)
+              }
+            }
           }
         }
 
@@ -203,7 +237,7 @@ export default function JoinCardPage() {
               >
                 Test as Customer (Sign Out)
               </Button>
-              <Link href={`/auth/customer-signup?next=/join/${cardId}`}>
+              <Link href={`/auth/customer-signup?next=${encodeURIComponent(`/join/${cardId}?autoJoin=true`)}`}>
                 <Button variant="outline" className="w-full border-green-600 text-green-600 hover:bg-green-50">
                   Create Customer Account
                 </Button>
@@ -279,7 +313,7 @@ export default function JoinCardPage() {
               <div className="space-y-4">
                 <h3 className="font-medium text-gray-900 text-center">Join this loyalty program</h3>
                 
-                <Link href={`/auth/customer-signup?next=/join/${cardId}`}>
+                <Link href={`/auth/customer-signup?next=${encodeURIComponent(`/join/${cardId}?autoJoin=true`)}`}>
                   <Button className="w-full h-12 bg-green-600 hover:bg-green-700 text-white font-semibold">
                     Create Account & Join
                     <ArrowRight className="w-4 h-4 ml-2" />
@@ -290,7 +324,7 @@ export default function JoinCardPage() {
                   <span className="text-sm text-gray-500">or</span>
                 </div>
                 
-                <Link href={`/auth/login?role=customer&next=/join/${cardId}`}>
+                <Link href={`/auth/login?role=customer&next=${encodeURIComponent(`/join/${cardId}?autoJoin=true`)}`}>
                   <Button variant="outline" className="w-full h-12 border-green-600 text-green-600 hover:bg-green-50">
                     Sign In to Existing Account
                   </Button>
