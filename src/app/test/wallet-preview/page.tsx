@@ -165,29 +165,37 @@ export default function WalletPreviewPage() {
         return
       }
 
+      console.log('Fetched customer cards:', cards) // Debug log
+
       if (cards && cards.length > 0) {
-        const formattedCards = (cards as DatabaseCustomerCard[]).map(card => ({
-          id: card.id,
-          customer_id: card.customer_id,
-          current_stamps: card.current_stamps,
-          wallet_type: card.wallet_type,
-          wallet_pass_id: card.wallet_pass_id,
-          created_at: card.created_at,
-          stamp_card: {
-            id: card.stamp_cards[0].id,
-            name: card.stamp_cards[0].name,
-            total_stamps: card.stamp_cards[0].total_stamps,
-            reward_description: card.stamp_cards[0].reward_description,
-            business: {
-              name: card.stamp_cards[0].businesses[0].name,
-              description: card.stamp_cards[0].businesses[0].description
+        const formattedCards = (cards as DatabaseCustomerCard[])
+          .filter(card => 
+            card.stamp_cards && card.stamp_cards.length > 0 &&
+            card.customers && card.customers.length > 0 &&
+            card.stamp_cards[0].businesses && card.stamp_cards[0].businesses.length > 0
+          )
+          .map(card => ({
+            id: card.id,
+            customer_id: card.customer_id,
+            current_stamps: card.current_stamps,
+            wallet_type: card.wallet_type,
+            wallet_pass_id: card.wallet_pass_id,
+            created_at: card.created_at,
+            stamp_card: {
+              id: card.stamp_cards[0].id,
+              name: card.stamp_cards[0].name,
+              total_stamps: card.stamp_cards[0].total_stamps,
+              reward_description: card.stamp_cards[0].reward_description,
+              business: {
+                name: card.stamp_cards[0].businesses[0].name,
+                description: card.stamp_cards[0].businesses[0].description
+              }
+            },
+            customer: {
+              name: card.customers[0].name,
+              email: card.customers[0].email
             }
-          },
-          customer: {
-            name: card.customers[0].name,
-            email: card.customers[0].email
-          }
-        }))
+          }))
         setCustomerCards(formattedCards)
       } else {
         setCustomerCards([])
@@ -287,6 +295,27 @@ export default function WalletPreviewPage() {
       }
 
       const dbCard = card as DatabaseCustomerCard
+      console.log('Fetched individual card:', dbCard) // Debug log
+      
+      // Validate that required nested data exists
+      if (!dbCard.stamp_cards || dbCard.stamp_cards.length === 0) {
+        setError('Customer card has no associated stamp card')
+        setSelectedCard(null)
+        return
+      }
+      
+      if (!dbCard.customers || dbCard.customers.length === 0) {
+        setError('Customer card has no associated customer')
+        setSelectedCard(null)
+        return
+      }
+      
+      if (!dbCard.stamp_cards[0].businesses || dbCard.stamp_cards[0].businesses.length === 0) {
+        setError('Stamp card has no associated business')
+        setSelectedCard(null)
+        return
+      }
+
       const formattedCard: CustomerCard = {
         id: dbCard.id,
         customer_id: dbCard.customer_id,
