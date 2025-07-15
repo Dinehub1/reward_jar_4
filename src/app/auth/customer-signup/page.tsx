@@ -70,22 +70,36 @@ function CustomerSignupContent() {
         throw new Error('Failed to create user account')
       }
 
-      // Step 2: Create profile record
-      const { error: profileError } = await supabase
-        .from('profiles')
+      // Step 2: Create user profile with CUSTOMER role (role_id: 3)
+      const { error: userError } = await supabase
+        .from('users')
         .insert({
           id: authData.user.id,
-          name: data.name,
           email: data.email,
-          role: 'customer'
+          role_id: 3 // CUSTOMER role only
         })
 
-      if (profileError) {
-        console.error('Profile creation error:', profileError)
-        // Don't throw here - profile might already exist from trigger
+      if (userError) {
+        console.error('User creation error:', userError)
+        // Continue if user already exists in users table
       }
 
-      // Step 3: Redirect to confirmation page or next URL
+      // Step 3: Create customer profile
+      const { error: customerError } = await supabase
+        .from('customers')
+        .insert({
+          user_id: authData.user.id,
+          name: data.name,
+          email: data.email,
+          created_at: new Date().toISOString()
+        })
+
+      if (customerError) {
+        console.error('Customer profile creation error:', customerError)
+        // Don't throw here - continue with signup process
+      }
+
+      // Step 4: Redirect to confirmation page or next URL
       if (nextUrl) {
         router.push(`/auth/login?message=Please check your email to confirm your account&next=${encodeURIComponent(nextUrl)}`)
       } else {
