@@ -39,8 +39,8 @@ export async function GET(
       )
     }
 
-    const stampCard = customerCard.stamp_cards
-    const business = stampCard.businesses
+    const stampCard = customerCard.stamp_cards as any
+    const business = stampCard.businesses as any
     
     // Calculate progress
     const progress = Math.min((customerCard.current_stamps / stampCard.total_stamps) * 100, 100)

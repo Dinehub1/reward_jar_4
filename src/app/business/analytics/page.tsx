@@ -220,7 +220,7 @@ export default function BusinessAnalytics() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {analytics.popularCards.slice(0, 5).map((card, index) => (
+                  {analytics.popularCards.slice(0, 5).map((card, _index) => (
                     <div key={card.name} className="flex items-center justify-between">
                       <div className="flex-1">
                         <p className="font-medium text-sm">{card.name}</p>

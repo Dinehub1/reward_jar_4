@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -26,7 +26,8 @@ const customerSignupSchema = z.object({
 
 type CustomerSignupForm = z.infer<typeof customerSignupSchema>
 
-export default function CustomerSignupPage() {
+// Separate client component for search params logic
+function CustomerSignupContent() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
@@ -49,196 +50,209 @@ export default function CustomerSignupPage() {
     setError(null)
 
     try {
-      // Step 1: Create Supabase auth user
+      // Step 1: Sign up with Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
-        password: data.password
+        password: data.password,
+        options: {
+          data: {
+            name: data.name,
+            role: 'customer'
+          }
+        }
       })
 
       if (authError) {
-        throw new Error(authError.message)
+        throw authError
       }
 
       if (!authData.user) {
-        throw new Error('Failed to create account')
+        throw new Error('Failed to create user account')
       }
 
-      // Step 2: Create user profile with CUSTOMER role (role_id: 3)
-      const { error: userError } = await supabase
-        .from('users')
+      // Step 2: Create profile record
+      const { error: profileError } = await supabase
+        .from('profiles')
         .insert({
           id: authData.user.id,
-          email: data.email,
-          role_id: 3 // CUSTOMER role only
-        })
-
-      if (userError) {
-        console.error('User creation error:', userError)
-        // Continue if user already exists in users table
-      }
-
-      // Step 3: Create customer profile
-      const { error: customerError } = await supabase
-        .from('customers')
-        .insert({
-          user_id: authData.user.id,
           name: data.name,
-          email: data.email
+          email: data.email,
+          role: 'customer'
         })
 
-      if (customerError) {
-        console.error('Customer creation error:', customerError)
-        // Continue if customer already exists
+      if (profileError) {
+        console.error('Profile creation error:', profileError)
+        // Don't throw here - profile might already exist from trigger
       }
 
-      // Step 4: Auto sign-in the user
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: data.email,
-        password: data.password
-      })
-
-      if (signInError) {
-        throw new Error(`Failed to sign in: ${signInError.message}`)
+      // Step 3: Redirect to confirmation page or next URL
+      if (nextUrl) {
+        router.push(`/auth/login?message=Please check your email to confirm your account&next=${encodeURIComponent(nextUrl)}`)
+      } else {
+        router.push('/auth/login?message=Please check your email to confirm your account')
       }
-
-      // Step 5: Redirect to next URL or customer dashboard
-      router.push(nextUrl || '/customer/dashboard')
 
     } catch (err) {
-      console.error('Customer signup error:', err)
-      setError(err instanceof Error ? err.message : 'Failed to create account')
+      console.error('Signup error:', err)
+      if (err instanceof Error) {
+        if (err.message.includes('User already registered')) {
+          setError('An account with this email already exists. Please sign in instead.')
+        } else if (err.message.includes('Password should be at least 6 characters')) {
+          setError('Password must be at least 6 characters long.')
+        } else {
+          setError(err.message)
+        }
+      } else {
+        setError('An unexpected error occurred. Please try again.')
+      }
     } finally {
       setIsSubmitting(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-6">
-        {/* Back Button */}
-        <Link 
-          href={nextUrl || '/'}
-          className="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
-        </Link>
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-4">
+      <div className="w-full max-w-md space-y-6">
+        {/* Header */}
+        <div className="text-center space-y-2">
+          <h1 className="text-3xl font-bold text-gray-900">Join as Customer</h1>
+          <p className="text-gray-600">Create your RewardJar customer account</p>
+        </div>
 
-        {/* Main Signup Card */}
-        <Card className="w-full shadow-xl border-0">
-          <CardHeader className="space-y-4 pb-8">
-            <div className="flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mx-auto">
-              <User className="w-8 h-8 text-green-600" />
-            </div>
-            <CardTitle className="text-2xl font-bold text-center text-gray-900">
-              Join Loyalty Program
-            </CardTitle>
-            <CardDescription className="text-center text-gray-600 text-base">
-              Create your account to start collecting stamps and earning rewards
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-red-800 text-sm">{error}</p>
+          </div>
+        )}
+
+        {/* Signup Form */}
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-xl">Create Account</CardTitle>
+            <CardDescription>
+              Enter your details to create a customer account
             </CardDescription>
           </CardHeader>
-
-          <CardContent className="space-y-6">
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+          <CardContent>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               {/* Name Field */}
               <div className="space-y-2">
-                <Label htmlFor="name" className="text-sm font-medium text-gray-700">
+                <Label htmlFor="name" className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
                   Full Name
                 </Label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <Input
-                    id="name"
-                    type="text"
-                    placeholder="Enter your full name"
-                    className="pl-10 h-12 bg-white border-gray-300 focus:border-green-500 focus:ring-green-500"
-                    {...form.register('name')}
-                  />
-                </div>
+                <Input
+                  id="name"
+                  type="text"
+                  placeholder="Enter your full name"
+                  {...form.register('name')}
+                  className={form.formState.errors.name ? 'border-red-500' : ''}
+                />
                 {form.formState.errors.name && (
-                  <p className="text-sm text-red-600">{form.formState.errors.name.message}</p>
+                  <p className="text-red-500 text-sm">{form.formState.errors.name.message}</p>
                 )}
               </div>
 
               {/* Email Field */}
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium text-gray-700">
-                  Email Address
+                <Label htmlFor="email" className="flex items-center gap-2">
+                  <Mail className="h-4 w-4" />
+                  Email
                 </Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="Enter your email"
-                    className="pl-10 h-12 bg-white border-gray-300 focus:border-green-500 focus:ring-green-500"
-                    {...form.register('email')}
-                  />
-                </div>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email"
+                  {...form.register('email')}
+                  className={form.formState.errors.email ? 'border-red-500' : ''}
+                />
                 {form.formState.errors.email && (
-                  <p className="text-sm text-red-600">{form.formState.errors.email.message}</p>
+                  <p className="text-red-500 text-sm">{form.formState.errors.email.message}</p>
                 )}
               </div>
 
               {/* Password Field */}
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-sm font-medium text-gray-700">
+                <Label htmlFor="password" className="flex items-center gap-2">
+                  <Lock className="h-4 w-4" />
                   Password
                 </Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Create a secure password"
-                    className="pl-10 h-12 bg-white border-gray-300 focus:border-green-500 focus:ring-green-500"
-                    {...form.register('password')}
-                  />
-                </div>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Create a password"
+                  {...form.register('password')}
+                  className={form.formState.errors.password ? 'border-red-500' : ''}
+                />
                 {form.formState.errors.password && (
-                  <p className="text-sm text-red-600">{form.formState.errors.password.message}</p>
+                  <p className="text-red-500 text-sm">{form.formState.errors.password.message}</p>
                 )}
+                <p className="text-xs text-gray-500">
+                  Password must be at least 8 characters with uppercase, lowercase, and numbers
+                </p>
               </div>
 
-              {/* Error Display */}
-              {error && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-md">
-                  <p className="text-sm text-red-600">{error}</p>
-                </div>
-              )}
-
               {/* Submit Button */}
-              <Button
-                type="submit"
+              <Button 
+                type="submit" 
+                className="w-full bg-green-600 hover:bg-green-700" 
                 disabled={isSubmitting}
-                className="w-full h-12 bg-green-600 hover:bg-green-700 text-white font-semibold text-base transition-colors"
               >
-                {isSubmitting ? 'Creating Account...' : 'Create Account & Join'}
+                {isSubmitting ? 'Creating Account...' : 'Create Account'}
               </Button>
             </form>
 
-            {/* Login Link */}
-            <div className="text-center pt-4 border-t border-gray-200">
-              <p className="text-sm text-gray-600">
-                Already have an account?{' '}
-                <Link 
-                  href={`/auth/login?role=customer${nextUrl ? `&next=${nextUrl}` : ''}`}
-                  className="font-semibold text-green-600 hover:text-green-700 transition-colors"
-                >
-                  Sign in
-                </Link>
-              </p>
+            {/* Links */}
+            <div className="mt-6 space-y-3">
+              <div className="text-center">
+                <p className="text-sm text-gray-600">
+                  Already have an account?{' '}
+                  <Link href="/auth/login" className="text-green-600 hover:text-green-500 font-medium">
+                    Sign in
+                  </Link>
+                </p>
+              </div>
+              
+              <div className="text-center">
+                <p className="text-sm text-gray-600">
+                  Are you a business?{' '}
+                  <Link href="/auth/signup" className="text-blue-600 hover:text-blue-500 font-medium">
+                    Business Sign Up
+                  </Link>
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Info */}
+        {/* Back to Home */}
         <div className="text-center">
-          <p className="text-xs text-gray-500">
-            By creating an account, you agree to collect stamps and receive rewards from participating businesses.
-          </p>
+          <Link 
+            href="/" 
+            className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Home
+          </Link>
         </div>
       </div>
     </div>
+  )
+}
+
+// Main page component with Suspense wrapper
+export default function CustomerSignupPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <CustomerSignupContent />
+    </Suspense>
   )
 } 

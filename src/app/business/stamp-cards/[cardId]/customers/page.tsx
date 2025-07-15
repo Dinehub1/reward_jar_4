@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import BusinessLayout from '@/components/layouts/BusinessLayout'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { 
@@ -99,7 +99,7 @@ export default function StampCardCustomersPage() {
 
         setStampCard({
           ...cardData,
-          business: cardData.businesses
+          business: cardData.businesses as any
         })
 
         // Get customers for this stamp card
@@ -129,8 +129,8 @@ export default function StampCardCustomersPage() {
           const formattedCustomers: Customer[] = customerData.map(cc => ({
             id: cc.id,
             customer_id: cc.customer_id,
-            name: cc.customers.name,
-            email: cc.customers.email,
+            name: (cc.customers as any).name,
+            email: (cc.customers as any).email,
             current_stamps: cc.current_stamps,
             wallet_type: cc.wallet_type,
             joined_date: cc.created_at,

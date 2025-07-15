@@ -63,8 +63,8 @@ export async function GET(
       })
     }
 
-    const stampCard = customerCard.stamp_cards
-    const business = stampCard.businesses
+    const stampCard = customerCard.stamp_cards as any
+    const business = stampCard.businesses as any
 
     // Generate customized manifest
     const manifest = {
@@ -134,9 +134,6 @@ export async function GET(
       // PWA features
       prefer_related_applications: false,
       display_override: ["window-controls-overlay", "standalone", "minimal-ui"],
-      
-      // Screen orientation
-      orientation: "portrait-primary",
       
       // Launch handler for file associations
       launch_handler: {

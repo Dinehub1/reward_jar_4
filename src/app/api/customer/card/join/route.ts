@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
     const walletType = requestedWalletType || stampCard.preferred_wallet_type || 'pwa'
 
     // Check if customer has already joined this card
-    const { data: existingCard, error: checkError } = await supabase
+    const { data: existingCard } = await supabase
       .from('customer_cards')
       .select('id')
       .eq('customer_id', customer.id)
@@ -155,7 +155,7 @@ export async function POST(request: NextRequest) {
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Invalid request data', details: error.errors },
+        { error: 'Invalid request data', details: error.issues },
         { status: 400 }
       )
     }

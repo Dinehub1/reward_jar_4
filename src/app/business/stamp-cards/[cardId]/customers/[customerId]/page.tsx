@@ -13,7 +13,6 @@ import {
   User, 
   Award,
   Calendar,
-  Smartphone,
   Clock,
   CheckCircle,
   CreditCard,
@@ -113,7 +112,7 @@ export default function CustomerDetailPage() {
 
         setStampCard({
           ...cardData,
-          business: cardData.businesses
+          business: cardData.businesses as any
         })
 
         // Get customer details for this stamp card
@@ -143,8 +142,8 @@ export default function CustomerDetailPage() {
         const customerDetail: CustomerDetail = {
           id: customerData.id,
           customer_id: customerData.customer_id,
-          name: customerData.customers.name,
-          email: customerData.customers.email,
+          name: (customerData.customers as any).name,
+          email: (customerData.customers as any).email,
           current_stamps: customerData.current_stamps,
           wallet_type: customerData.wallet_type,
           wallet_pass_id: customerData.wallet_pass_id,
@@ -280,7 +279,7 @@ export default function CustomerDetailPage() {
     )
   }
 
-  const walletDisplay = getWalletTypeDisplay(customer?.wallet_type)
+  const walletDisplay = getWalletTypeDisplay(customer?.wallet_type || null)
 
   return (
     <BusinessLayout>

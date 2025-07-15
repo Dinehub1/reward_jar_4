@@ -104,8 +104,8 @@ export default function CustomerCardPage() {
           setCustomerCard({
             ...cardData,
             stamp_card: {
-              ...cardData.stamp_cards,
-              business: cardData.stamp_cards.businesses
+              ...cardData.stamp_cards as any,
+              business: (cardData.stamp_cards as any).businesses
             }
           })
         }

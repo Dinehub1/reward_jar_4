@@ -50,7 +50,7 @@ export default function BusinessDashboard() {
         // Get total customers (unique customers across all business's cards)
         const { data: customerCards, count: customersCount } = await supabase
           .from('customer_cards')
-          .select('customer_id', { count: 'exact' })
+          .select('customer_id, stamp_card_id', { count: 'exact' })
           .in('stamp_card_id', stampCards?.map(card => card.id) || [])
 
         // Get active cards (cards with at least one customer)

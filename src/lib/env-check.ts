@@ -10,7 +10,7 @@ export function validateEnvVars() {
     BASE_URL: typeof window !== 'undefined' ? process.env.BASE_URL : 'placeholder',
   }
 
-  const missing = Object.entries(required).filter(([key, value]) => !value || value === 'placeholder')
+  const missing = Object.entries(required).filter(([_key, value]) => !value || value === 'placeholder')
   
   return {
     isValid: missing.length === 0,

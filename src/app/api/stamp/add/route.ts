@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const validatedData = addStampSchema.parse(body)
     
-    const { customerCardId, locationId } = validatedData
+    const { customerCardId } = validatedData
 
     // Get customer card with stamp card details
     const { data: customerCard, error: cardError } = await supabase
@@ -48,8 +48,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const stampCard = customerCard.stamp_cards
-    const business = stampCard.businesses
+    const stampCard = customerCard.stamp_cards as any
+    const business = stampCard.businesses as any
 
     // Check if card is already completed
     if (customerCard.current_stamps >= stampCard.total_stamps) {
@@ -155,7 +155,7 @@ export async function POST(request: NextRequest) {
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Invalid request data', details: error.errors },
+        { error: 'Invalid request data', details: error.issues },
         { status: 400 }
       )
     }

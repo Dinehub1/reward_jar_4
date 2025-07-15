@@ -40,8 +40,8 @@ export async function GET(
       )
     }
 
-    const stampCard = customerCard.stamp_cards
-    const business = stampCard.businesses
+    const stampCard = customerCard.stamp_cards as any
+    const business = stampCard.businesses as any
     
     // Calculate progress
     const progress = Math.min((customerCard.current_stamps / stampCard.total_stamps) * 100, 100)
@@ -387,7 +387,7 @@ function generateGoogleWalletHTML(
                         </div>
                         <p class="text-sm text-gray-600">Scan this QR code at ${business.name} to collect stamps</p>
                     </div>
-                    <p class="text-xs text-gray-500">Card ID: ${customerCard.id.substring(0, 8)}</p>
+                    <p class="text-xs text-gray-500">Card ID: ${(customerCard.id as string).substring(0, 8)}</p>
                 </div>
             </div>
         </div>

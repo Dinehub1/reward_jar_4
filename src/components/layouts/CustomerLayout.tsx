@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import type { User } from '@supabase/supabase-js'
-import { CreditCard, User as UserIcon, Home, LogOut } from 'lucide-react'
+import { User as UserIcon, Home, LogOut } from 'lucide-react'
 
 interface CustomerLayoutProps {
   children: React.ReactNode

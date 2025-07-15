@@ -79,7 +79,7 @@ export default function JoinCardPage() {
           if (cardData) {
             setStampCard({
               ...cardData,
-              business: cardData.businesses
+              business: cardData.businesses as any
             })
           }
         }
@@ -118,7 +118,7 @@ export default function JoinCardPage() {
         throw new Error(errorData.error || 'Failed to join card')
       }
 
-      const result = await response.json()
+      await response.json()
       
       // Redirect to customer card view
       router.push(`/customer/card/${cardId}`)

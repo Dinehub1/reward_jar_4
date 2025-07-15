@@ -120,7 +120,7 @@ function validateAppleCertificate(): boolean {
     const wwdrValid = wwdrDecoded.includes('-----BEGIN') && wwdrDecoded.includes('-----END')
     
     return certValid && keyValid && wwdrValid
-  } catch (error) {
+  } catch (_error) {
     return false
   }
 }
@@ -146,7 +146,7 @@ function validateGoogleAuth(): boolean {
     }
     
     return true
-  } catch (error) {
+  } catch (_error) {
     return false
   }
 } 

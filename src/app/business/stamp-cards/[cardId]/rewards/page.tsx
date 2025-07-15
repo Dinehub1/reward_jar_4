@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import BusinessLayout from '@/components/layouts/BusinessLayout'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -101,7 +101,7 @@ export default function StampCardRewardsPage() {
 
         setStampCard({
           ...cardData,
-          business: cardData.businesses
+          business: cardData.businesses as any
         })
 
         // Get completed rewards for this stamp card
@@ -130,8 +130,8 @@ export default function StampCardRewardsPage() {
           const formattedRewards: CompletedReward[] = rewardsData.map(reward => ({
             id: reward.id,
             customer_id: reward.customer_id,
-            customer_name: reward.customers.name,
-            customer_email: reward.customers.email,
+            customer_name: (reward.customers as any).name,
+            customer_email: (reward.customers as any).email,
             reward_earned_date: reward.created_at,
             redeemed_at: reward.redeemed_at,
             is_redeemed: !!reward.redeemed_at
@@ -181,7 +181,7 @@ export default function StampCardRewardsPage() {
     })
   }
 
-  const formatDateTime = (dateString: string) => {
+  const _formatDateTime = (dateString: string) => {
     return new Date(dateString).toLocaleString('en-US', {
       year: 'numeric',
       month: 'short',

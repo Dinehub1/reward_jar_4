@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -21,7 +21,8 @@ const loginSchema = z.object({
 
 type LoginForm = z.infer<typeof loginSchema>
 
-export default function LoginPage() {
+// Separate client component for search params logic
+function LoginContent() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
@@ -38,7 +39,7 @@ export default function LoginPage() {
       setSuccessMessage(message)
     }
     if (errorParam === 'unauthorized') {
-      setError('Unauthorized access. Please sign in with a business account.')
+      setError('You need to be logged in to access this page')
     }
   }, [searchParams])
 
@@ -56,225 +57,192 @@ export default function LoginPage() {
     setSuccessMessage(null)
 
     try {
-      // Get the next parameter and role parameter from URL
-      const nextUrl = searchParams.get('next')
-      const roleParam = searchParams.get('role')
-      
-      console.log('🔐 Login attempt:', { email: data.email, nextUrl, roleParam })
-      
-      // Step 1: Sign in with Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      const { error: signInError } = await supabase.auth.signInWithPassword({
         email: data.email,
         password: data.password
       })
 
-      console.log('🔐 Auth result:', { authData: authData ? 'success' : 'null', authError })
-
-      if (authError) {
-        console.error('🔐 Auth error:', authError)
-        throw new Error(authError.message)
+      if (signInError) {
+        throw signInError
       }
 
-      if (!authData.user) {
-        throw new Error('Login failed. Please try again.')
+      // Check user role after successful login
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user) {
+        throw new Error('No user found after login')
       }
 
-      // Step 2: Check user role from users table
-      console.log('🔐 Fetching user role for:', authData.user.id)
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('role_id')
-        .eq('id', authData.user.id)
+      // Get user profile to determine role
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
         .single()
 
-      console.log('🔐 User role query result:', { userData, userError })
-
-      if (userError) {
-        console.error('Error fetching user role:', userError)
-        
-        // If user doesn't exist in users table, create it based on context
-        const defaultRole = roleParam === 'customer' ? 3 : 2 // Customer or Business
-        const { error: insertError } = await supabase
-          .from('users')
-          .insert({
-            id: authData.user.id,
-            email: data.email,
-            role_id: defaultRole
-          })
-        
-        if (insertError) {
-          console.error('Error creating user record:', insertError)
-        }
-        
-        // Redirect based on role and next parameter
-        if (defaultRole === 3 && nextUrl) {
-          router.push(nextUrl)
-        } else if (defaultRole === 3) {
-          router.push('/customer/dashboard')
-        } else {
-          router.push('/business/dashboard')
-        }
-        return
+      if (profileError) {
+        console.error('Error fetching profile:', profileError)
+        throw new Error('Failed to fetch user profile')
       }
 
-      // Step 3: Redirect based on role and context
-      if (userData.role_id === 2) {
-        // Business user
-        if (roleParam === 'customer') {
-          await supabase.auth.signOut()
-          throw new Error('Please use a customer account to join loyalty programs.')
-        }
+      // Redirect based on role
+      if (profile.role === 'business') {
         router.push('/business/dashboard')
-      } else if (userData.role_id === 3) {
-        // Customer user
-        if (roleParam === 'business') {
-          await supabase.auth.signOut()
-          throw new Error('Please use a business account to access the business dashboard.')
-        }
-        // Redirect to next URL or customer dashboard
-        router.push(nextUrl || '/customer/dashboard')
+      } else if (profile.role === 'customer') {
+        router.push('/customer/dashboard')
       } else {
-        // Unsupported role
-        await supabase.auth.signOut()
-        throw new Error('Account type not supported.')
+        throw new Error('Invalid user role')
       }
 
     } catch (err) {
-      console.error('🔐 Complete login error:', err)
-      console.error('🔐 Error type:', typeof err)
-      console.error('🔐 Error structure:', JSON.stringify(err, null, 2))
-      
-      let errorMessage = 'Login failed. Please try again.'
-      
+      console.error('Login error:', err)
       if (err instanceof Error) {
-        errorMessage = err.message
-      } else if (typeof err === 'string') {
-        errorMessage = err
-      } else if (err && typeof err === 'object' && 'message' in err) {
-        errorMessage = String(err.message)
+        if (err.message.includes('Invalid login credentials')) {
+          setError('Invalid email or password. Please try again.')
+        } else if (err.message.includes('Email not confirmed')) {
+          setError('Please check your email and click the confirmation link before logging in.')
+        } else {
+          setError(err.message)
+        }
+      } else {
+        setError('An unexpected error occurred. Please try again.')
       }
-      
-      setError(errorMessage)
     } finally {
       setIsSubmitting(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      <div className="w-full max-w-md space-y-6">
         {/* Header */}
-        <div className="text-center">
-          <Link href="/" className="inline-flex items-center text-blue-600 hover:text-blue-700 mb-6 text-sm font-medium">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Home
-          </Link>
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome Back</h1>
-            <p className="text-gray-600">
-              Sign in to your RewardJar business account
-            </p>
-          </div>
+        <div className="text-center space-y-2">
+          <h1 className="text-3xl font-bold text-gray-900">Welcome Back</h1>
+          <p className="text-gray-600">Sign in to your RewardJar account</p>
         </div>
 
+        {/* Success Message */}
+        {successMessage && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-2">
+            <CheckCircle className="h-5 w-5 text-green-600" />
+            <p className="text-green-800 text-sm">{successMessage}</p>
+          </div>
+        )}
+
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-2">
+            <AlertCircle className="h-5 w-5 text-red-600" />
+            <p className="text-red-800 text-sm">{error}</p>
+          </div>
+        )}
+
         {/* Login Form */}
-        <Card className="shadow-lg border-0">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-center text-lg font-semibold">Business Login</CardTitle>
-            <CardDescription className="text-center text-sm">
-              Enter your credentials to access your dashboard
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-xl">Sign In</CardTitle>
+            <CardDescription>
+              Enter your email and password to access your account
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-              {/* Email */}
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              {/* Email Field */}
               <div className="space-y-2">
-                <Label htmlFor="email" className="flex items-center">
-                  <Mail className="w-4 h-4 mr-2" />
-                  Email Address
+                <Label htmlFor="email" className="flex items-center gap-2">
+                  <Mail className="h-4 w-4" />
+                  Email
                 </Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="your@business.com"
-                  autoComplete="email"
+                  placeholder="Enter your email"
                   {...form.register('email')}
+                  className={form.formState.errors.email ? 'border-red-500' : ''}
                 />
                 {form.formState.errors.email && (
-                  <p className="text-sm text-red-600">{form.formState.errors.email.message}</p>
+                  <p className="text-red-500 text-sm">{form.formState.errors.email.message}</p>
                 )}
               </div>
 
-              {/* Password */}
+              {/* Password Field */}
               <div className="space-y-2">
-                <Label htmlFor="password" className="flex items-center">
-                  <Lock className="w-4 h-4 mr-2" />
+                <Label htmlFor="password" className="flex items-center gap-2">
+                  <Lock className="h-4 w-4" />
                   Password
                 </Label>
                 <Input
                   id="password"
                   type="password"
                   placeholder="Enter your password"
-                  autoComplete="current-password"
                   {...form.register('password')}
+                  className={form.formState.errors.password ? 'border-red-500' : ''}
                 />
                 {form.formState.errors.password && (
-                  <p className="text-sm text-red-600">{form.formState.errors.password.message}</p>
+                  <p className="text-red-500 text-sm">{form.formState.errors.password.message}</p>
                 )}
               </div>
 
-              {/* Success Message */}
-              {successMessage && (
-                <div className="p-4 bg-green-50 border border-green-200 rounded-md flex items-center">
-                  <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
-                  <p className="text-sm text-green-600">{successMessage}</p>
-                </div>
-              )}
-
-              {/* Error Message */}
-              {error && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-md flex items-center">
-                  <AlertCircle className="w-4 h-4 text-red-600 mr-2" />
-                  <p className="text-sm text-red-600">{error}</p>
-                </div>
-              )}
-
               {/* Submit Button */}
-              <Button
-                type="submit"
+              <Button 
+                type="submit" 
+                className="w-full" 
                 disabled={isSubmitting}
-                className="w-full bg-blue-600 hover:bg-blue-700 h-12 text-base font-medium mt-6"
               >
                 {isSubmitting ? 'Signing In...' : 'Sign In'}
               </Button>
             </form>
 
-            {/* Forgot Password */}
-            <div className="mt-4 text-center">
-              <Link href="/auth/reset-password" className="text-sm text-blue-600 hover:text-blue-700">
-                Forgot your password?
-              </Link>
-            </div>
-
-            {/* Signup Link */}
-            <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600">
-                Don&apos;t have an account?{' '}
-                <Link href="/auth/signup" className="text-blue-600 hover:text-blue-700 font-medium">
-                  Create one here
-                </Link>
-              </p>
+            {/* Links */}
+            <div className="mt-6 space-y-3">
+              <div className="text-center">
+                <p className="text-sm text-gray-600">
+                  Don&apos;t have an account?{' '}
+                  <Link href="/auth/signup" className="text-blue-600 hover:text-blue-500 font-medium">
+                    Sign up
+                  </Link>
+                </p>
+              </div>
+              
+              <div className="text-center">
+                <p className="text-sm text-gray-600">
+                  Are you a customer?{' '}
+                  <Link href="/auth/customer-signup" className="text-green-600 hover:text-green-500 font-medium">
+                    Customer Sign Up
+                  </Link>
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Business Account Notice */}
+        {/* Back to Home */}
         <div className="text-center">
-          <p className="text-xs text-gray-500">
-            This portal is for business accounts only. Customers join through QR codes.
-          </p>
+          <Link 
+            href="/" 
+            className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Home
+          </Link>
         </div>
       </div>
     </div>
   )
-} 
+}
+
+// Main page component with Suspense wrapper
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
+  )
+}

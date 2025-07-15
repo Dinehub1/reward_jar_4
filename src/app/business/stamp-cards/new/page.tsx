@@ -31,7 +31,7 @@ export default function NewStampCard() {
   const supabase = createClient()
 
   const form = useForm<StampCardForm>({
-    resolver: zodResolver(stampCardSchema),
+    resolver: zodResolver(stampCardSchema) as any,
     defaultValues: {
       name: '',
       total_stamps: 10,

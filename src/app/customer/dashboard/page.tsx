@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase'
 import CustomerLayout from '@/components/layouts/CustomerLayout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { CreditCard, Trophy, Star, Plus, ArrowRight, Gift } from 'lucide-react'
+import { CreditCard, Trophy, Star, ArrowRight, Gift } from 'lucide-react'
 import Link from 'next/link'
 
 interface CustomerCard {
@@ -72,8 +72,8 @@ export default function CustomerDashboard() {
           const formattedCards = cards.map(card => ({
             ...card,
             stamp_card: {
-              ...card.stamp_cards,
-              business: card.stamp_cards.businesses
+              ...card.stamp_cards as any,
+              business: (card.stamp_cards as any).businesses
             }
           }))
 
