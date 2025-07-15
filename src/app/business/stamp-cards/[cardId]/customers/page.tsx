@@ -99,7 +99,7 @@ export default function StampCardCustomersPage() {
 
         setStampCard({
           ...cardData,
-          business: cardData.businesses as any
+          business: (cardData.businesses as { name: string }[])[0]
         })
 
         // Get customers for this stamp card
@@ -126,16 +126,19 @@ export default function StampCardCustomersPage() {
         }
 
         if (customerData) {
-          const formattedCustomers: Customer[] = customerData.map(cc => ({
-            id: cc.id,
-            customer_id: cc.customer_id,
-            name: (cc.customers as any).name,
-            email: (cc.customers as any).email,
-            current_stamps: cc.current_stamps,
-            wallet_type: cc.wallet_type,
-            joined_date: cc.created_at,
-            is_completed: cc.current_stamps >= cardData.total_stamps
-          }))
+          const formattedCustomers: Customer[] = customerData.map(cc => {
+            const customer = (cc.customers as { name: string; email: string }[])[0]
+            return {
+              id: cc.id,
+              customer_id: cc.customer_id,
+              name: customer.name,
+              email: customer.email,
+              current_stamps: cc.current_stamps,
+              wallet_type: cc.wallet_type,
+              joined_date: cc.created_at,
+              is_completed: cc.current_stamps >= cardData.total_stamps
+            }
+          })
 
           setCustomers(formattedCustomers)
           setFilteredCustomers(formattedCustomers)

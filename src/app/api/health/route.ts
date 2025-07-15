@@ -8,7 +8,7 @@ export async function GET() {
       env: process.env.NODE_ENV || 'development',
       version: '3.0.0'
     })
-  } catch (_error) {
+  } catch {
     return NextResponse.json(
       { 
         status: 'error', 

@@ -69,13 +69,31 @@ export default function CustomerDashboard() {
           .order('created_at', { ascending: false })
 
         if (cards) {
-          const formattedCards = cards.map(card => ({
-            ...card,
-            stamp_card: {
-              ...card.stamp_cards as any,
-              business: (card.stamp_cards as any).businesses
+          const formattedCards = cards.map(card => {
+            const stampCard = (card.stamp_cards as {
+              id: string
+              name: string
+              total_stamps: number
+              reward_description: string
+              businesses: {
+                name: string
+              }[]
+            }[])[0]
+            const business = stampCard.businesses[0]
+            
+            return {
+              ...card,
+              stamp_card: {
+                id: stampCard.id,
+                name: stampCard.name,
+                total_stamps: stampCard.total_stamps,
+                reward_description: stampCard.reward_description,
+                business: {
+                  name: business.name
+                }
+              }
             }
-          }))
+          })
 
           setCustomerCards(formattedCards)
 

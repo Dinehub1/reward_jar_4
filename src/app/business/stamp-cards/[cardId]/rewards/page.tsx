@@ -101,7 +101,7 @@ export default function StampCardRewardsPage() {
 
         setStampCard({
           ...cardData,
-          business: cardData.businesses as any
+          business: (cardData.businesses as { name: string }[])[0]
         })
 
         // Get completed rewards for this stamp card
@@ -127,15 +127,18 @@ export default function StampCardRewardsPage() {
         }
 
         if (rewardsData) {
-          const formattedRewards: CompletedReward[] = rewardsData.map(reward => ({
-            id: reward.id,
-            customer_id: reward.customer_id,
-            customer_name: (reward.customers as any).name,
-            customer_email: (reward.customers as any).email,
-            reward_earned_date: reward.created_at,
-            redeemed_at: reward.redeemed_at,
-            is_redeemed: !!reward.redeemed_at
-          }))
+          const formattedRewards: CompletedReward[] = rewardsData.map(reward => {
+            const customer = (reward.customers as { name: string; email: string }[])[0]
+            return {
+              id: reward.id,
+              customer_id: reward.customer_id,
+              customer_name: customer.name,
+              customer_email: customer.email,
+              reward_earned_date: reward.created_at,
+              redeemed_at: reward.redeemed_at,
+              is_redeemed: !!reward.redeemed_at
+            }
+          })
 
           setRewards(formattedRewards)
           setFilteredRewards(formattedRewards)
@@ -178,16 +181,6 @@ export default function StampCardRewardsPage() {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
-    })
-  }
-
-  const _formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
     })
   }
 

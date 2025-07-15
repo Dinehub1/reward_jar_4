@@ -101,11 +101,29 @@ export default function CustomerCardPage() {
         }
 
         if (cardData) {
+          const stampCard = (cardData.stamp_cards as {
+            id: string
+            name: string
+            total_stamps: number
+            reward_description: string
+            businesses: {
+              name: string
+              description: string
+            }[]
+          }[])[0]
+          const business = stampCard.businesses[0]
+          
           setCustomerCard({
             ...cardData,
             stamp_card: {
-              ...cardData.stamp_cards as any,
-              business: (cardData.stamp_cards as any).businesses
+              id: stampCard.id,
+              name: stampCard.name,
+              total_stamps: stampCard.total_stamps,
+              reward_description: stampCard.reward_description,
+              business: {
+                name: business.name,
+                description: business.description
+              }
             }
           })
         }

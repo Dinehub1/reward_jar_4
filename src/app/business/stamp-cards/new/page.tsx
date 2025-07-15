@@ -19,7 +19,7 @@ const stampCardSchema = z.object({
   name: z.string().min(1, 'Card name is required').max(100, 'Card name must be under 100 characters'),
   total_stamps: z.number().min(1, 'Must require at least 1 stamp').max(50, 'Maximum 50 stamps allowed'),
   reward_description: z.string().min(1, 'Reward description is required').max(500, 'Description must be under 500 characters'),
-  preferred_wallet_type: z.enum(['apple', 'google', 'pwa']).default('pwa')
+  preferred_wallet_type: z.enum(['apple', 'google', 'pwa'])
 })
 
 type StampCardForm = z.infer<typeof stampCardSchema>
@@ -31,7 +31,7 @@ export default function NewStampCard() {
   const supabase = createClient()
 
   const form = useForm<StampCardForm>({
-    resolver: zodResolver(stampCardSchema) as any,
+    resolver: zodResolver(stampCardSchema),
     defaultValues: {
       name: '',
       total_stamps: 10,

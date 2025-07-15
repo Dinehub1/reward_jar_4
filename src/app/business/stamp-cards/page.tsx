@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import BusinessLayout from '@/components/layouts/BusinessLayout'
@@ -351,9 +352,11 @@ export default function StampCardsPage() {
               <div className="text-center space-y-4">
                 {/* QR Code Image */}
                 <div className="flex justify-center">
-                  <img
+                  <Image
                     src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(getJoinUrl(selectedCard.id))}`}
-                    alt="QR Code"
+                    alt="QR Code for joining loyalty program"
+                    width={200}
+                    height={200}
                     className="border border-gray-200 rounded-lg"
                   />
                 </div>

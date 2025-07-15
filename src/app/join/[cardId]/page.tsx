@@ -79,7 +79,7 @@ export default function JoinCardPage() {
           if (cardData) {
             setStampCard({
               ...cardData,
-              business: cardData.businesses as any
+              business: (cardData.businesses as { name: string }[])[0]
             })
           }
         }

@@ -48,8 +48,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const stampCard = customerCard.stamp_cards as any
-    const business = stampCard.businesses as any
+    const stampCardArray = customerCard.stamp_cards as {
+      id: string
+      total_stamps: number
+      name: string
+      reward_description: string
+      business_id: string
+      businesses: {
+        name: string
+      }[]
+    }[]
+    const stampCard = stampCardArray[0]
+    const business = stampCard.businesses[0]
 
     // Check if card is already completed
     if (customerCard.current_stamps >= stampCard.total_stamps) {

@@ -112,7 +112,7 @@ export default function CustomerDetailPage() {
 
         setStampCard({
           ...cardData,
-          business: cardData.businesses as any
+          business: (cardData.businesses as { name: string }[])[0]
         })
 
         // Get customer details for this stamp card
@@ -139,11 +139,12 @@ export default function CustomerDetailPage() {
           return
         }
 
+        const customer = (customerData.customers as { name: string; email: string }[])[0]
         const customerDetail: CustomerDetail = {
           id: customerData.id,
           customer_id: customerData.customer_id,
-          name: (customerData.customers as any).name,
-          email: (customerData.customers as any).email,
+          name: customer.name,
+          email: customer.email,
           current_stamps: customerData.current_stamps,
           wallet_type: customerData.wallet_type,
           wallet_pass_id: customerData.wallet_pass_id,

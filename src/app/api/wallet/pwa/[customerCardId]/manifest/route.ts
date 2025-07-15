@@ -63,8 +63,16 @@ export async function GET(
       })
     }
 
-    const stampCard = customerCard.stamp_cards as any
-    const business = stampCard.businesses as any
+    const stampCardArray = customerCard.stamp_cards as {
+      id: string
+      total_stamps: number
+      name: string
+      businesses: {
+        name: string
+      }[]
+    }[]
+    const stampCard = stampCardArray[0]
+    const business = stampCard.businesses[0]
 
     // Generate customized manifest
     const manifest = {

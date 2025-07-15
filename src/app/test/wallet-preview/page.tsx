@@ -48,6 +48,39 @@ interface CustomerCard {
   }
 }
 
+interface DatabaseStampCard {
+  id: string
+  name: string
+  total_stamps: number
+  reward_description: string
+  businesses: {
+    name: string
+    description: string
+  }[]
+}
+
+interface DatabaseCustomer {
+  name: string
+  email: string
+}
+
+interface DatabaseCustomerCard {
+  id: string
+  customer_id: string
+  current_stamps: number
+  wallet_type: string | null
+  wallet_pass_id: string | null
+  created_at: string
+  stamp_cards: DatabaseStampCard[]
+  customers: DatabaseCustomer[]
+}
+
+interface TestResult {
+  success: boolean
+  message?: string
+  data?: unknown
+}
+
 interface WalletStatus {
   apple: {
     configured: boolean
@@ -74,7 +107,7 @@ export default function WalletPreviewPage() {
   const [searchLoading, setSearchLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [walletStatus, setWalletStatus] = useState<WalletStatus | null>(null)
-  const [testResults, setTestResults] = useState<Record<string, unknown>>({})
+  const [testResults, setTestResults] = useState<Record<string, TestResult>>({})
   const supabase = createClient()
 
   const fetchAllCustomerCards = useCallback(async () => {
@@ -116,7 +149,7 @@ export default function WalletPreviewPage() {
       }
 
       if (cards && cards.length > 0) {
-        const formattedCards = cards.map(card => ({
+        const formattedCards = (cards as DatabaseCustomerCard[]).map(card => ({
           id: card.id,
           customer_id: card.customer_id,
           current_stamps: card.current_stamps,
@@ -124,18 +157,18 @@ export default function WalletPreviewPage() {
           wallet_pass_id: card.wallet_pass_id,
           created_at: card.created_at,
           stamp_card: {
-            id: (card.stamp_cards as any).id,
-            name: (card.stamp_cards as any).name,
-            total_stamps: (card.stamp_cards as any).total_stamps,
-            reward_description: (card.stamp_cards as any).reward_description,
+            id: card.stamp_cards[0].id,
+            name: card.stamp_cards[0].name,
+            total_stamps: card.stamp_cards[0].total_stamps,
+            reward_description: card.stamp_cards[0].reward_description,
             business: {
-              name: (card.stamp_cards as any).businesses.name,
-              description: (card.stamp_cards as any).businesses.description
+              name: card.stamp_cards[0].businesses[0].name,
+              description: card.stamp_cards[0].businesses[0].description
             }
           },
           customer: {
-            name: (card.customers as any).name,
-            email: (card.customers as any).email
+            name: card.customers[0].name,
+            email: card.customers[0].email
           }
         }))
         setCustomerCards(formattedCards)
@@ -228,26 +261,27 @@ export default function WalletPreviewPage() {
         return
       }
 
+      const dbCard = card as DatabaseCustomerCard
       const formattedCard: CustomerCard = {
-        id: card.id,
-        customer_id: card.customer_id,
-        current_stamps: card.current_stamps,
-        wallet_type: card.wallet_type,
-        wallet_pass_id: card.wallet_pass_id,
-        created_at: card.created_at,
+        id: dbCard.id,
+        customer_id: dbCard.customer_id,
+        current_stamps: dbCard.current_stamps,
+        wallet_type: dbCard.wallet_type,
+        wallet_pass_id: dbCard.wallet_pass_id,
+        created_at: dbCard.created_at,
         stamp_card: {
-          id: (card.stamp_cards as any).id,
-          name: (card.stamp_cards as any).name,
-          total_stamps: (card.stamp_cards as any).total_stamps,
-          reward_description: (card.stamp_cards as any).reward_description,
+          id: dbCard.stamp_cards[0].id,
+          name: dbCard.stamp_cards[0].name,
+          total_stamps: dbCard.stamp_cards[0].total_stamps,
+          reward_description: dbCard.stamp_cards[0].reward_description,
           business: {
-            name: (card.stamp_cards as any).businesses.name,
-            description: (card.stamp_cards as any).businesses.description
+            name: dbCard.stamp_cards[0].businesses[0].name,
+            description: dbCard.stamp_cards[0].businesses[0].description
           }
         },
         customer: {
-          name: (card.customers as any).name,
-          email: (card.customers as any).email
+          name: dbCard.customers[0].name,
+          email: dbCard.customers[0].email
         }
       }
 
@@ -706,9 +740,9 @@ export default function WalletPreviewPage() {
                             <Eye className="w-4 h-4" />
                           </Button>
                         </div>
-                        {(testResults.apple as any) && (
-                          <div className={`mt-2 text-sm ${(testResults.apple as any).success ? 'text-green-600' : 'text-red-600'}`}>
-                            {(testResults.apple as any).success ? '✅' : '❌'} {(testResults.apple as any).message}
+                        {testResults.apple && (
+                          <div className={`mt-2 text-sm ${testResults.apple.success ? 'text-green-600' : 'text-red-600'}`}>
+                            {testResults.apple.success ? '✅' : '❌'} {testResults.apple.message}
                           </div>
                         )}
                       </div>
@@ -741,9 +775,9 @@ export default function WalletPreviewPage() {
                             <Eye className="w-4 h-4" />
                           </Button>
                         </div>
-                        {(testResults.google as any) && (
-                          <div className={`mt-2 text-sm ${(testResults.google as any).success ? 'text-green-600' : 'text-red-600'}`}>
-                            {(testResults.google as any).success ? '✅' : '❌'} {(testResults.google as any).message}
+                        {testResults.google && (
+                          <div className={`mt-2 text-sm ${testResults.google.success ? 'text-green-600' : 'text-red-600'}`}>
+                            {testResults.google.success ? '✅' : '❌'} {testResults.google.message}
                           </div>
                         )}
                       </div>
@@ -774,9 +808,9 @@ export default function WalletPreviewPage() {
                             <Eye className="w-4 h-4" />
                           </Button>
                         </div>
-                        {(testResults.pwa as any) && (
-                          <div className={`mt-2 text-sm ${(testResults.pwa as any).success ? 'text-green-600' : 'text-red-600'}`}>
-                            {(testResults.pwa as any).success ? '✅' : '❌'} {(testResults.pwa as any).message}
+                        {testResults.pwa && (
+                          <div className={`mt-2 text-sm ${testResults.pwa.success ? 'text-green-600' : 'text-red-600'}`}>
+                            {testResults.pwa.success ? '✅' : '❌'} {testResults.pwa.message}
                           </div>
                         )}
                       </div>
@@ -786,7 +820,7 @@ export default function WalletPreviewPage() {
               </Card>
 
               {/* Debug Information */}
-              {((testResults.apple_debug as any) || (testResults.google_debug as any)) && (
+              {(testResults.apple_debug || testResults.google_debug) && (
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center">
@@ -796,19 +830,19 @@ export default function WalletPreviewPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {(testResults.apple_debug as any) && (
+                      {testResults.apple_debug && (
                         <div>
                           <h4 className="font-medium mb-2">Apple Wallet Debug Data:</h4>
                           <pre className="bg-gray-100 p-3 rounded text-xs overflow-x-auto">
-                            {JSON.stringify((testResults.apple_debug as any).data, null, 2)}
+                            {JSON.stringify(testResults.apple_debug.data, null, 2)}
                           </pre>
                         </div>
                       )}
-                      {(testResults.google_debug as any) && (
+                      {testResults.google_debug && (
                         <div>
                           <h4 className="font-medium mb-2">Google Wallet Debug Data:</h4>
                           <pre className="bg-gray-100 p-3 rounded text-xs overflow-x-auto">
-                            {JSON.stringify((testResults.google_debug as any).data, null, 2)}
+                            {JSON.stringify(testResults.google_debug.data, null, 2)}
                           </pre>
                         </div>
                       )}
