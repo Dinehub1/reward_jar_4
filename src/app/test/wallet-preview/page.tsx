@@ -105,8 +105,25 @@ export default function WalletPreviewPage() {
   const [customerCardId, setCustomerCardId] = useState('')
   const [loading, setLoading] = useState(false)
   const [searchLoading, setSearchLoading] = useState(false)
+  const [walletStatusLoading, setWalletStatusLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [walletStatus, setWalletStatus] = useState<WalletStatus | null>(null)
+  const [walletStatus, setWalletStatus] = useState<WalletStatus>({
+    apple: {
+      configured: false,
+      certificates: false,
+      teamId: false,
+      passTypeId: false
+    },
+    google: {
+      configured: false,
+      serviceAccount: false,
+      classId: false,
+      privateKey: false
+    },
+    pwa: {
+      configured: true // PWA is always available
+    }
+  })
   const [testResults, setTestResults] = useState<Record<string, TestResult>>({})
   const supabase = createClient()
 
@@ -185,11 +202,14 @@ export default function WalletPreviewPage() {
 
   const checkWalletStatus = useCallback(async () => {
     try {
+      setWalletStatusLoading(true)
       const response = await fetch('/api/health/wallet')
       const data = await response.json()
       
+      console.log('Wallet status API response:', data) // Debug log
+      
       if (response.ok) {
-        setWalletStatus({
+        const newWalletStatus = {
           apple: {
             configured: data.wallet_availability?.apple === 'available',
             certificates: data.checks?.apple_wallet || false,
@@ -205,10 +225,15 @@ export default function WalletPreviewPage() {
           pwa: {
             configured: true // PWA is always available
           }
-        })
+        }
+        
+        console.log('Setting wallet status:', newWalletStatus) // Debug log
+        setWalletStatus(newWalletStatus)
       }
     } catch (err) {
       console.error('Error checking wallet status:', err)
+    } finally {
+      setWalletStatusLoading(false)
     }
   }, [])
 
@@ -410,7 +435,9 @@ export default function WalletPreviewPage() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Configured</span>
-                    {walletStatus?.apple.configured ? (
+                    {walletStatusLoading ? (
+                      <RefreshCw className="w-4 h-4 animate-spin text-blue-500" />
+                    ) : walletStatus.apple.configured ? (
                       <CheckCircle className="w-4 h-4 text-green-500" />
                     ) : (
                       <AlertCircle className="w-4 h-4 text-red-500" />
@@ -418,7 +445,9 @@ export default function WalletPreviewPage() {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Certificates</span>
-                    {walletStatus?.apple.certificates ? (
+                    {walletStatusLoading ? (
+                      <RefreshCw className="w-4 h-4 animate-spin text-blue-500" />
+                    ) : walletStatus.apple.certificates ? (
                       <CheckCircle className="w-4 h-4 text-green-500" />
                     ) : (
                       <AlertCircle className="w-4 h-4 text-red-500" />
@@ -426,7 +455,9 @@ export default function WalletPreviewPage() {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Team ID</span>
-                    {walletStatus?.apple.teamId ? (
+                    {walletStatusLoading ? (
+                      <RefreshCw className="w-4 h-4 animate-spin text-blue-500" />
+                    ) : walletStatus.apple.teamId ? (
                       <CheckCircle className="w-4 h-4 text-green-500" />
                     ) : (
                       <AlertCircle className="w-4 h-4 text-red-500" />
@@ -447,7 +478,9 @@ export default function WalletPreviewPage() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Configured</span>
-                    {walletStatus?.google.configured ? (
+                    {walletStatusLoading ? (
+                      <RefreshCw className="w-4 h-4 animate-spin text-blue-500" />
+                    ) : walletStatus.google.configured ? (
                       <CheckCircle className="w-4 h-4 text-green-500" />
                     ) : (
                       <AlertCircle className="w-4 h-4 text-red-500" />
@@ -455,7 +488,9 @@ export default function WalletPreviewPage() {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Service Account</span>
-                    {walletStatus?.google.serviceAccount ? (
+                    {walletStatusLoading ? (
+                      <RefreshCw className="w-4 h-4 animate-spin text-blue-500" />
+                    ) : walletStatus.google.serviceAccount ? (
                       <CheckCircle className="w-4 h-4 text-green-500" />
                     ) : (
                       <AlertCircle className="w-4 h-4 text-red-500" />
@@ -463,7 +498,9 @@ export default function WalletPreviewPage() {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Class ID</span>
-                    {walletStatus?.google.classId ? (
+                    {walletStatusLoading ? (
+                      <RefreshCw className="w-4 h-4 animate-spin text-blue-500" />
+                    ) : walletStatus.google.classId ? (
                       <CheckCircle className="w-4 h-4 text-green-500" />
                     ) : (
                       <AlertCircle className="w-4 h-4 text-red-500" />
