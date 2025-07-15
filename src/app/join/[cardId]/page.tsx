@@ -115,6 +115,7 @@ export default function JoinCardPage() {
                   } else if (autoJoin) {
                     // Auto-join the card if user is returning from auth flow
                     console.log('Auto-joining card for customer:', customerData.id)
+                    setLoading(true)
                     setTimeout(() => {
                       handleJoinCard()
                     }, 100) // Small delay to ensure state is set
