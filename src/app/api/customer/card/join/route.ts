@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     // Verify stamp card exists and is active
     const { data: stampCard, error: cardError } = await supabase
       .from('stamp_cards')
-      .select('id, business_id, name, total_stamps, reward_description, preferred_wallet_type')
+      .select('id, business_id, name, total_stamps, reward_description')
       .eq('id', stampCardId)
       .eq('status', 'active')
       .single()
@@ -71,8 +71,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Determine wallet type (requested type or business preference)
-    const walletType = requestedWalletType || stampCard.preferred_wallet_type || 'pwa'
+    // Use requested wallet type or default to PWA
+    const walletType = requestedWalletType || 'pwa'
 
     // Check if customer has already joined this card
     const { data: existingCard } = await supabase

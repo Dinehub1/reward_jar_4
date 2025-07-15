@@ -11,15 +11,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ArrowLeft, Save, Smartphone, Wallet, Globe } from 'lucide-react'
+import { ArrowLeft, Save } from 'lucide-react'
 import Link from 'next/link'
 
 // Form validation schema
 const stampCardSchema = z.object({
   name: z.string().min(1, 'Card name is required').max(100, 'Card name must be under 100 characters'),
   total_stamps: z.number().min(1, 'Must require at least 1 stamp').max(50, 'Maximum 50 stamps allowed'),
-  reward_description: z.string().min(1, 'Reward description is required').max(500, 'Description must be under 500 characters'),
-  preferred_wallet_type: z.enum(['apple', 'google', 'pwa'])
+  reward_description: z.string().min(1, 'Reward description is required').max(500, 'Description must be under 500 characters')
 })
 
 type StampCardForm = z.infer<typeof stampCardSchema>
@@ -35,8 +34,7 @@ export default function NewStampCard() {
     defaultValues: {
       name: '',
       total_stamps: 10,
-      reward_description: '',
-      preferred_wallet_type: 'pwa'
+      reward_description: ''
     }
   })
 
@@ -70,7 +68,6 @@ export default function NewStampCard() {
           name: data.name,
           total_stamps: data.total_stamps,
           reward_description: data.reward_description,
-          preferred_wallet_type: data.preferred_wallet_type,
           status: 'active'
         })
 
@@ -162,87 +159,6 @@ export default function NewStampCard() {
                 )}
                 <p className="text-sm text-gray-500">
                   Describe what reward customers will receive when they complete their card.
-                </p>
-              </div>
-
-              {/* Preferred Wallet Type */}
-              <div className="space-y-2">
-                <Label htmlFor="preferred_wallet_type">Preferred Wallet Type</Label>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div className="relative">
-                    <input
-                      type="radio"
-                      id="apple"
-                      value="apple"
-                      {...form.register('preferred_wallet_type')}
-                      className="sr-only"
-                    />
-                    <Label
-                      htmlFor="apple"
-                      className={`flex items-center space-x-3 p-4 border rounded-lg cursor-pointer transition-colors ${
-                        form.watch('preferred_wallet_type') === 'apple'
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <Smartphone className="w-5 h-5 text-gray-600" />
-                      <div>
-                        <div className="font-medium">Apple Wallet</div>
-                        <div className="text-sm text-gray-500">iOS native wallet</div>
-                      </div>
-                    </Label>
-                  </div>
-                  
-                  <div className="relative">
-                    <input
-                      type="radio"
-                      id="google"
-                      value="google"
-                      {...form.register('preferred_wallet_type')}
-                      className="sr-only"
-                    />
-                    <Label
-                      htmlFor="google"
-                      className={`flex items-center space-x-3 p-4 border rounded-lg cursor-pointer transition-colors ${
-                        form.watch('preferred_wallet_type') === 'google'
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <Wallet className="w-5 h-5 text-gray-600" />
-                      <div>
-                        <div className="font-medium">Google Wallet</div>
-                        <div className="text-sm text-gray-500">Android native wallet</div>
-                      </div>
-                    </Label>
-                  </div>
-                  
-                  <div className="relative">
-                    <input
-                      type="radio"
-                      id="pwa"
-                      value="pwa"
-                      {...form.register('preferred_wallet_type')}
-                      className="sr-only"
-                    />
-                    <Label
-                      htmlFor="pwa"
-                      className={`flex items-center space-x-3 p-4 border rounded-lg cursor-pointer transition-colors ${
-                        form.watch('preferred_wallet_type') === 'pwa'
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <Globe className="w-5 h-5 text-gray-600" />
-                      <div>
-                        <div className="font-medium">Web App</div>
-                        <div className="text-sm text-gray-500">Universal compatibility</div>
-                      </div>
-                    </Label>
-                  </div>
-                </div>
-                <p className="text-sm text-gray-500">
-                  Choose the default wallet type for new customers. They can still use other wallet types if available.
                 </p>
               </div>
 

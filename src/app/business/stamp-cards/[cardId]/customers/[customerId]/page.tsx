@@ -36,7 +36,6 @@ interface CustomerDetail {
   name: string
   email: string
   current_stamps: number
-  wallet_type: string | null
   wallet_pass_id: string | null
   joined_date: string
   is_completed: boolean

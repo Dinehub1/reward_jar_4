@@ -36,7 +36,6 @@ interface Customer {
   name: string
   email: string
   current_stamps: number
-  wallet_type: string | null
   joined_date: string
   is_completed: boolean
 }
@@ -109,7 +108,6 @@ export default function StampCardCustomersPage() {
             id,
             customer_id,
             current_stamps,
-            wallet_type,
             created_at,
             customers!inner (
               name,
@@ -134,7 +132,6 @@ export default function StampCardCustomersPage() {
               name: customer.name,
               email: customer.email,
             current_stamps: cc.current_stamps,
-            wallet_type: cc.wallet_type,
             joined_date: cc.created_at,
             is_completed: cc.current_stamps >= cardData.total_stamps
             }
