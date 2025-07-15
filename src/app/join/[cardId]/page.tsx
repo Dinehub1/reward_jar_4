@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -31,6 +31,41 @@ export default function JoinCardPage() {
   
   const cardId = params.cardId as string
   const autoJoin = searchParams.get('autoJoin') === 'true'
+
+  // Handle joining the card (for authenticated customers)
+  const handleJoinCard = useCallback(async () => {
+    if (!isAuthenticated || userRole !== 3) {
+      return
+    }
+
+    setLoading(true)
+    try {
+      const response = await fetch('/api/customer/card/join', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          stampCardId: cardId
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to join card')
+      }
+
+      await response.json()
+      
+      // Redirect to customer card view
+      router.push(`/customer/card/${cardId}`)
+    } catch (err) {
+      console.error('Error joining card:', err)
+      setError(err instanceof Error ? err.message : 'Failed to join card')
+    } finally {
+      setLoading(false)
+    }
+  }, [isAuthenticated, userRole, cardId, router, setLoading, setError])
 
   useEffect(() => {
     const checkAuthAndCard = async () => {
@@ -73,7 +108,10 @@ export default function JoinCardPage() {
                     return
                   } else if (autoJoin) {
                     // Auto-join the card if user is returning from auth flow
-                    handleJoinCard()
+                    console.log('Auto-joining card for customer:', customerData.id)
+                    setTimeout(() => {
+                      handleJoinCard()
+                    }, 100) // Small delay to ensure state is set
                     return
                   }
                 }
@@ -132,42 +170,7 @@ export default function JoinCardPage() {
     }
 
     checkAuthAndCard()
-  }, [cardId, supabase])
-
-  // Handle joining the card (for authenticated customers)
-  const handleJoinCard = async () => {
-    if (!isAuthenticated || userRole !== 3) {
-      return
-    }
-
-    setLoading(true)
-    try {
-      const response = await fetch('/api/customer/card/join', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          stampCardId: cardId
-        })
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to join card')
-      }
-
-      await response.json()
-      
-      // Redirect to customer card view
-      router.push(`/customer/card/${cardId}`)
-    } catch (err) {
-      console.error('Error joining card:', err)
-      setError(err instanceof Error ? err.message : 'Failed to join card')
-    } finally {
-      setLoading(false)
-    }
-  }
+  }, [cardId, supabase, autoJoin, handleJoinCard])
 
   if (loading) {
     return (
