@@ -68,6 +68,7 @@ export default function JoinCardPage() {
             .single()
 
           if (cardError) {
+            console.error('Card fetch error:', cardError)
             if (cardError.code === 'PGRST116') {
               setError('Stamp card not found or is no longer active.')
             } else {
@@ -77,9 +78,14 @@ export default function JoinCardPage() {
           }
 
           if (cardData) {
+            // Handle the business relationship more safely
+            const business = Array.isArray(cardData.businesses) 
+              ? cardData.businesses[0] 
+              : cardData.businesses
+
             setStampCard({
               ...cardData,
-              business: (cardData.businesses as { name: string }[])[0]
+              business: business || { name: 'Unknown Business' }
             })
           }
         }
@@ -108,8 +114,7 @@ export default function JoinCardPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          stampCardId: cardId,
-          walletType: 'pwa' // Default to PWA, can be changed later
+          stampCardId: cardId
         })
       })
 
@@ -211,9 +216,27 @@ export default function JoinCardPage() {
             </div>
             <div className="mt-4 pt-4 border-t border-gray-200">
               <p className="text-xs text-gray-500">
-                {stampCard ? `Testing: ${stampCard.name}` : 'Testing QR Code'}
+                {stampCard?.name ? `Testing: ${stampCard.name}` : 'Testing QR Code'}
               </p>
             </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // Additional safety check - if stampCard is null or doesn't have required properties
+  if (stampCard && (!stampCard.name || !stampCard.business)) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-amber-100 flex items-center justify-center py-12 px-4">
+        <Card className="max-w-md w-full">
+          <CardContent className="text-center py-8">
+            <AlertCircle className="w-16 h-16 text-amber-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Invalid Card Data</h2>
+            <p className="text-gray-600 mb-6">This stamp card appears to have incomplete information. Please contact support.</p>
+            <Link href="/">
+              <Button variant="outline">Back to Home</Button>
+            </Link>
           </CardContent>
         </Card>
       </div>
@@ -244,11 +267,11 @@ export default function JoinCardPage() {
               <div className="bg-gray-50 rounded-lg p-4 space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium text-gray-700">Stamps needed:</span>
-                  <span className="text-lg font-bold text-green-600">{stampCard.total_stamps}</span>
+                  <span className="text-lg font-bold text-green-600">{stampCard?.total_stamps || 0}</span>
                 </div>
                 <div className="space-y-1">
                   <span className="text-sm font-medium text-gray-700">Reward:</span>
-                  <p className="text-sm text-gray-600">{stampCard.reward_description}</p>
+                  <p className="text-sm text-gray-600">{stampCard?.reward_description || 'Loading...'}</p>
                 </div>
               </div>
 
@@ -277,11 +300,11 @@ export default function JoinCardPage() {
           </Card>
 
           {/* Info */}
-          <div className="text-center">
-            <p className="text-xs text-gray-500">
-              Scan this QR code at {stampCard.business.name} to collect stamps and earn your reward!
-            </p>
-          </div>
+                      <div className="text-center">
+              <p className="text-xs text-gray-500">
+                Scan this QR code at {stampCard?.business?.name || 'this business'} to collect stamps and earn your reward!
+              </p>
+            </div>
         </div>
       </div>
     )
@@ -297,10 +320,10 @@ export default function JoinCardPage() {
               <CreditCard className="w-8 h-8 text-green-600" />
             </div>
             <CardTitle className="text-xl font-bold text-gray-900">
-              {stampCard.name}
+              {stampCard?.name || 'Loading...'}
             </CardTitle>
             <CardDescription className="text-gray-600">
-              by {stampCard.business.name}
+              by {stampCard?.business?.name || 'Unknown Business'}
             </CardDescription>
           </CardHeader>
           
