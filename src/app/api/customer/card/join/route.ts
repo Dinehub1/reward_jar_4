@@ -2,10 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { z } from 'zod'
 
-// Validation schema
+// Validation schema - simplified to remove wallet type
 const joinCardSchema = z.object({
-  stampCardId: z.string().uuid('Invalid stamp card ID'),
-  walletType: z.enum(['apple', 'google', 'pwa']).optional()
+  stampCardId: z.string().uuid('Invalid stamp card ID')
 })
 
 export async function POST(request: NextRequest) {
@@ -26,7 +25,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const validatedData = joinCardSchema.parse(body)
     
-    const { stampCardId, walletType: requestedWalletType } = validatedData
+    const { stampCardId } = validatedData
 
     // Check if user is a customer
     const { data: userData, error: userError } = await supabase
@@ -71,9 +70,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Use requested wallet type or default to PWA
-    const walletType = requestedWalletType || 'pwa'
-
     // Check if customer has already joined this card
     const { data: existingCard } = await supabase
       .from('customer_cards')
@@ -92,14 +88,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create customer card relationship
+    // Create customer card relationship - removed wallet_type field
     const { data: customerCard, error: insertError } = await supabase
       .from('customer_cards')
       .insert({
         customer_id: customer.id,
         stamp_card_id: stampCardId,
         current_stamps: 0,
-        wallet_type: walletType,
         wallet_pass_id: null // Will be generated when needed
       })
       .select()
@@ -113,26 +108,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Generate wallet pass based on type
-    let walletPassUrl = null
-    try {
-      const baseUrl = process.env.BASE_URL || `${request.nextUrl.protocol}//${request.nextUrl.host}`
-      
-      switch (walletType) {
-        case 'apple':
-          walletPassUrl = `${baseUrl}/api/wallet/apple/${customerCard.id}`
-          break
-        case 'google':
-          walletPassUrl = `${baseUrl}/api/wallet/google/${customerCard.id}`
-          break
-        case 'pwa':
-        default:
-          walletPassUrl = `${baseUrl}/api/wallet/pwa/${customerCard.id}`
-          break
-      }
-    } catch (walletError) {
-      console.error('Error generating wallet pass:', walletError)
-      // Continue without wallet pass - not critical for joining
+    // Generate wallet pass URLs for all types
+    const baseUrl = process.env.BASE_URL || `${request.nextUrl.protocol}//${request.nextUrl.host}`
+    const walletPassUrls = {
+      apple: `${baseUrl}/api/wallet/apple/${customerCard.id}`,
+      google: `${baseUrl}/api/wallet/google/${customerCard.id}`,
+      pwa: `${baseUrl}/api/wallet/pwa/${customerCard.id}`
     }
 
     return NextResponse.json({
@@ -145,8 +126,7 @@ export async function POST(request: NextRequest) {
         rewardDescription: stampCard.reward_description
       },
       currentStamps: 0,
-      walletType,
-      walletPassUrl,
+      walletPassUrls,
       message: 'Successfully joined stamp card!'
     })
 

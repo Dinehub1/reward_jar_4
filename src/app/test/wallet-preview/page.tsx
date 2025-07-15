@@ -30,7 +30,6 @@ interface CustomerCard {
   id: string
   customer_id: string
   current_stamps: number
-  wallet_type: string | null
   wallet_pass_id: string | null
   created_at: string
   stamp_card: {
@@ -69,7 +68,6 @@ interface DatabaseCustomerCard {
   id: string
   customer_id: string
   current_stamps: number
-  wallet_type: string | null
   wallet_pass_id: string | null
   created_at: string
   stamp_cards: DatabaseStampCard[]
@@ -139,7 +137,6 @@ export default function WalletPreviewPage() {
           id,
           customer_id,
           current_stamps,
-          wallet_type,
           wallet_pass_id,
           created_at,
           stamp_cards!inner (
@@ -179,7 +176,6 @@ export default function WalletPreviewPage() {
             id: card.id,
             customer_id: card.customer_id,
             current_stamps: card.current_stamps,
-            wallet_type: card.wallet_type,
             wallet_pass_id: card.wallet_pass_id,
             created_at: card.created_at,
             stamp_card: {
@@ -268,7 +264,6 @@ export default function WalletPreviewPage() {
           id,
           customer_id,
           current_stamps,
-          wallet_type,
           wallet_pass_id,
           created_at,
           stamp_cards!inner (
@@ -321,7 +316,6 @@ export default function WalletPreviewPage() {
         id: dbCard.id,
         customer_id: dbCard.customer_id,
         current_stamps: dbCard.current_stamps,
-        wallet_type: dbCard.wallet_type,
         wallet_pass_id: dbCard.wallet_pass_id,
         created_at: dbCard.created_at,
         stamp_card: {
@@ -404,11 +398,11 @@ export default function WalletPreviewPage() {
         const errorData = await response.json()
         setTestResults(prev => ({
           ...prev,
-          [walletType]: { success: false, message: errorData.message || 'Test failed' }
+          [walletType]: { success: false, message: errorData.error || 'Request failed' }
         }))
       }
     } catch (err) {
-      console.error(`Error testing ${walletType} wallet:`, err)
+      console.error('Error testing wallet endpoint:', err)
       setTestResults(prev => ({
         ...prev,
         [walletType]: { success: false, message: 'Network error' }
@@ -424,15 +418,6 @@ export default function WalletPreviewPage() {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString()
-  }
-
-  const getWalletIcon = (walletType: string | null) => {
-    switch (walletType) {
-      case 'apple': return '🍎'
-      case 'google': return '🤖'
-      case 'pwa': return '🌐'
-      default: return '💳'
-    }
   }
 
   const getProgressColor = (current: number, total: number) => {
@@ -648,7 +633,7 @@ export default function WalletPreviewPage() {
                       >
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center space-x-2">
-                            <span className="text-lg">{getWalletIcon(card.wallet_type)}</span>
+                            <span className="text-lg">{getProgressColor(card.current_stamps, card.stamp_card.total_stamps)}</span>
                             <span className="font-medium text-sm">{card.stamp_card.name}</span>
                           </div>
                           <Badge variant="outline" className="text-xs">
@@ -720,19 +705,7 @@ export default function WalletPreviewPage() {
                       <div>
                         <span className="font-medium text-gray-600">Wallet Type:</span>
                         <p className="font-semibold flex items-center">
-                          <span className="mr-1">{getWalletIcon(selectedCard.wallet_type)}</span>
-                          {selectedCard.wallet_type || 'None'}
-                        </p>
-                      </div>
-                      <div>
-                        <span className="font-medium text-gray-600">Progress:</span>
-                        <p className="font-semibold">
-                          {selectedCard.current_stamps}/{selectedCard.stamp_card.total_stamps} stamps
-                        </p>
-                      </div>
-                      <div>
-                        <span className="font-medium text-gray-600">Status:</span>
-                        <p className="font-semibold">
+                          <span className="mr-1">{getProgressColor(selectedCard.current_stamps, selectedCard.stamp_card.total_stamps)}</span>
                           {selectedCard.current_stamps >= selectedCard.stamp_card.total_stamps ? (
                             <Badge className="bg-green-100 text-green-800">
                               <Trophy className="w-3 h-3 mr-1" />
@@ -744,6 +717,12 @@ export default function WalletPreviewPage() {
                               In Progress
                             </Badge>
                           )}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-600">Progress:</span>
+                        <p className="font-semibold">
+                          {selectedCard.current_stamps}/{selectedCard.stamp_card.total_stamps} stamps
                         </p>
                       </div>
                     </div>

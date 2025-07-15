@@ -205,43 +205,16 @@ export default function CustomerDetailPage() {
     })
   }
 
-  const getWalletTypeDisplay = (walletType: string | null) => {
-    switch (walletType) {
-      case 'apple':
-        return { name: 'Apple Wallet', icon: '🍎' }
-      case 'google':
-        return { name: 'Google Wallet', icon: '🤖' }
-      case 'pwa':
-        return { name: 'Web App', icon: '📱' }
-      default:
-        return { name: 'Not Set', icon: '💳' }
-    }
-  }
-
   const getProgressPercentage = (current: number, total: number) => {
     return Math.min((current / total) * 100, 100)
   }
 
-  const generateWalletPass = async () => {
+  const generateWalletPass = async (walletType: 'apple' | 'google' | 'pwa') => {
     if (!customer || !stampCard) return
 
     try {
       const baseUrl = window.location.origin
-      let walletUrl = ''
-
-      switch (customer.wallet_type) {
-        case 'apple':
-          walletUrl = `${baseUrl}/api/wallet/apple/${customer.id}`
-          break
-        case 'google':
-          walletUrl = `${baseUrl}/api/wallet/google/${customer.id}`
-          break
-        case 'pwa':
-        default:
-          walletUrl = `${baseUrl}/api/wallet/pwa/${customer.id}`
-          break
-      }
-
+      const walletUrl = `${baseUrl}/api/wallet/${walletType}/${customer.id}`
       window.open(walletUrl, '_blank')
     } catch (error) {
       console.error('Error generating wallet pass:', error)
@@ -277,7 +250,7 @@ export default function CustomerDetailPage() {
     )
   }
 
-  const walletDisplay = getWalletTypeDisplay(customer?.wallet_type || null)
+  // Removed wallet_type display logic - now shows all wallet options
 
   return (
     <BusinessLayout>
@@ -339,14 +312,23 @@ export default function CustomerDetailPage() {
                 </div>
               </div>
 
-              {customer?.wallet_type && (
-                <div className="pt-4 border-t">
-                  <Button onClick={generateWalletPass} variant="outline" className="w-full md:w-auto">
-                    <Download className="w-4 h-4 mr-2" />
-                    Generate Wallet Pass
+              <div className="pt-4 border-t">
+                <h4 className="text-sm font-medium text-gray-900 mb-3">Generate Wallet Pass</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <Button onClick={() => generateWalletPass('apple')} variant="outline" size="sm">
+                    <Download className="w-3 h-3 mr-1" />
+                    🍎 Apple
+                  </Button>
+                  <Button onClick={() => generateWalletPass('google')} variant="outline" size="sm">
+                    <Download className="w-3 h-3 mr-1" />
+                    🤖 Google
+                  </Button>
+                  <Button onClick={() => generateWalletPass('pwa')} variant="outline" size="sm">
+                    <Download className="w-3 h-3 mr-1" />
+                    📱 Web App
                   </Button>
                 </div>
-              )}
+              </div>
             </CardContent>
           </Card>
 
