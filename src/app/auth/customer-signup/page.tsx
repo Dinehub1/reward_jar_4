@@ -99,11 +99,21 @@ function CustomerSignupContent() {
         // Don't throw here - continue with signup process
       }
 
-      // Step 4: Redirect to confirmation page or next URL
-      if (nextUrl) {
-        router.push(`/auth/login?message=Please check your email to confirm your account&next=${encodeURIComponent(nextUrl)}`)
+      // Step 4: Check if user is already confirmed or needs confirmation
+      if (authData.user && authData.session) {
+        // User is already logged in (no confirmation needed)
+        if (nextUrl) {
+          router.push(decodeURIComponent(nextUrl))
+        } else {
+          router.push('/customer/dashboard')
+        }
       } else {
-        router.push('/auth/login?message=Please check your email to confirm your account')
+        // User needs email confirmation
+        if (nextUrl) {
+          router.push(`/auth/login?message=Please check your email to confirm your account&next=${encodeURIComponent(nextUrl)}`)
+        } else {
+          router.push('/auth/login?message=Please check your email to confirm your account')
+        }
       }
 
     } catch (err) {

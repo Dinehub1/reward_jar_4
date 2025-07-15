@@ -158,13 +158,21 @@ function LoginContent() {
       // Show success message
       setSuccessMessage('Login successful! Redirecting...')
 
-      // Redirect based on role
-      if (profile.role_id === 2) { // Business role
-        router.push('/business/dashboard')
-      } else if (profile.role_id === 3) { // Customer role
-        router.push('/customer/dashboard')
+      // Check for next URL parameter
+      const nextUrl = searchParams.get('next')
+      
+      if (nextUrl) {
+        // Redirect to the next URL if provided
+        router.push(decodeURIComponent(nextUrl))
       } else {
-        throw new Error('Invalid user role')
+        // Redirect based on role
+        if (profile.role_id === 2) { // Business role
+          router.push('/business/dashboard')
+        } else if (profile.role_id === 3) { // Customer role
+          router.push('/customer/dashboard')
+        } else {
+          throw new Error('Invalid user role')
+        }
       }
 
     } catch (err) {

@@ -73,6 +73,12 @@ export default function JoinCardPage() {
         // Check authentication status
         const { data: { session } } = await supabase.auth.getSession()
         
+        console.log('Join page - checking auth state:', {
+          hasSession: !!session?.user,
+          autoJoin,
+          cardId
+        })
+        
         if (session?.user) {
           // User is authenticated, check their role
           const { data: userData } = await supabase
@@ -170,7 +176,25 @@ export default function JoinCardPage() {
     }
 
     checkAuthAndCard()
-  }, [cardId, supabase, autoJoin, handleJoinCard])
+    
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state changed:', event, !!session?.user)
+        if (event === 'SIGNED_IN' && session?.user && autoJoin) {
+          console.log('User signed in with autoJoin, triggering check')
+          // Small delay to ensure all state is updated
+          setTimeout(() => {
+            checkAuthAndCard()
+          }, 500)
+        }
+      }
+    )
+    
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [cardId, supabase, autoJoin, handleJoinCard, router])
 
   if (loading) {
     return (
@@ -395,6 +419,15 @@ export default function JoinCardPage() {
                 </>
               )}
             </Button>
+            
+            {/* Auto-join indicator */}
+            {autoJoin && (
+              <div className="text-center">
+                <p className="text-sm text-green-600 font-medium">
+                  ✨ Auto-joining you to this loyalty program...
+                </p>
+              </div>
+            )}
 
             {/* Info */}
             <div className="text-center pt-4 border-t border-gray-200">
