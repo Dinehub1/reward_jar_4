@@ -172,18 +172,7 @@ export default function StampCardCustomersPage() {
     })
   }
 
-  const getWalletIcon = (walletType: string | null) => {
-    switch (walletType) {
-      case 'apple':
-        return '🍎'
-      case 'google':
-        return '🤖'
-      case 'pwa':
-        return '📱'
-      default:
-        return '💳'
-    }
-  }
+
 
   const getProgressPercentage = (current: number, total: number) => {
     return Math.min((current / total) * 100, 100)
@@ -304,7 +293,7 @@ export default function StampCardCustomersPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {customers.filter(c => c.wallet_type && c.wallet_type !== 'pwa').length}
+                {customers.length}
               </div>
             </CardContent>
           </Card>
@@ -367,7 +356,7 @@ export default function StampCardCustomersPage() {
                               Completed
                             </Badge>
                           )}
-                          <span className="text-lg">{getWalletIcon(customer.wallet_type)}</span>
+                          <span className="text-lg">💳</span>
                         </div>
                         <p className="text-sm text-gray-600">{customer.email}</p>
                         <div className="flex items-center space-x-4 mt-2">

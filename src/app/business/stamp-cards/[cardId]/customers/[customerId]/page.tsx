@@ -121,7 +121,6 @@ export default function CustomerDetailPage() {
             id,
             customer_id,
             current_stamps,
-            wallet_type,
             wallet_pass_id,
             created_at,
             customers!inner (
@@ -145,7 +144,6 @@ export default function CustomerDetailPage() {
           name: customer.name,
           email: customer.email,
           current_stamps: customerData.current_stamps,
-          wallet_type: customerData.wallet_type,
           wallet_pass_id: customerData.wallet_pass_id,
           joined_date: customerData.created_at,
           is_completed: customerData.current_stamps >= cardData.total_stamps
