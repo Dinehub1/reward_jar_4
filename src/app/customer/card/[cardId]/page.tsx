@@ -99,17 +99,9 @@ export default function CustomerCardPage() {
         }
 
         if (cardData) {
-          const stampCard = (cardData.stamp_cards as {
-            id: string
-            name: string
-            total_stamps: number
-            reward_description: string
-            businesses: {
-              name: string
-              description: string
-            }[]
-          }[])[0]
-          const business = stampCard.businesses[0]
+          // Handle the nested structure correctly - stamp_cards and businesses are objects, not arrays
+          const stampCard = cardData.stamp_cards
+          const business = stampCard.businesses
           
           setCustomerCard({
             ...cardData,
