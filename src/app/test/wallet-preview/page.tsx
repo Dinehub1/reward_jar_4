@@ -56,7 +56,7 @@ interface DatabaseStampCard {
   businesses: {
     name: string
     description: string
-  }[]
+  }
 }
 
 interface DatabaseCustomer {
@@ -70,8 +70,8 @@ interface DatabaseCustomerCard {
   current_stamps: number
   wallet_pass_id: string | null
   created_at: string
-  stamp_cards: DatabaseStampCard[]
-  customers: DatabaseCustomer[]
+  stamp_cards: DatabaseStampCard
+  customers: DatabaseCustomer
 }
 
 interface TestResult {
@@ -130,7 +130,7 @@ export default function WalletPreviewPage() {
     try {
       setSearchLoading(true)
       
-      // Get all customer cards with related data
+      // Get all customer cards with related data - using a different approach
       const { data: cards, error } = await supabase
         .from('customer_cards')
         .select(`
@@ -139,17 +139,17 @@ export default function WalletPreviewPage() {
           current_stamps,
           wallet_pass_id,
           created_at,
-          stamp_cards!inner (
+          stamp_cards (
             id,
             name,
             total_stamps,
             reward_description,
-            businesses!inner (
+            businesses (
               name,
               description
             )
           ),
-          customers!inner (
+          customers (
             name,
             email
           )
@@ -163,14 +163,10 @@ export default function WalletPreviewPage() {
         return
       }
 
-      console.log('Fetched customer cards:', cards) // Debug log
-
       if (cards && cards.length > 0) {
-        const formattedCards = (cards as DatabaseCustomerCard[])
+        const formattedCards = (cards as any[])
           .filter(card => 
-            card.stamp_cards && card.stamp_cards.length > 0 &&
-            card.customers && card.customers.length > 0 &&
-            card.stamp_cards[0].businesses && card.stamp_cards[0].businesses.length > 0
+            card.stamp_cards && card.customers && card.stamp_cards.businesses
           )
           .map(card => ({
             id: card.id,
@@ -179,18 +175,18 @@ export default function WalletPreviewPage() {
             wallet_pass_id: card.wallet_pass_id,
             created_at: card.created_at,
             stamp_card: {
-              id: card.stamp_cards[0].id,
-              name: card.stamp_cards[0].name,
-              total_stamps: card.stamp_cards[0].total_stamps,
-              reward_description: card.stamp_cards[0].reward_description,
+              id: card.stamp_cards.id,
+              name: card.stamp_cards.name,
+              total_stamps: card.stamp_cards.total_stamps,
+              reward_description: card.stamp_cards.reward_description,
               business: {
-                name: card.stamp_cards[0].businesses[0].name,
-                description: card.stamp_cards[0].businesses[0].description
+                name: card.stamp_cards.businesses.name,
+                description: card.stamp_cards.businesses.description
               }
             },
             customer: {
-              name: card.customers[0].name,
-              email: card.customers[0].email
+              name: card.customers.name,
+              email: card.customers.email
             }
           }))
         setCustomerCards(formattedCards)
@@ -266,17 +262,17 @@ export default function WalletPreviewPage() {
           current_stamps,
           wallet_pass_id,
           created_at,
-          stamp_cards!inner (
+          stamp_cards (
             id,
             name,
             total_stamps,
             reward_description,
-            businesses!inner (
+            businesses (
               name,
               description
             )
           ),
-          customers!inner (
+          customers (
             name,
             email
           )
@@ -290,47 +286,49 @@ export default function WalletPreviewPage() {
         return
       }
 
-      const dbCard = card as DatabaseCustomerCard
-      console.log('Fetched individual card:', dbCard) // Debug log
+      console.log('Fetched individual card:', card) // Debug log
+      
+      // Cast to any for easier access
+      const cardData = card as any
       
       // Validate that required nested data exists
-      if (!dbCard.stamp_cards || dbCard.stamp_cards.length === 0) {
+      if (!cardData.stamp_cards) {
         setError('Customer card has no associated stamp card')
         setSelectedCard(null)
         return
       }
       
-      if (!dbCard.customers || dbCard.customers.length === 0) {
+      if (!cardData.customers) {
         setError('Customer card has no associated customer')
         setSelectedCard(null)
         return
       }
       
-      if (!dbCard.stamp_cards[0].businesses || dbCard.stamp_cards[0].businesses.length === 0) {
+      if (!cardData.stamp_cards.businesses) {
         setError('Stamp card has no associated business')
         setSelectedCard(null)
         return
       }
 
       const formattedCard: CustomerCard = {
-        id: dbCard.id,
-        customer_id: dbCard.customer_id,
-        current_stamps: dbCard.current_stamps,
-        wallet_pass_id: dbCard.wallet_pass_id,
-        created_at: dbCard.created_at,
+        id: cardData.id,
+        customer_id: cardData.customer_id,
+        current_stamps: cardData.current_stamps,
+        wallet_pass_id: cardData.wallet_pass_id,
+        created_at: cardData.created_at,
         stamp_card: {
-          id: dbCard.stamp_cards[0].id,
-          name: dbCard.stamp_cards[0].name,
-          total_stamps: dbCard.stamp_cards[0].total_stamps,
-          reward_description: dbCard.stamp_cards[0].reward_description,
+          id: cardData.stamp_cards.id,
+          name: cardData.stamp_cards.name,
+          total_stamps: cardData.stamp_cards.total_stamps,
+          reward_description: cardData.stamp_cards.reward_description,
           business: {
-            name: dbCard.stamp_cards[0].businesses[0].name,
-            description: dbCard.stamp_cards[0].businesses[0].description
+            name: cardData.stamp_cards.businesses.name,
+            description: cardData.stamp_cards.businesses.description
           }
         },
         customer: {
-          name: dbCard.customers[0].name,
-          email: dbCard.customers[0].email
+          name: cardData.customers.name,
+          email: cardData.customers.email
         }
       }
 
@@ -659,9 +657,9 @@ export default function WalletPreviewPage() {
                     {customerCards.length === 0 && !searchLoading && (
                       <div className="text-center text-gray-500 py-8">
                         <CreditCard className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                        <p className="font-medium mb-2">No customer cards found</p>
+                        <p className="font-medium mb-2">No customer cards found.</p>
                         <p className="text-sm text-gray-400 mb-4">
-                          To test wallet functionality, you need customer cards in your database.
+                          Please join a card by scanning a QR code at a business.
                         </p>
                         <div className="text-xs text-gray-400 text-left space-y-1">
                           <p><strong>To create test data:</strong></p>
