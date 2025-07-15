@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, Fragment } from 'react'
 import { createClient } from '@/lib/supabase'
+import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -673,7 +674,17 @@ export default function WalletPreviewPage() {
                     {customerCards.length === 0 && !searchLoading && (
                       <div className="text-center text-gray-500 py-8">
                         <CreditCard className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                        <p>No customer cards found</p>
+                        <p className="font-medium mb-2">No customer cards found</p>
+                        <p className="text-sm text-gray-400 mb-4">
+                          To test wallet functionality, you need customer cards in your database.
+                        </p>
+                        <div className="text-xs text-gray-400 text-left space-y-1">
+                          <p><strong>To create test data:</strong></p>
+                          <p>1. Go to <Link href="/business/dashboard" className="text-blue-500 hover:underline">/business/dashboard</Link></p>
+                          <p>2. Create a stamp card</p>
+                          <p>3. Use the QR code to join as a customer</p>
+                          <p>4. The customer card will appear here for testing</p>
+                        </div>
                       </div>
                     )}
                   </div>
