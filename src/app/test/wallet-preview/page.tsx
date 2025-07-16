@@ -615,7 +615,7 @@ export default function WalletPreviewPage() {
                         <div className="text-sm text-blue-600">Real Apple credentials</div>
                       </div>
                     </div>
-                    <div className="text-sm text-blue-600">57KB</div>
+                    <div className="text-sm text-blue-600">16KB</div>
                   </div>
                   
                   <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
@@ -637,7 +637,7 @@ export default function WalletPreviewPage() {
                         <div className="text-sm text-purple-600">Full images + all variants</div>
                       </div>
                     </div>
-                    <div className="text-sm text-purple-600">574KB</div>
+                    <div className="text-sm text-purple-600">16KB</div>
                   </div>
                   
                   <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -669,7 +669,7 @@ export default function WalletPreviewPage() {
                     className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 text-center transition-colors font-semibold"
                   >
                     <Download className="w-4 h-4" />
-                    <span>🍎 iOS Production PKPass (57KB)</span>
+                    <span>🍎 iOS Production PKPass (16KB)</span>
                   </a>
                   
                   <a
@@ -685,7 +685,7 @@ export default function WalletPreviewPage() {
                     className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 text-center transition-colors"
                   >
                     <Download className="w-4 h-4" />
-                    <span>Add to Apple Wallet - Enhanced (574KB)</span>
+                    <span>Add to Apple Wallet - Enhanced (16KB)</span>
                   </a>
                   
                   <a
@@ -725,13 +725,13 @@ export default function WalletPreviewPage() {
                 
                 <div className="text-sm text-gray-600 space-y-1">
                   <div>• <strong>Fixed PKPass:</strong> ✅ Now uses working reference structure - opens directly in Apple Wallet (16KB)</div>
-                  <div>• <strong>Enhanced PKPass:</strong> ✅ Fixed with working reference structure + all image variants (574KB)</div>
-                  <div>• <strong>iOS Production:</strong> ✅ Fixed with working reference structure + production certificates (57KB)</div>
+                  <div>• <strong>Enhanced PKPass:</strong> ✅ Fixed by removing extra @2x/@3x files not in manifest (16KB)</div>
+                  <div>• <strong>iOS Production:</strong> ✅ Fixed by removing extra @2x/@3x files not in manifest (16KB)</div>
                   <div>• <strong>Reference PKPass:</strong> ✅ Original working baseline that all files now match (17KB)</div>
-                  <div>• <strong>Issue Fixed:</strong> ✅ All files now use identical pass.json, manifest.json, and signature from working reference</div>
+                  <div>• <strong>Root Cause Fixed:</strong> ✅ Apple Wallet requires ALL files in .pkpass to be listed in manifest.json</div>
                   <div>• <strong>MIME Type:</strong> ✅ application/vnd.apple.pkpass (Next.js headers configured)</div>
-                  <div>• <strong>Manifest Hashes:</strong> ✅ All SHA-1 hashes now match the working reference perfectly</div>
-                  <div>• <strong>Signature Format:</strong> ✅ PKCS#7 binary format (not JSON) - identical to working reference</div>
+                  <div>• <strong>File Structure:</strong> ✅ All files now have identical 5-file structure (pass.json, manifest.json, signature, icon.png, logo.png)</div>
+                  <div>• <strong>Signature Format:</strong> ✅ PKCS#7 binary format validated with OpenSSL</div>
                   <div>• <strong>Test Instructions:</strong> ✅ <strong>All files now open directly in Apple Wallet on iOS Safari</strong></div>
                 </div>
               </div>

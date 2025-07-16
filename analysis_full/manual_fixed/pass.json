@@ -1,0 +1,66 @@
+{
+  "formatVersion": 1,
+  "passTypeIdentifier": "pass.com.rewardjar.rewards",
+  "serialNumber": "chain-fix-test-123",
+  "teamIdentifier": "39CDB598RF",
+  "organizationName": "RewardJar",
+  "description": "Certificate Chain Fix Test",
+  "logoText": "RewardJar",
+  "foregroundColor": "rgb(0,0,0)",
+  "backgroundColor": "rgb(255,255,255)",
+  "labelColor": "rgb(0,0,0)",
+  "storeCard": {
+    "primaryFields": [
+      {
+        "key": "test",
+        "label": "Test",
+        "value": "Chain Fix"
+      }
+    ],
+    "secondaryFields": [
+      {
+        "key": "status",
+        "label": "Status",
+        "value": "Certificate Chain Fixed"
+      }
+    ],
+    "auxiliaryFields": [
+      {
+        "key": "date",
+        "label": "Created",
+        "value": "July 16, 2025"
+      }
+    ],
+    "backFields": [
+      {
+        "key": "description",
+        "label": "About",
+        "value": "This is a test pass to verify the Apple Wallet certificate chain fix. The pass should install without errors on iOS devices."
+      },
+      {
+        "key": "instructions",
+        "label": "Instructions",
+        "value": "If you can see this pass in Apple Wallet, the certificate chain issue has been resolved successfully."
+      }
+    ]
+  },
+  "barcode": {
+    "message": "chain-fix-test-123",
+    "format": "PKBarcodeFormatQR",
+    "messageEncoding": "iso-8859-1",
+    "altText": "Test ID: chain-fix-test-123"
+  },
+  "barcodes": [
+    {
+      "message": "chain-fix-test-123",
+      "format": "PKBarcodeFormatQR",
+      "messageEncoding": "iso-8859-1",
+      "altText": "Test ID: chain-fix-test-123"
+    }
+  ],
+  "locations": [],
+  "maxDistance": 1000,
+  "relevantDate": "2025-07-16T20:00:00Z",
+  "suppressStripShine": false,
+  "sharingProhibited": false
+}

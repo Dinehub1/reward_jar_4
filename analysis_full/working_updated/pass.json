@@ -1,0 +1,65 @@
+{
+  "formatVersion": 1,
+  "passTypeIdentifier": "pass.com.rewardjar.pizzaclub",
+  "serialNumber": "RJ-PIZZA-001",
+  "teamIdentifier": "TEAM123456",
+  "organizationName": "Pizza Club Rewards",
+  "description": "Pizza Club Loyalty Card",
+  "logoText": "Pizza Club",
+  "foregroundColor": "rgb(255, 255, 255)",
+  "backgroundColor": "rgb(76, 175, 80)",
+  "labelColor": "rgb(255, 255, 255)",
+  "webServiceURL": "https://rewardjar.com/api/wallet",
+  "authenticationToken": "auth_token_123",
+  "relevantDate": "2025-07-16T17:06:31.344Z",
+  "maxDistance": 1000,
+  "storeCard": {
+    "primaryFields": [
+      {
+        "key": "balance",
+        "label": "Stamps",
+        "value": "3 of 10"
+      }
+    ],
+    "secondaryFields": [
+      {
+        "key": "member",
+        "label": "Member",
+        "value": "John Doe"
+      }
+    ],
+    "auxiliaryFields": [
+      {
+        "key": "expires",
+        "label": "Expires",
+        "value": "Dec 2024"
+      }
+    ],
+    "headerFields": [
+      {
+        "key": "store",
+        "label": "Store",
+        "value": "Main St"
+      }
+    ],
+    "backFields": [
+      {
+        "key": "terms",
+        "label": "Terms",
+        "value": "Collect 10 stamps to get a free pizza. Valid at participating locations."
+      }
+    ]
+  },
+  "barcode": {
+    "message": "RJ-PIZZA-001",
+    "format": "PKBarcodeFormatQR",
+    "messageEncoding": "iso-8859-1"
+  },
+  "barcodes": [
+    {
+      "message": "RJ-PIZZA-001",
+      "format": "PKBarcodeFormatQR",
+      "messageEncoding": "iso-8859-1"
+    }
+  ]
+}

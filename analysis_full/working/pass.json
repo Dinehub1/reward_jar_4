@@ -1,0 +1,87 @@
+{
+  "formatVersion": 1,
+  "passTypeIdentifier": "pass.com.rewardjar.rewards",
+  "serialNumber": "pizza-pass-001",
+  "teamIdentifier": "39CDB598RF",
+  "organizationName": "RewardJar",
+  "description": "Pizza Club – Pizza Palace",
+  "logoText": "RewardJar",
+  "backgroundColor": "rgb(16, 185, 129)",
+  "foregroundColor": "rgb(255, 255, 255)",
+  "labelColor": "rgb(255, 255, 255)",
+  "storeCard": {
+    "primaryFields": [
+      {
+        "key": "stamps",
+        "label": "Stamps Collected",
+        "value": "3/10"
+      }
+    ],
+    "secondaryFields": [
+      {
+        "key": "progress",
+        "label": "Progress",
+        "value": "30%"
+      },
+      {
+        "key": "remaining",
+        "label": "Remaining",
+        "value": "7 stamps"
+      }
+    ],
+    "auxiliaryFields": [
+      {
+        "key": "business",
+        "label": "Business",
+        "value": "Pizza Palace"
+      },
+      {
+        "key": "reward",
+        "label": "Reward",
+        "value": "Free pizza after 10 purchases"
+      }
+    ],
+    "headerFields": [
+      {
+        "key": "card_name",
+        "label": "Loyalty Card",
+        "value": "Pizza Club"
+      }
+    ],
+    "backFields": [
+      {
+        "key": "description",
+        "label": "About",
+        "value": "Collect 10 stamps to earn a free pizza. Show this pass during checkout."
+      },
+      {
+        "key": "contact",
+        "label": "Contact",
+        "value": "pizza@rewardjar.com"
+      },
+      {
+        "key": "terms",
+        "label": "Terms & Conditions",
+        "value": "Valid at participating Pizza Palace locations only. Expires 1 year after issue."
+      }
+    ]
+  },
+  "barcode": {
+    "message": "pizza-pass-001",
+    "format": "PKBarcodeFormatQR",
+    "messageEncoding": "iso-8859-1",
+    "altText": "Card ID: pizza-pass-001"
+  },
+  "barcodes": [
+    {
+      "message": "pizza-pass-001",
+      "format": "PKBarcodeFormatQR",
+      "messageEncoding": "iso-8859-1",
+      "altText": "Card ID: pizza-pass-001"
+    }
+  ],
+  "relevantDate": "2025-07-16T13:14:29Z",
+  "maxDistance": 1000,
+  "webServiceURL": "https://rewardjar.com/api/wallet/apple/updates",
+  "authenticationToken": "pizza-pass-001"
+} 
