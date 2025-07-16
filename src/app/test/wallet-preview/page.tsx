@@ -450,6 +450,36 @@ export default function WalletPreviewPage() {
                   </div>
                 </div>
               </div>
+              
+              {/* Database Offline Notice */}
+              <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div className="flex items-center">
+                  <AlertCircle className="h-5 w-5 text-yellow-500 mr-2" />
+                  <div>
+                    <h3 className="text-sm font-medium text-yellow-800">📡 Database Offline - Offline Mode Available</h3>
+                    <p className="mt-1 text-sm text-yellow-700">
+                      Database connectivity issue detected (DNS resolution failed). Using offline Apple Wallet testing.
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-4 text-xs text-yellow-600">
+                      <span>• Status: Network connectivity issue to Supabase</span>
+                      <span>• Solution: Offline testing with mock data</span>
+                      <a 
+                        href={`${process.env.NEXT_PUBLIC_BASE_URL || 'http://192.168.29.135:3000'}/api/test/wallet-simple`}
+                        target="_blank" 
+                        className="underline hover:text-yellow-800 font-medium"
+                      >
+                        🍎 Test Apple Wallet (Offline) →
+                      </a>
+                      <button
+                        onClick={() => copyToClipboard(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://192.168.29.135:3000'}/api/test/wallet-simple`)}
+                        className="underline hover:text-yellow-800 font-medium"
+                      >
+                        📋 Copy Offline Test URL
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
                       </div>
             <div className="flex space-x-4">
               <Button
