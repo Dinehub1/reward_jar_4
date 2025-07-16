@@ -866,6 +866,111 @@ export default function WalletPreviewPage() {
 
             {/* Right Column - Testing Interface */}
             <div className="space-y-6">
+              {/* Pass Visual Preview */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <CreditCard className="w-5 h-5 mr-2" />
+                    Apple Wallet Pass Preview
+                  </CardTitle>
+                  <CardDescription>
+                    Visual preview of how the pass will appear in Apple Wallet
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {selectedCard ? (
+                    <div className="relative">
+                      {/* Pass Visual Mockup */}
+                      <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg p-6 text-white shadow-lg">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-8 h-8 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                              <Trophy className="w-4 h-4" />
+                            </div>
+                            <span className="text-sm font-medium">RewardJar</span>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-xs opacity-75">Loyalty Card</div>
+                            <div className="text-sm font-semibold">{selectedCard.stamp_card.name}</div>
+                          </div>
+                        </div>
+                        
+                        <div className="text-center mb-4">
+                          <div className="text-3xl font-bold mb-1">
+                            {selectedCard.current_stamps}/{selectedCard.stamp_card.total_stamps}
+                          </div>
+                          <div className="text-sm opacity-90">Stamps Collected</div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <div className="opacity-75">Progress</div>
+                            <div className="font-semibold">
+                              {Math.round((selectedCard.current_stamps / selectedCard.stamp_card.total_stamps) * 100)}%
+                            </div>
+                          </div>
+                          <div>
+                            <div className="opacity-75">
+                              {selectedCard.current_stamps >= selectedCard.stamp_card.total_stamps ? "Status" : "Remaining"}
+                            </div>
+                            <div className="font-semibold">
+                              {selectedCard.current_stamps >= selectedCard.stamp_card.total_stamps 
+                                ? "Completed!" 
+                                : `${selectedCard.stamp_card.total_stamps - selectedCard.current_stamps} stamps`}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="mt-4 pt-4 border-t border-white border-opacity-20">
+                          <div className="text-xs opacity-75 mb-1">Business</div>
+                          <div className="text-sm font-medium">{selectedCard.stamp_card.business.name}</div>
+                        </div>
+                        
+                        <div className="mt-2">
+                          <div className="text-xs opacity-75 mb-1">Reward</div>
+                          <div className="text-sm">{selectedCard.stamp_card.reward_description}</div>
+                        </div>
+                        
+                        {/* QR Code Placeholder */}
+                        <div className="mt-4 flex justify-center">
+                          <div className="w-16 h-16 bg-white bg-opacity-20 rounded-md flex items-center justify-center">
+                            <div className="text-xs">QR</div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Pass Metadata */}
+                      <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                        <h4 className="font-semibold text-gray-900 mb-2">Pass Metadata</h4>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Serial Number:</span>
+                            <code className="text-xs bg-gray-200 px-2 py-1 rounded">{selectedCard.id}</code>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Customer:</span>
+                            <span className="font-medium">{selectedCard.customer.name}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Pass Type:</span>
+                            <span className="font-medium">Store Card</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Background:</span>
+                            <span className="font-medium">rgb(16, 185, 129)</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center text-gray-500 py-8">
+                      <CreditCard className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                      <div>Select a customer card to preview the pass</div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
               {/* Selected Card Info */}
               {selectedCard ? (
                 <Card>
@@ -890,9 +995,8 @@ export default function WalletPreviewPage() {
                         <div className="font-semibold">{selectedCard.customer.name}</div>
                       </div>
                       <div>
-                        <span className="font-medium text-gray-600">Wallet Type:</span>
+                        <span className="font-medium text-gray-600">Status:</span>
                         <div className="font-semibold flex items-center">
-                          <span className="mr-1">{getProgressColor(selectedCard.current_stamps, selectedCard.stamp_card.total_stamps)}</span>
                           {selectedCard.current_stamps >= selectedCard.stamp_card.total_stamps ? (
                             <Badge className="bg-green-100 text-green-800">
                               <Trophy className="w-3 h-3 mr-1" />
