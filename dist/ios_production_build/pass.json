@@ -1,0 +1,88 @@
+{
+  "formatVersion": 1,
+  "passTypeIdentifier": "pass.com.rewardjar.rewards",
+  "serialNumber": "ios-production-1752689034451",
+  "teamIdentifier": "39CDB598RF",
+  "organizationName": "RewardJar",
+  "description": "RewardJar Loyalty Card - iOS Production",
+  "logoText": "RewardJar",
+  "foregroundColor": "rgb(255, 255, 255)",
+  "backgroundColor": "rgb(76, 175, 80)",
+  "labelColor": "rgb(255, 255, 255)",
+  "webServiceURL": "https://rewardjar.com/api/wallet",
+  "authenticationToken": "ios-production-1752689034451",
+  "relevantDate": "2025-07-16T18:03:54.451Z",
+  "maxDistance": 1000,
+  "storeCard": {
+    "primaryFields": [
+      {
+        "key": "balance",
+        "label": "Stamps",
+        "value": "7 of 10",
+        "textAlignment": "PKTextAlignmentCenter"
+      }
+    ],
+    "secondaryFields": [
+      {
+        "key": "member",
+        "label": "Member",
+        "value": "Production Test",
+        "textAlignment": "PKTextAlignmentLeft"
+      },
+      {
+        "key": "expires",
+        "label": "Expires",
+        "value": "Dec 2025",
+        "textAlignment": "PKTextAlignmentRight"
+      }
+    ],
+    "auxiliaryFields": [
+      {
+        "key": "business",
+        "label": "Business",
+        "value": "RewardJar Demo",
+        "textAlignment": "PKTextAlignmentLeft"
+      },
+      {
+        "key": "reward",
+        "label": "Reward",
+        "value": "Free item after 10 stamps",
+        "textAlignment": "PKTextAlignmentLeft"
+      }
+    ],
+    "headerFields": [
+      {
+        "key": "store",
+        "label": "Location",
+        "value": "Production Store",
+        "textAlignment": "PKTextAlignmentCenter"
+      }
+    ],
+    "backFields": [
+      {
+        "key": "terms",
+        "label": "Terms & Conditions",
+        "value": "This is a production loyalty card. Collect stamps to earn rewards. Valid at participating locations only."
+      },
+      {
+        "key": "contact",
+        "label": "Contact",
+        "value": "Visit rewardjar.com for support or questions about your loyalty card."
+      }
+    ]
+  },
+  "barcode": {
+    "message": "ios-production-1752689034455",
+    "format": "PKBarcodeFormatQR",
+    "messageEncoding": "iso-8859-1",
+    "altText": "Scan to collect stamps"
+  },
+  "barcodes": [
+    {
+      "message": "ios-production-1752689034455",
+      "format": "PKBarcodeFormatQR",
+      "messageEncoding": "iso-8859-1",
+      "altText": "Scan to collect stamps"
+    }
+  ]
+}
