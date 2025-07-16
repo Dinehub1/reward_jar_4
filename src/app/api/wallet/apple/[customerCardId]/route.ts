@@ -555,30 +555,34 @@ async function createPKCS7Signature(manifestBuffer: Buffer): Promise<Buffer> {
       wwdrExpires: wwdrCert.validity.notAfter.toISOString()
     })
     
-    // Create PKCS#7 signature
+    // Create PKCS#7 signature with proper structure
     const p7 = forge.pkcs7.createSignedData()
     p7.content = forge.util.createBuffer(manifestBuffer.toString('binary'))
     
     p7.addCertificate(cert)
     p7.addCertificate(wwdrCert)
     
+    // Create proper message digest
+    const messageDigest = forge.md.sha1.create()
+    messageDigest.update(manifestBuffer.toString('binary'))
+    
     p7.addSigner({
       key: key,
       certificate: cert,
       digestAlgorithm: forge.pki.oids.sha1,
       authenticatedAttributes: [{
-        type: forge.pki.oids.contentTypes,
+        type: '1.2.840.113549.1.9.3', // contentTypes OID
         value: forge.pki.oids.data
       }, {
         type: forge.pki.oids.messageDigest,
-        value: forge.md.sha1.create().update(manifestBuffer.toString('binary')).digest().getBytes()
+        value: messageDigest.digest().getBytes()
       }, {
         type: forge.pki.oids.signingTime,
         value: new Date()
       }]
     })
     
-    // Sign the data
+    // Sign the data with detached signature
     p7.sign({ detached: true })
     
     // Convert to DER format
@@ -589,16 +593,7 @@ async function createPKCS7Signature(manifestBuffer: Buffer): Promise<Buffer> {
     
   } catch (error) {
     console.error('Error creating PKCS#7 signature:', error)
-    
-    // Fallback to development signature with better structure
-    const fallbackSignature = {
-      error: 'PKCS7_SIGNATURE_FAILED',
-      message: error instanceof Error ? error.message : 'Unknown error',
-      timestamp: new Date().toISOString(),
-      certificates_available: !!(process.env.APPLE_CERT_BASE64 && process.env.APPLE_KEY_BASE64 && process.env.APPLE_WWDR_BASE64)
-    }
-    
-    return Buffer.from(JSON.stringify(fallbackSignature, null, 2), 'utf8')
+    throw error // Don't fallback to JSON in production
   }
 }
 
