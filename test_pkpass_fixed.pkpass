@@ -1,1 +1,0 @@
-{"error":"Failed to generate Apple Wallet pass","message":"Invalid signer.authenticatedAttributes. If signer.authenticatedAttributes is specified, then it must contain at least two attributes, PKCS #9 content-type and PKCS #9 message-digest."}

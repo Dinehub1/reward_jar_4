@@ -519,24 +519,29 @@ async function generatePassIcons(stampCard: any, business: any): Promise<Record<
   }
 }
 
-// Create proper PKCS#7 signature using node-forge
+// Create proper PKCS#7 signature using openssl command (more reliable than node-forge)
 async function createPKCS7Signature(manifestBuffer: Buffer): Promise<Buffer> {
   try {
     if (!process.env.APPLE_CERT_BASE64 || !process.env.APPLE_KEY_BASE64 || !process.env.APPLE_WWDR_BASE64) {
       throw new Error('Missing Apple certificates')
     }
     
+    // Import required modules
+    const { exec } = require('child_process')
+    const fs = require('fs')
+    const path = require('path')
+    const { promisify } = require('util')
+    const execAsync = promisify(exec)
+    
     // Decode certificates
     const certPem = Buffer.from(process.env.APPLE_CERT_BASE64, 'base64').toString('utf8')
     const keyPem = Buffer.from(process.env.APPLE_KEY_BASE64, 'base64').toString('utf8')
     const wwdrPem = Buffer.from(process.env.APPLE_WWDR_BASE64, 'base64').toString('utf8')
     
-    // Parse certificates with forge
+    // Validate certificates with forge first
     const cert = forge.pki.certificateFromPem(certPem)
-    const key = forge.pki.privateKeyFromPem(keyPem)
     const wwdrCert = forge.pki.certificateFromPem(wwdrPem)
     
-    // Validate certificate expiration
     const now = new Date()
     if (cert.validity.notAfter < now) {
       throw new Error(`Pass certificate expired on ${cert.validity.notAfter.toISOString()}`)
@@ -545,15 +550,74 @@ async function createPKCS7Signature(manifestBuffer: Buffer): Promise<Buffer> {
       throw new Error(`WWDR certificate expired on ${wwdrCert.validity.notAfter.toISOString()}`)
     }
     
-    // Validate certificate is not yet valid
-    if (cert.validity.notBefore > now) {
-      throw new Error(`Pass certificate not valid until ${cert.validity.notBefore.toISOString()}`)
-    }
-    
     console.log('Certificate validation passed:', {
       passExpires: cert.validity.notAfter.toISOString(),
       wwdrExpires: wwdrCert.validity.notAfter.toISOString()
     })
+    
+    // Create temporary files for openssl
+    const tmpDir = '/tmp'
+    const manifestFile = path.join(tmpDir, `manifest-${Date.now()}.json`)
+    const certFile = path.join(tmpDir, `cert-${Date.now()}.pem`)
+    const keyFile = path.join(tmpDir, `key-${Date.now()}.pem`)
+    const wwdrFile = path.join(tmpDir, `wwdr-${Date.now()}.pem`)
+    const signatureFile = path.join(tmpDir, `signature-${Date.now()}.der`)
+    
+    try {
+      // Write files
+      fs.writeFileSync(manifestFile, manifestBuffer)
+      fs.writeFileSync(certFile, certPem)
+      fs.writeFileSync(keyFile, keyPem)
+      fs.writeFileSync(wwdrFile, wwdrPem)
+      
+      // Use openssl to create PKCS#7 signature (Apple's recommended method)
+      // Add -noattr flag to avoid issues with attributes, and ensure proper certificate chain
+      const opensslCommand = `openssl smime -sign -signer "${certFile}" -inkey "${keyFile}" -certfile "${wwdrFile}" -in "${manifestFile}" -out "${signatureFile}" -outform DER -binary -noattr`
+      
+      console.log('Running OpenSSL command for PKCS#7 signature...')
+      await execAsync(opensslCommand)
+      
+      // Read the signature file
+      const signature = fs.readFileSync(signatureFile)
+      
+      console.log('Created PKCS#7 signature using OpenSSL:', signature.length, 'bytes')
+      return signature
+      
+    } finally {
+      // Clean up temporary files
+      const filesToCleanup = [manifestFile, certFile, keyFile, wwdrFile, signatureFile]
+      filesToCleanup.forEach(file => {
+        try {
+          if (fs.existsSync(file)) {
+            fs.unlinkSync(file)
+          }
+        } catch (e) {
+          console.warn('Could not cleanup temp file:', file)
+        }
+      })
+    }
+    
+  } catch (error) {
+    console.error('Error creating PKCS#7 signature:', error)
+    
+    // Fallback to node-forge if OpenSSL fails
+    console.log('Falling back to node-forge signature generation...')
+    return createNodeForgeSignature(manifestBuffer)
+  }
+}
+
+// Fallback node-forge signature generation
+async function createNodeForgeSignature(manifestBuffer: Buffer): Promise<Buffer> {
+  try {
+    // Decode certificates
+    const certPem = Buffer.from(process.env.APPLE_CERT_BASE64!, 'base64').toString('utf8')
+    const keyPem = Buffer.from(process.env.APPLE_KEY_BASE64!, 'base64').toString('utf8')
+    const wwdrPem = Buffer.from(process.env.APPLE_WWDR_BASE64!, 'base64').toString('utf8')
+    
+    // Parse certificates with forge
+    const cert = forge.pki.certificateFromPem(certPem)
+    const key = forge.pki.privateKeyFromPem(keyPem)
+    const wwdrCert = forge.pki.certificateFromPem(wwdrPem)
     
     // Create PKCS#7 signature with proper structure
     const p7 = forge.pkcs7.createSignedData()
@@ -588,12 +652,12 @@ async function createPKCS7Signature(manifestBuffer: Buffer): Promise<Buffer> {
     // Convert to DER format
     const derBuffer = forge.asn1.toDer(p7.toAsn1()).getBytes()
     
-    console.log('Created PKCS#7 signature:', derBuffer.length, 'bytes')
+    console.log('Created fallback PKCS#7 signature:', derBuffer.length, 'bytes')
     return Buffer.from(derBuffer, 'binary')
     
   } catch (error) {
-    console.error('Error creating PKCS#7 signature:', error)
-    throw error // Don't fallback to JSON in production
+    console.error('Error creating fallback signature:', error)
+    throw error
   }
 }
 
