@@ -1,10 +1,10 @@
 {
   "formatVersion": 1,
   "passTypeIdentifier": "pass.com.rewardjar.rewards",
-  "serialNumber": "test-pass-1752671669",
+  "serialNumber": "pizza-pass-001",
   "teamIdentifier": "39CDB598RF",
   "organizationName": "RewardJar",
-  "description": "Test Loyalty Card - Pizza Palace",
+  "description": "Pizza Club – Pizza Palace",
   "logoText": "RewardJar",
   "backgroundColor": "rgb(16, 185, 129)",
   "foregroundColor": "rgb(255, 255, 255)",
@@ -14,86 +14,74 @@
       {
         "key": "stamps",
         "label": "Stamps Collected",
-        "value": "3/10",
-        "textAlignment": "PKTextAlignmentCenter"
+        "value": "3/10"
       }
     ],
     "secondaryFields": [
       {
         "key": "progress",
         "label": "Progress",
-        "value": "30%",
-        "textAlignment": "PKTextAlignmentLeft"
+        "value": "30%"
       },
       {
         "key": "remaining",
         "label": "Remaining",
-        "value": "7 stamps",
-        "textAlignment": "PKTextAlignmentRight"
+        "value": "7 stamps"
       }
     ],
     "auxiliaryFields": [
       {
         "key": "business",
         "label": "Business",
-        "value": "Pizza Palace",
-        "textAlignment": "PKTextAlignmentLeft"
+        "value": "Pizza Palace"
       },
       {
         "key": "reward",
         "label": "Reward",
-        "value": "Free large pizza after 10 purchases",
-        "textAlignment": "PKTextAlignmentLeft"
+        "value": "Free pizza after 10 purchases"
       }
     ],
     "headerFields": [
       {
         "key": "card_name",
         "label": "Loyalty Card",
-        "value": "Pizza Club",
-        "textAlignment": "PKTextAlignmentCenter"
+        "value": "Pizza Club"
       }
     ],
     "backFields": [
       {
         "key": "description",
         "label": "About",
-        "value": "Collect 10 stamps to earn a free large pizza. Show this pass to collect stamps at Pizza Palace."
+        "value": "Collect 10 stamps to earn a free pizza. Show this pass during checkout."
       },
       {
-        "key": "business_info",
-        "label": "Pizza Palace",
-        "value": "Your favorite neighborhood pizza restaurant. We use only the freshest ingredients!"
-      },
-      {
-        "key": "instructions",
-        "label": "How to Use",
-        "value": "Show this pass to collect stamps with each purchase. Pass will update automatically."
+        "key": "contact",
+        "label": "Contact",
+        "value": "pizza@rewardjar.com"
       },
       {
         "key": "terms",
         "label": "Terms & Conditions",
-        "value": "Valid at participating Pizza Palace locations. Cannot be combined with other offers. Expires 1 year from issue date."
+        "value": "Valid at participating Pizza Palace locations only. Expires 1 year after issue."
       }
     ]
   },
   "barcode": {
-    "message": "test-pass-1752671669",
+    "message": "pizza-pass-001",
     "format": "PKBarcodeFormatQR",
     "messageEncoding": "iso-8859-1",
-    "altText": "Test Pass ID: test-pass-1752671669"
+    "altText": "Card ID: pizza-pass-001"
   },
   "barcodes": [
     {
-      "message": "test-pass-1752671669",
+      "message": "pizza-pass-001",
       "format": "PKBarcodeFormatQR",
       "messageEncoding": "iso-8859-1",
-      "altText": "Test Pass ID: test-pass-1752671669"
+      "altText": "Card ID: pizza-pass-001"
     }
   ],
-  "locations": [],
-  "maxDistance": 1000,
   "relevantDate": "2025-07-16T13:14:29Z",
+  "maxDistance": 1000,
   "webServiceURL": "https://rewardjar.com/api/wallet/apple/updates",
-  "authenticationToken": "test-pass-1752671669"
-}
+  "authenticationToken": "pizza-pass-001"
+} 

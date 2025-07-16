@@ -651,6 +651,14 @@ export default function WalletPreviewPage() {
                   </Button>
                   
                   <Button 
+                    onClick={() => window.open('/working.pkpass', '_blank')}
+                    className="flex items-center space-x-2 bg-green-600 hover:bg-green-700"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Download NEW Generated PKPass</span>
+                  </Button>
+                  
+                  <Button 
                     variant="outline"
                     onClick={() => window.open('/manual_fixed.pkpass', '_blank')}
                     className="flex items-center space-x-2"
@@ -689,10 +697,11 @@ export default function WalletPreviewPage() {
                 
                 <div className="text-sm text-gray-600 space-y-1">
                   <div>• <strong>Working PKPass:</strong> Based on reference structure with proper 29x29 icon and 160x50 logo</div>
+                  <div>• <strong>NEW Generated PKPass:</strong> Complete with all image variants (@1x, @2x, @3x) - 40KB</div>
                   <div>• <strong>MIME Type:</strong> application/vnd.apple.pkpass (✅ Next.js headers configured)</div>
-                  <div>• <strong>File Structure:</strong> Only essential files (pass.json, manifest.json, signature, icon.png, logo.png)</div>
+                  <div>• <strong>File Structure:</strong> Comprehensive pass.json with all fields (Pizza Club theme)</div>
                   <div>• <strong>iOS Compatible:</strong> Should install directly in Apple Wallet without errors</div>
-                  <div>• <strong>Network Access:</strong> Available at http://192.168.29.219:3000/working_fixed.pkpass</div>
+                  <div>• <strong>Network Access:</strong> Available at http://192.168.29.135:3000/working.pkpass</div>
                   <div>• <strong>Test Instructions:</strong> Open URL in iPhone Safari - should prompt "Add to Apple Wallet"</div>
                 </div>
               </div>
