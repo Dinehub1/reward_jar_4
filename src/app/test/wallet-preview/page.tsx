@@ -657,16 +657,16 @@ export default function WalletPreviewPage() {
                     {customerCards.length === 0 && !searchLoading && (
                       <div className="text-center text-gray-500 py-8">
                         <CreditCard className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                        <p className="font-medium mb-2">No customer cards found.</p>
-                        <p className="text-sm text-gray-400 mb-4">
+                        <div className="font-medium mb-2">No customer cards found.</div>
+                        <div className="text-sm text-gray-400 mb-4">
                           Please join a card by scanning a QR code at a business.
-                        </p>
+                        </div>
                         <div className="text-xs text-gray-400 text-left space-y-1">
-                          <p><strong>To create test data:</strong></p>
-                          <p>1. Go to <Link href="/business/dashboard" className="text-blue-500 hover:underline">/business/dashboard</Link></p>
-                          <p>2. Create a stamp card</p>
-                          <p>3. Use the QR code to join as a customer</p>
-                          <p>4. The customer card will appear here for testing</p>
+                          <div><strong>To create test data:</strong></div>
+                          <div>1. Go to <Link href="/business/dashboard" className="text-blue-500 hover:underline">/business/dashboard</Link></div>
+                          <div>2. Create a stamp card</div>
+                          <div>3. Use the QR code to join as a customer</div>
+                          <div>4. The customer card will appear here for testing</div>
                         </div>
                       </div>
                     )}
@@ -690,19 +690,19 @@ export default function WalletPreviewPage() {
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
                         <span className="font-medium text-gray-600">Card Name:</span>
-                        <p className="font-semibold">{selectedCard.stamp_card.name}</p>
+                        <div className="font-semibold">{selectedCard.stamp_card.name}</div>
                       </div>
                       <div>
                         <span className="font-medium text-gray-600">Business:</span>
-                        <p className="font-semibold">{selectedCard.stamp_card.business.name}</p>
+                        <div className="font-semibold">{selectedCard.stamp_card.business.name}</div>
                       </div>
                       <div>
                         <span className="font-medium text-gray-600">Customer:</span>
-                        <p className="font-semibold">{selectedCard.customer.name}</p>
+                        <div className="font-semibold">{selectedCard.customer.name}</div>
                       </div>
                       <div>
                         <span className="font-medium text-gray-600">Wallet Type:</span>
-                        <p className="font-semibold flex items-center">
+                        <div className="font-semibold flex items-center">
                           <span className="mr-1">{getProgressColor(selectedCard.current_stamps, selectedCard.stamp_card.total_stamps)}</span>
                           {selectedCard.current_stamps >= selectedCard.stamp_card.total_stamps ? (
                             <Badge className="bg-green-100 text-green-800">
@@ -715,19 +715,19 @@ export default function WalletPreviewPage() {
                               In Progress
                             </Badge>
                           )}
-                        </p>
+                        </div>
                       </div>
                       <div>
                         <span className="font-medium text-gray-600">Progress:</span>
-                        <p className="font-semibold">
+                        <div className="font-semibold">
                           {selectedCard.current_stamps}/{selectedCard.stamp_card.total_stamps} stamps
-                        </p>
+                        </div>
                       </div>
                     </div>
                     
                     <div>
                       <span className="font-medium text-gray-600">Reward:</span>
-                      <p className="text-sm mt-1">{selectedCard.stamp_card.reward_description}</p>
+                      <div className="text-sm mt-1">{selectedCard.stamp_card.reward_description}</div>
                     </div>
                     
                     <div>
@@ -759,10 +759,10 @@ export default function WalletPreviewPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {!selectedCard ? (
+                                      {!selectedCard ? (
                     <div className="text-center text-gray-500 py-8">
                       <Search className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                      <p>Select a customer card to test wallet functionality</p>
+                      <div>Select a customer card to test wallet functionality</div>
                     </div>
                   ) : (
                     <div className="space-y-4">

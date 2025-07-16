@@ -10,20 +10,21 @@ export async function GET(
     const supabase = await createClient()
     const customerCardId = resolvedParams.customerCardId
 
+    console.log('Generating PWA Wallet for card ID:', customerCardId)
+
     // Get customer card with stamp card details
     const { data: customerCard, error } = await supabase
       .from('customer_cards')
       .select(`
         id,
         current_stamps,
-        wallet_type,
         created_at,
-        stamp_cards!inner (
+        stamp_cards (
           id,
           name,
           total_stamps,
           reward_description,
-          businesses!inner (
+          businesses (
             name,
             description
           )
@@ -33,13 +34,17 @@ export async function GET(
       .single()
 
     if (error || !customerCard) {
+      console.error('Customer card not found:', error)
       return NextResponse.json(
         { error: 'Customer card not found' },
         { status: 404 }
       )
     }
 
-    const stampCardArray = customerCard.stamp_cards as {
+    console.log('Fetched customer card:', customerCard)
+
+    // Handle the data structure properly - stamp_cards is an object, not an array
+    const stampCardData = customerCard.stamp_cards as {
       id: string
       total_stamps: number
       name: string
@@ -47,10 +52,45 @@ export async function GET(
       businesses: {
         name: string
         description: string
-      }[]
-    }[]
-    const stampCard = stampCardArray[0]
-    const business = stampCard.businesses[0]
+      }
+    }
+
+    const businessData = stampCardData?.businesses as {
+      name: string
+      description: string
+    }
+
+    // Validate required data exists
+    if (!stampCardData) {
+      console.error('Stamp card data missing')
+      return NextResponse.json(
+        { error: 'Stamp card data not found' },
+        { status: 404 }
+      )
+    }
+
+    if (!businessData) {
+      console.error('Business data missing')
+      return NextResponse.json(
+        { error: 'Business data not found' },
+        { status: 404 }
+      )
+    }
+
+    const stampCard = {
+      id: stampCardData.id,
+      name: stampCardData.name || 'Loyalty Card',
+      total_stamps: stampCardData.total_stamps || 10,
+      reward_description: stampCardData.reward_description || 'Reward'
+    }
+
+    const business = {
+      name: businessData.name || 'Business',
+      description: businessData.description || 'Visit us to collect stamps and earn rewards!'
+    }
+
+    console.log('Stamp Card:', stampCard)
+    console.log('Business:', business)
     
     // Calculate progress
     const progress = Math.min((customerCard.current_stamps / stampCard.total_stamps) * 100, 100)

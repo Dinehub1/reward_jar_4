@@ -63,16 +63,28 @@ export async function GET(
       })
     }
 
-    const stampCardArray = customerCard.stamp_cards as {
+    const stampCardData = customerCard.stamp_cards as {
       id: string
       total_stamps: number
       name: string
       businesses: {
         name: string
-      }[]
-    }[]
-    const stampCard = stampCardArray[0]
-    const business = stampCard.businesses[0]
+      }
+    }
+    const businessData = stampCardData?.businesses as {
+      name: string
+    }
+    
+    const stampCard = {
+      id: stampCardData.id,
+      name: stampCardData.name || 'Loyalty Card',
+      total_stamps: stampCardData.total_stamps || 10,
+      businesses: businessData?.name || 'Business'
+    }
+    
+    const business = {
+      name: businessData?.name || 'Business'
+    }
 
     // Generate customized manifest
     const manifest = {

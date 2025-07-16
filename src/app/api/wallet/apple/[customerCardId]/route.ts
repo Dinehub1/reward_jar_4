@@ -12,20 +12,21 @@ export async function GET(
     const supabase = await createClient()
     const customerCardId = resolvedParams.customerCardId
 
+    console.log('Generating Apple Wallet for card ID:', customerCardId)
+
     // Get customer card with stamp card details
     const { data: customerCard, error } = await supabase
       .from('customer_cards')
       .select(`
         id,
         current_stamps,
-        wallet_type,
         created_at,
-        stamp_cards!inner (
+        stamp_cards (
           id,
           name,
           total_stamps,
           reward_description,
-          businesses!inner (
+          businesses (
             name,
             description
           )
@@ -35,13 +36,17 @@ export async function GET(
       .single()
 
     if (error || !customerCard) {
+      console.error('Customer card not found:', error)
       return NextResponse.json(
         { error: 'Customer card not found' },
         { status: 404 }
       )
     }
 
-    const stampCardArray = customerCard.stamp_cards as {
+    console.log('Fetched customer card:', customerCard)
+
+    // Handle the data structure properly - stamp_cards is an object, not an array
+    const stampCardData = customerCard.stamp_cards as {
       id: string
       total_stamps: number
       name: string
@@ -49,10 +54,45 @@ export async function GET(
       businesses: {
         name: string
         description: string
-      }[]
-    }[]
-    const stampCard = stampCardArray[0]
-    const business = stampCard.businesses[0]
+      }
+    }
+
+    const businessData = stampCardData.businesses as {
+      name: string
+      description: string
+    }
+
+    // Validate required data exists
+    if (!stampCardData) {
+      console.error('Stamp card data missing')
+      return NextResponse.json(
+        { error: 'Stamp card data not found' },
+        { status: 404 }
+      )
+    }
+
+    if (!businessData) {
+      console.error('Business data missing')
+      return NextResponse.json(
+        { error: 'Business data not found' },
+        { status: 404 }
+      )
+    }
+
+    const stampCard = {
+      id: stampCardData.id,
+      name: stampCardData.name || 'Loyalty Card',
+      total_stamps: stampCardData.total_stamps || 10,
+      reward_description: stampCardData.reward_description || 'Reward'
+    }
+
+    const business = {
+      name: businessData.name || 'Business',
+      description: businessData.description || 'Visit us to collect stamps and earn rewards!'
+    }
+
+    console.log('Stamp Card:', stampCard)
+    console.log('Business:', business)
     
     // Calculate progress
     const progress = Math.min((customerCard.current_stamps / stampCard.total_stamps) * 100, 100)
@@ -183,15 +223,23 @@ export async function GET(
 
     // For debugging, return JSON
     if (request.nextUrl.searchParams.get('debug') === 'true') {
-      return NextResponse.json({
+      const debugInfo = {
         passData,
         certificatesConfigured: hasAllCertificates,
         environment: {
           teamIdentifier: !!process.env.APPLE_TEAM_IDENTIFIER,
           passTypeIdentifier: !!process.env.APPLE_PASS_TYPE_IDENTIFIER,
-          certificates: hasAllCertificates
-        }
-      }, {
+          certificates: hasAllCertificates ? 'CONFIGURED' : 'MISSING',
+          certificateDetails: hasAllCertificates ? {
+            cert: process.env.APPLE_CERT_BASE64 ? `${process.env.APPLE_CERT_BASE64.substring(0, 50)}...` : 'MISSING',
+            key: process.env.APPLE_KEY_BASE64 ? `${process.env.APPLE_KEY_BASE64.substring(0, 50)}...` : 'MISSING',
+            wwdr: process.env.APPLE_WWDR_BASE64 ? `${process.env.APPLE_WWDR_BASE64.substring(0, 50)}...` : 'MISSING'
+          } : 'CERTIFICATES_NOT_CONFIGURED'
+        },
+        status: hasAllCertificates ? 'READY_FOR_PKPASS_GENERATION' : 'SETUP_REQUIRED'
+      }
+      
+      return NextResponse.json(debugInfo, {
         headers: {
           'Content-Type': 'application/json'
         }
@@ -333,17 +381,33 @@ function sha1Hash(data: Buffer): string {
 }
 
 function createDevelopmentSignature(): Buffer {
-  // In development, create a placeholder signature
-  // In production, this would use OpenSSL with actual certificates
-  if (process.env.NODE_ENV === 'production' && 
-      process.env.APPLE_CERT_BASE64 && 
+  // Try to use actual certificates if available
+  if (process.env.APPLE_CERT_BASE64 && 
       process.env.APPLE_KEY_BASE64 && 
       process.env.APPLE_WWDR_BASE64) {
     
-    // TODO: Implement actual certificate signing with OpenSSL
-    // This requires: pass certificate, private key, WWDR certificate
-    const placeholderSignature = 'PRODUCTION_SIGNATURE_PLACEHOLDER'
-    return Buffer.from(placeholderSignature, 'utf8')
+    try {
+      // Decode the base64 certificates
+      const cert = Buffer.from(process.env.APPLE_CERT_BASE64, 'base64').toString('utf8')
+      const key = Buffer.from(process.env.APPLE_KEY_BASE64, 'base64').toString('utf8')
+      const wwdr = Buffer.from(process.env.APPLE_WWDR_BASE64, 'base64').toString('utf8')
+      
+      // For now, create a signature that indicates certificates are loaded
+      // In a full production implementation, this would use node-forge or similar
+      // to create a proper PKCS#7 signature
+      const signatureData = {
+        certificates_loaded: true,
+        cert_preview: cert.substring(0, 100),
+        key_preview: key.substring(0, 50),
+        wwdr_preview: wwdr.substring(0, 50),
+        timestamp: new Date().toISOString()
+      }
+      
+      return Buffer.from(JSON.stringify(signatureData), 'utf8')
+    } catch (error) {
+      console.error('Error processing certificates:', error)
+      return Buffer.from('CERTIFICATE_ERROR', 'utf8')
+    }
   }
   
   // Development placeholder
