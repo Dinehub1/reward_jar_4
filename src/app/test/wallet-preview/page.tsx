@@ -172,26 +172,26 @@ export default function WalletPreviewPage() {
             card.stamp_cards && card.customers && card.stamp_cards.businesses
           )
           .map(card => ({
-            id: card.id,
-            customer_id: card.customer_id,
-            current_stamps: card.current_stamps,
-            wallet_pass_id: card.wallet_pass_id,
-            created_at: card.created_at,
-            stamp_card: {
+          id: card.id,
+          customer_id: card.customer_id,
+          current_stamps: card.current_stamps,
+          wallet_pass_id: card.wallet_pass_id,
+          created_at: card.created_at,
+          stamp_card: {
               id: card.stamp_cards.id,
               name: card.stamp_cards.name,
               total_stamps: card.stamp_cards.total_stamps,
               reward_description: card.stamp_cards.reward_description,
-              business: {
+            business: {
                 name: card.stamp_cards.businesses.name,
                 description: card.stamp_cards.businesses.description
-              }
-            },
-            customer: {
+            }
+          },
+          customer: {
               name: card.customers.name,
               email: card.customers.email
-            }
-          }))
+          }
+        }))
         setCustomerCards(formattedCards)
       } else {
         setCustomerCards([])
@@ -379,24 +379,24 @@ export default function WalletPreviewPage() {
             }))
           } else {
             // On desktop, download the file
-            const url = window.URL.createObjectURL(blob)
-            const a = document.createElement('a')
-            a.href = url
-            a.download = `${selectedCard.stamp_card.name.replace(/[^a-zA-Z0-9]/g, '_')}.pkpass`
-            document.body.appendChild(a)
-            a.click()
-            document.body.removeChild(a)
-            window.URL.revokeObjectURL(url)
-            
-            setTestResults(prev => ({
-              ...prev,
+          const url = window.URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = `${selectedCard.stamp_card.name.replace(/[^a-zA-Z0-9]/g, '_')}.pkpass`
+          document.body.appendChild(a)
+          a.click()
+          document.body.removeChild(a)
+          window.URL.revokeObjectURL(url)
+          
+          setTestResults(prev => ({
+            ...prev,
               [walletType]: { 
                 success: true, 
                 message: `PKPass downloaded (${sizeKB} KB)`,
                 size: sizeKB,
                 structured: blob.size > 2000 // Basic size check
               }
-            }))
+          }))
           }
         } else if (walletType === 'google' && !debug) {
           // Redirect to Google Wallet
@@ -425,7 +425,7 @@ export default function WalletPreviewPage() {
         let errorDetails = ''
         
         try {
-          const errorData = await response.json()
+        const errorData = await response.json()
           errorMessage = errorData.error || `HTTP ${response.status}: ${response.statusText}`
           errorDetails = JSON.stringify(errorData, null, 2)
         } catch (e) {
@@ -803,7 +803,7 @@ export default function WalletPreviewPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                                      {!selectedCard ? (
+                  {!selectedCard ? (
                     <div className="text-center text-gray-500 py-8">
                       <Search className="w-12 h-12 mx-auto mb-2 text-gray-300" />
                       <div>Select a customer card to test wallet functionality</div>
@@ -841,7 +841,7 @@ export default function WalletPreviewPage() {
                         {testResults.apple && (
                           <div className="mt-2 space-y-1">
                             <div className={`text-sm ${testResults.apple.success ? 'text-green-600' : 'text-red-600'}`}>
-                              {testResults.apple.success ? '✅' : '❌'} {testResults.apple.message}
+                            {testResults.apple.success ? '✅' : '❌'} {testResults.apple.message}
                             </div>
                             {testResults.apple.size && (
                               <div className="text-xs text-gray-500">

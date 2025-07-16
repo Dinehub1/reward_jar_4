@@ -21,18 +21,18 @@ function validateAppleWalletSetup() {
   };
 
   // Check required environment variables
-  const requiredVars = [
+const requiredVars = [
     'APPLE_TEAM_IDENTIFIER',
     'APPLE_PASS_TYPE_IDENTIFIER', 
-    'APPLE_CERT_BASE64',
-    'APPLE_KEY_BASE64',
-    'APPLE_WWDR_BASE64',
+  'APPLE_CERT_BASE64',
+  'APPLE_KEY_BASE64', 
+  'APPLE_WWDR_BASE64',
     'APPLE_CERT_PASSWORD'
-  ];
+];
 
   console.log('📋 Environment Variables:');
-  requiredVars.forEach(varName => {
-    const value = process.env[varName];
+requiredVars.forEach(varName => {
+  const value = process.env[varName];
     const exists = !!value;
     const status = exists ? '✅' : '❌';
     
@@ -69,8 +69,8 @@ function validateAppleWalletSetup() {
           const certType = lines[0].replace('-----BEGIN ', '').replace('-----', '');
           console.log(`       Type: ${certType}`);
           console.log(`       Lines: ${lines.length}`);
-        }
-      } catch (error) {
+      }
+    } catch (error) {
         console.log(`  ❌ ${varName}: Base64 decode error`);
         results.certificates[varName] = false;
         results.overall = false;
