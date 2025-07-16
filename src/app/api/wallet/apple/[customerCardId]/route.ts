@@ -194,6 +194,17 @@ export async function GET(
         ]
       },
 
+      // Use barcodes array (iOS 9+) with fallback to barcode (iOS 8)
+      barcodes: [
+        {
+          message: customerCardId,
+          format: "PKBarcodeFormatQR",
+          messageEncoding: "iso-8859-1",
+          altText: `Card ID: ${customerCardId}`
+        }
+      ],
+      
+      // Legacy barcode for iOS 8 compatibility
       barcode: {
         message: customerCardId,
         format: "PKBarcodeFormatQR",
@@ -255,7 +266,25 @@ export async function GET(
     // If certificates are configured, generate actual PKPass
     if (hasAllCertificates) {
       try {
+        // Validate pass structure before generation
+        const validationErrors = validatePKPassStructure(passData)
+        if (validationErrors.length > 0) {
+          console.error('PKPass validation failed:', validationErrors)
+          return NextResponse.json(
+            { 
+              error: 'PKPass validation failed',
+              message: validationErrors.join(', ')
+            },
+            { status: 400 }
+          )
+        }
+        
         const pkpassBuffer = await generatePKPass(passData)
+        
+        console.log('PKPass generated successfully:', {
+          size: pkpassBuffer.length,
+          sizeKB: (pkpassBuffer.length / 1024).toFixed(1)
+        })
         
         return new NextResponse(pkpassBuffer, {
           status: 200,
@@ -477,13 +506,15 @@ async function generatePassIcons(stampCard: any, business: any): Promise<Record<
     
   } catch (error) {
     console.error('Error generating icons:', error)
-    // Return minimal icons as fallback
+    // Return minimal icons as fallback - MUST include all required sizes
     const fallbackIcon = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==', 'base64')
     return {
       'icon.png': fallbackIcon,
       'icon@2x.png': fallbackIcon,
+      'icon@3x.png': fallbackIcon, // CRITICAL for newer iPhones
       'logo.png': fallbackIcon,
-      'logo@2x.png': fallbackIcon
+      'logo@2x.png': fallbackIcon,
+      'logo@3x.png': fallbackIcon
     }
   }
 }
@@ -505,6 +536,25 @@ async function createPKCS7Signature(manifestBuffer: Buffer): Promise<Buffer> {
     const key = forge.pki.privateKeyFromPem(keyPem)
     const wwdrCert = forge.pki.certificateFromPem(wwdrPem)
     
+    // Validate certificate expiration
+    const now = new Date()
+    if (cert.validity.notAfter < now) {
+      throw new Error(`Pass certificate expired on ${cert.validity.notAfter.toISOString()}`)
+    }
+    if (wwdrCert.validity.notAfter < now) {
+      throw new Error(`WWDR certificate expired on ${wwdrCert.validity.notAfter.toISOString()}`)
+    }
+    
+    // Validate certificate is not yet valid
+    if (cert.validity.notBefore > now) {
+      throw new Error(`Pass certificate not valid until ${cert.validity.notBefore.toISOString()}`)
+    }
+    
+    console.log('Certificate validation passed:', {
+      passExpires: cert.validity.notAfter.toISOString(),
+      wwdrExpires: wwdrCert.validity.notAfter.toISOString()
+    })
+    
     // Create PKCS#7 signature
     const p7 = forge.pkcs7.createSignedData()
     p7.content = forge.util.createBuffer(manifestBuffer.toString('binary'))
@@ -520,7 +570,8 @@ async function createPKCS7Signature(manifestBuffer: Buffer): Promise<Buffer> {
         type: forge.pki.oids.contentTypes,
         value: forge.pki.oids.data
       }, {
-        type: forge.pki.oids.messageDigest
+        type: forge.pki.oids.messageDigest,
+        value: forge.md.sha1.create().update(manifestBuffer.toString('binary')).digest().getBytes()
       }, {
         type: forge.pki.oids.signingTime,
         value: new Date()
@@ -553,4 +604,37 @@ async function createPKCS7Signature(manifestBuffer: Buffer): Promise<Buffer> {
 
 function sha1Hash(data: Buffer): string {
   return crypto.createHash('sha1').update(data).digest('hex')
+}
+
+// Validate PKPass structure
+function validatePKPassStructure(passData: Record<string, unknown>): string[] {
+  const errors: string[] = []
+  
+  // Required top-level fields
+  if (!passData.formatVersion) errors.push('Missing formatVersion')
+  if (!passData.passTypeIdentifier) errors.push('Missing passTypeIdentifier')
+  if (!passData.serialNumber) errors.push('Missing serialNumber')
+  if (!passData.teamIdentifier) errors.push('Missing teamIdentifier')
+  if (!passData.organizationName) errors.push('Missing organizationName')
+  if (!passData.description) errors.push('Missing description')
+  
+  // Must have one pass style
+  const passStyles = ['boardingPass', 'coupon', 'eventTicket', 'generic', 'storeCard']
+  const hasPassStyle = passStyles.some(style => passData[style])
+  if (!hasPassStyle) errors.push('Missing pass style (boardingPass, coupon, eventTicket, generic, or storeCard)')
+  
+  // Check barcode format
+  if (passData.barcodes && Array.isArray(passData.barcodes)) {
+    const validFormats = ['PKBarcodeFormatQR', 'PKBarcodeFormatPDF417', 'PKBarcodeFormatAztec', 'PKBarcodeFormatCode128']
+    for (const barcode of passData.barcodes) {
+      if (typeof barcode === 'object' && barcode !== null) {
+        const bc = barcode as any
+        if (!validFormats.includes(bc.format)) {
+          errors.push(`Invalid barcode format: ${bc.format}`)
+        }
+      }
+    }
+  }
+  
+  return errors
 } 

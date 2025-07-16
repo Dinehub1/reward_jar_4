@@ -78,6 +78,9 @@ interface TestResult {
   success: boolean
   message?: string
   data?: unknown
+  size?: string
+  structured?: boolean
+  error?: string
 }
 
 interface WalletStatus {
@@ -355,6 +358,10 @@ export default function WalletPreviewPage() {
       
       if (response.ok) {
         if (walletType === 'apple' && !debug) {
+          // Check PKPass size and structure
+          const blob = await response.blob()
+          const sizeKB = (blob.size / 1024).toFixed(1)
+          
           // Open PKPass directly in Apple Wallet (for mobile) or download (for desktop)
           const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
           
@@ -363,11 +370,15 @@ export default function WalletPreviewPage() {
             window.open(`/api/wallet/${walletType}/${selectedCard.id}`, '_blank')
             setTestResults(prev => ({
               ...prev,
-              [walletType]: { success: true, message: 'Opened in Apple Wallet' }
+              [walletType]: { 
+                success: true, 
+                message: `Opened in Apple Wallet (${sizeKB} KB)`,
+                size: sizeKB,
+                structured: blob.size > 2000 // Basic size check
+              }
             }))
           } else {
             // On desktop, download the file
-            const blob = await response.blob()
             const url = window.URL.createObjectURL(blob)
             const a = document.createElement('a')
             a.href = url
@@ -379,7 +390,12 @@ export default function WalletPreviewPage() {
             
             setTestResults(prev => ({
               ...prev,
-              [walletType]: { success: true, message: 'PKPass downloaded successfully' }
+              [walletType]: { 
+                success: true, 
+                message: `PKPass downloaded (${sizeKB} KB)`,
+                size: sizeKB,
+                structured: blob.size > 2000 // Basic size check
+              }
             }))
           }
         } else if (walletType === 'google' && !debug) {
@@ -405,10 +421,26 @@ export default function WalletPreviewPage() {
           }))
         }
       } else {
-        const errorData = await response.json()
+        let errorMessage = 'Request failed'
+        let errorDetails = ''
+        
+        try {
+          const errorData = await response.json()
+          errorMessage = errorData.error || `HTTP ${response.status}: ${response.statusText}`
+          errorDetails = JSON.stringify(errorData, null, 2)
+        } catch (e) {
+          const errorText = await response.text()
+          errorMessage = `HTTP ${response.status}: ${response.statusText}`
+          errorDetails = errorText.substring(0, 200)
+        }
+        
         setTestResults(prev => ({
           ...prev,
-          [walletType]: { success: false, message: errorData.error || 'Request failed' }
+          [walletType]: { 
+            success: false, 
+            message: errorMessage,
+            error: errorDetails
+          }
         }))
       }
     } catch (err) {
@@ -807,8 +839,21 @@ export default function WalletPreviewPage() {
                           </Button>
                         </div>
                         {testResults.apple && (
-                          <div className={`mt-2 text-sm ${testResults.apple.success ? 'text-green-600' : 'text-red-600'}`}>
-                            {testResults.apple.success ? '✅' : '❌'} {testResults.apple.message}
+                          <div className="mt-2 space-y-1">
+                            <div className={`text-sm ${testResults.apple.success ? 'text-green-600' : 'text-red-600'}`}>
+                              {testResults.apple.success ? '✅' : '❌'} {testResults.apple.message}
+                            </div>
+                            {testResults.apple.size && (
+                              <div className="text-xs text-gray-500">
+                                Size: {testResults.apple.size} KB {testResults.apple.structured ? '(Structured ✅)' : '(Too small ⚠️)'}
+                              </div>
+                            )}
+                            {testResults.apple.error && (
+                              <details className="text-xs text-red-500">
+                                <summary className="cursor-pointer">Show error details</summary>
+                                <pre className="mt-1 whitespace-pre-wrap">{testResults.apple.error}</pre>
+                              </details>
+                            )}
                           </div>
                         )}
                       </div>
