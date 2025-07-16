@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import crypto from 'crypto'
 import archiver from 'archiver'
+import forge from 'node-forge'
+import sharp from 'sharp'
 
 export async function GET(
   request: NextRequest,
@@ -344,76 +346,208 @@ export async function GET(
   }
 }
 
-// PKPass generation helper functions
+// Enhanced PKPass generation with proper icons and signature
 async function generatePKPass(passData: Record<string, unknown>): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     try {
-      const archive = archiver('zip', { zlib: { level: 9 } })
+      console.log('Starting PKPass generation...')
+      
+      const archive = archiver('zip', { 
+        zlib: { level: 9 },
+        forceLocalTime: true
+      })
       const chunks: Buffer[] = []
       
       archive.on('data', (chunk) => chunks.push(chunk))
-      archive.on('end', () => resolve(Buffer.concat(chunks)))
-      archive.on('error', reject)
+      archive.on('end', () => {
+        console.log('PKPass archive created successfully')
+        resolve(Buffer.concat(chunks))
+      })
+      archive.on('error', (error) => {
+        console.error('Archive error:', error)
+        reject(error)
+      })
+      
+      // Generate required icons
+      const icons = await generatePassIcons(null, null)
       
       // Create pass.json
       const passJson = JSON.stringify(passData, null, 2)
+      console.log('Generated pass.json:', passJson.length, 'bytes')
       
-      // Create manifest.json with file checksums
-      const manifest = {
-        'pass.json': sha1Hash(Buffer.from(passJson))
+      // Create manifest with all file hashes
+      const manifest: Record<string, string> = {
+        'pass.json': sha1Hash(Buffer.from(passJson, 'utf8'))
       }
+      
+      // Add icon hashes to manifest
+      for (const [filename, buffer] of Object.entries(icons)) {
+        manifest[filename] = sha1Hash(buffer)
+      }
+      
       const manifestJson = JSON.stringify(manifest, null, 2)
+      console.log('Generated manifest.json with', Object.keys(manifest).length, 'files')
       
-      // Create signature (simplified for development)
-      // In production, this would use actual certificate signing
-      const signature = createDevelopmentSignature()
+      // Create PKCS#7 signature
+      const signature = await createPKCS7Signature(Buffer.from(manifestJson, 'utf8'))
+      console.log('Generated signature:', signature.length, 'bytes')
       
-      // Add files to archive
+      // Add all files to archive
       archive.append(passJson, { name: 'pass.json' })
       archive.append(manifestJson, { name: 'manifest.json' })
       archive.append(signature, { name: 'signature' })
       
+      // Add icons to archive
+      for (const [filename, buffer] of Object.entries(icons)) {
+        archive.append(buffer, { name: filename })
+      }
+      
+      console.log('Finalizing PKPass archive...')
       archive.finalize()
+      
     } catch (error) {
+      console.error('Error in generatePKPass:', error)
       reject(error)
     }
   })
 }
 
-function sha1Hash(data: Buffer): string {
-  return crypto.createHash('sha1').update(data).digest('hex')
-}
-
-function createDevelopmentSignature(): Buffer {
-  // Try to use actual certificates if available
-  if (process.env.APPLE_CERT_BASE64 && 
-      process.env.APPLE_KEY_BASE64 && 
-      process.env.APPLE_WWDR_BASE64) {
-    
-    try {
-      // Decode the base64 certificates
-      const cert = Buffer.from(process.env.APPLE_CERT_BASE64, 'base64').toString('utf8')
-      const key = Buffer.from(process.env.APPLE_KEY_BASE64, 'base64').toString('utf8')
-      const wwdr = Buffer.from(process.env.APPLE_WWDR_BASE64, 'base64').toString('utf8')
-      
-      // For now, create a signature that indicates certificates are loaded
-      // In a full production implementation, this would use node-forge or similar
-      // to create a proper PKCS#7 signature
-      const signatureData = {
-        certificates_loaded: true,
-        cert_preview: cert.substring(0, 100),
-        key_preview: key.substring(0, 50),
-        wwdr_preview: wwdr.substring(0, 50),
-        timestamp: new Date().toISOString()
+// Generate required pass icons
+async function generatePassIcons(stampCard: any, business: any): Promise<Record<string, Buffer>> {
+  const icons: Record<string, Buffer> = {}
+  
+  try {
+    // Create a simple branded icon using Sharp
+    const baseIcon = await sharp({
+      create: {
+        width: 29,
+        height: 29,
+        channels: 4,
+        background: { r: 16, g: 185, b: 129, alpha: 1 } // green-500
       }
-      
-      return Buffer.from(JSON.stringify(signatureData), 'utf8')
-    } catch (error) {
-      console.error('Error processing certificates:', error)
-      return Buffer.from('CERTIFICATE_ERROR', 'utf8')
+    })
+    .png()
+    .toBuffer()
+    
+    const baseLogo = await sharp({
+      create: {
+        width: 160,
+        height: 50,
+        channels: 4,
+        background: { r: 16, g: 185, b: 129, alpha: 1 } // green-500
+      }
+    })
+    .png()
+    .toBuffer()
+    
+    // Required icon sizes for Apple Wallet
+    const iconSizes = [
+      { name: 'icon.png', size: 29 },
+      { name: 'icon@2x.png', size: 58 },
+      { name: 'icon@3x.png', size: 87 }
+    ]
+    
+    const logoSizes = [
+      { name: 'logo.png', width: 160, height: 50 },
+      { name: 'logo@2x.png', width: 320, height: 100 },
+      { name: 'logo@3x.png', width: 480, height: 150 }
+    ]
+    
+    // Generate icons
+    for (const { name, size } of iconSizes) {
+      icons[name] = await sharp(baseIcon)
+        .resize(size, size)
+        .png()
+        .toBuffer()
+    }
+    
+    // Generate logos
+    for (const { name, width, height } of logoSizes) {
+      icons[name] = await sharp(baseLogo)
+        .resize(width, height)
+        .png()
+        .toBuffer()
+    }
+    
+    console.log('Generated', Object.keys(icons).length, 'icon files')
+    return icons
+    
+  } catch (error) {
+    console.error('Error generating icons:', error)
+    // Return minimal icons as fallback
+    const fallbackIcon = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==', 'base64')
+    return {
+      'icon.png': fallbackIcon,
+      'icon@2x.png': fallbackIcon,
+      'logo.png': fallbackIcon,
+      'logo@2x.png': fallbackIcon
     }
   }
-  
-  // Development placeholder
-  return Buffer.from('DEVELOPMENT_SIGNATURE_PLACEHOLDER', 'utf8')
+}
+
+// Create proper PKCS#7 signature using node-forge
+async function createPKCS7Signature(manifestBuffer: Buffer): Promise<Buffer> {
+  try {
+    if (!process.env.APPLE_CERT_BASE64 || !process.env.APPLE_KEY_BASE64 || !process.env.APPLE_WWDR_BASE64) {
+      throw new Error('Missing Apple certificates')
+    }
+    
+    // Decode certificates
+    const certPem = Buffer.from(process.env.APPLE_CERT_BASE64, 'base64').toString('utf8')
+    const keyPem = Buffer.from(process.env.APPLE_KEY_BASE64, 'base64').toString('utf8')
+    const wwdrPem = Buffer.from(process.env.APPLE_WWDR_BASE64, 'base64').toString('utf8')
+    
+    // Parse certificates with forge
+    const cert = forge.pki.certificateFromPem(certPem)
+    const key = forge.pki.privateKeyFromPem(keyPem)
+    const wwdrCert = forge.pki.certificateFromPem(wwdrPem)
+    
+    // Create PKCS#7 signature
+    const p7 = forge.pkcs7.createSignedData()
+    p7.content = forge.util.createBuffer(manifestBuffer.toString('binary'))
+    
+    p7.addCertificate(cert)
+    p7.addCertificate(wwdrCert)
+    
+    p7.addSigner({
+      key: key,
+      certificate: cert,
+      digestAlgorithm: forge.pki.oids.sha1,
+      authenticatedAttributes: [{
+        type: forge.pki.oids.contentTypes,
+        value: forge.pki.oids.data
+      }, {
+        type: forge.pki.oids.messageDigest
+      }, {
+        type: forge.pki.oids.signingTime,
+        value: new Date()
+      }]
+    })
+    
+    // Sign the data
+    p7.sign({ detached: true })
+    
+    // Convert to DER format
+    const derBuffer = forge.asn1.toDer(p7.toAsn1()).getBytes()
+    
+    console.log('Created PKCS#7 signature:', derBuffer.length, 'bytes')
+    return Buffer.from(derBuffer, 'binary')
+    
+  } catch (error) {
+    console.error('Error creating PKCS#7 signature:', error)
+    
+    // Fallback to development signature with better structure
+    const fallbackSignature = {
+      error: 'PKCS7_SIGNATURE_FAILED',
+      message: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+      certificates_available: !!(process.env.APPLE_CERT_BASE64 && process.env.APPLE_KEY_BASE64 && process.env.APPLE_WWDR_BASE64)
+    }
+    
+    return Buffer.from(JSON.stringify(fallbackSignature, null, 2), 'utf8')
+  }
+}
+
+function sha1Hash(data: Buffer): string {
+  return crypto.createHash('sha1').update(data).digest('hex')
 } 
