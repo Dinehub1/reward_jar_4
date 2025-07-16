@@ -434,14 +434,14 @@ export default function WalletPreviewPage() {
                       <span>• Team ID: 39CDB598RF</span>
                       <span>• Pass Type: pass.com.rewardjar.rewards</span>
                       <a 
-                        href={`http://${window.location.hostname}:${window.location.port}/api/test/wallet-ios`}
+                        href={`${process.env.NEXT_PUBLIC_BASE_URL || 'http://192.168.29.135:3000'}/api/test/wallet-ios`}
                         target="_blank" 
                         className="underline hover:text-green-800 font-medium"
                       >
                         🧪 Test iOS Safari Direct →
                       </a>
                       <button
-                        onClick={() => copyToClipboard(`http://${window.location.hostname}:${window.location.port}/api/test/wallet-ios`)}
+                        onClick={() => copyToClipboard(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://192.168.29.135:3000'}/api/test/wallet-ios`)}
                         className="underline hover:text-green-800 font-medium"
                       >
                         📋 Copy iOS Test URL
