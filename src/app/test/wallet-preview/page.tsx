@@ -593,6 +593,92 @@ export default function WalletPreviewPage() {
             </Card>
           </div>
 
+          {/* Fixed PKPass Download Section */}
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Download className="w-5 h-5 mr-2" />
+                Enhanced PKPass - Certificate Chain Fixed
+              </CardTitle>
+              <CardDescription>
+                Test the iOS-compatible PKPass with complete visual styling and proper certificate chain
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                      <div>
+                        <div className="font-medium text-green-800">Certificate Chain Fixed</div>
+                        <div className="text-sm text-green-600">WWDR G4 certificate chain</div>
+                      </div>
+                    </div>
+                    <div className="text-sm text-green-600">4.4KB</div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <Star className="w-5 h-5 text-blue-600" />
+                      <div>
+                        <div className="font-medium text-blue-800">Enhanced PKPass</div>
+                        <div className="text-sm text-blue-600">Complete visual styling + fields</div>
+                      </div>
+                    </div>
+                    <div className="text-sm text-blue-600">4.9KB</div>
+                  </div>
+                </div>
+                
+                <div className="flex flex-wrap gap-3">
+                  <Button 
+                    onClick={() => window.open('/manual_fixed.pkpass', '_blank')}
+                    className="flex items-center space-x-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Download Enhanced PKPass</span>
+                  </Button>
+                  
+                  <Button 
+                    variant="outline"
+                    onClick={() => window.open('/test_chain_fixed.pkpass', '_blank')}
+                    className="flex items-center space-x-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Download Basic PKPass</span>
+                  </Button>
+                  
+                  <Button 
+                    variant="outline"
+                    onClick={() => copyToClipboard(`${window.location.origin}/manual_fixed.pkpass`)}
+                    className="flex items-center space-x-2"
+                  >
+                    <Copy className="w-4 h-4" />
+                    <span>Copy Enhanced URL</span>
+                  </Button>
+                  
+                  <Button 
+                    variant="outline"
+                    onClick={() => window.open(`${window.location.origin}/manual_fixed.pkpass`, '_blank')}
+                    className="flex items-center space-x-2"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    <span>Open in Safari</span>
+                  </Button>
+                </div>
+                
+                <div className="text-sm text-gray-600 space-y-1">
+                  <div>• <strong>Certificate Chain:</strong> Pass Certificate ← WWDR G4 ← Apple Root CA</div>
+                  <div>• <strong>MIME Type:</strong> application/vnd.apple.pkpass (✅ Next.js headers configured)</div>
+                  <div>• <strong>Enhanced Features:</strong> Visual styling, colors, multiple fields, back content</div>
+                  <div>• <strong>iOS Compatible:</strong> Should install without "Unsupported file type" error</div>
+                  <div>• <strong>Network Access:</strong> Available at http://192.168.29.219:3000/manual_fixed.pkpass</div>
+                  <div>• <strong>Test Instructions:</strong> Open URL in iPhone Safari or AirDrop to device</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Left Column - Card Selection */}
             <div className="space-y-6">

@@ -1,0 +1,29 @@
+{
+  "formatVersion": 1,
+  "passTypeIdentifier": "pass.com.rewardjar.rewards",
+  "serialNumber": "chain-fix-test-123",
+  "teamIdentifier": "39CDB598RF",
+  "organizationName": "RewardJar",
+  "description": "Certificate Chain Fix Test",
+  "storeCard": {
+    "primaryFields": [
+      {
+        "key": "test",
+        "label": "Test",
+        "value": "Chain Fix"
+      }
+    ]
+  },
+  "barcode": {
+    "message": "chain-fix-test-123",
+    "format": "PKBarcodeFormatQR",
+    "messageEncoding": "iso-8859-1"
+  },
+  "barcodes": [
+    {
+      "message": "chain-fix-test-123",
+      "format": "PKBarcodeFormatQR",
+      "messageEncoding": "iso-8859-1"
+    }
+  ]
+}
