@@ -18,7 +18,8 @@ export async function POST(request: NextRequest) {
     const { 
       scenario = 'default',
       count = 1,
-      cleanup = false
+      cleanup = false,
+      createAll = false // New option to create all 8 test scenarios
     } = body
 
     // Cleanup existing test data if requested
@@ -30,6 +31,43 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // Create all 8 test scenarios if requested
+    if (createAll) {
+      const allScenarios = [
+        'empty',
+        'small_card',
+        'large_card', 
+        'long_names',
+        'half_complete',
+        'almost_complete',
+        'completed',
+        'over_complete'
+      ]
+      
+      const results = []
+      for (const scenarioType of allScenarios) {
+        const result = await generateTestData(supabase, scenarioType, 1)
+        results.push(...result)
+      }
+      
+      return NextResponse.json({
+        success: true,
+        scenario: 'all_scenarios',
+        count: results.length,
+        data: results,
+        message: `Generated ${results.length} test customer cards across all scenarios`,
+        testUrls: results.map(card => ({
+          id: card.customerCardId,
+          scenario: card.scenario,
+          progress: `${card.currentStamps}/${card.totalStamps}`,
+          apple: `http://localhost:3000/api/wallet/apple/${card.customerCardId}`,
+          google: `http://localhost:3000/api/wallet/google/${card.customerCardId}`,
+          pwa: `http://localhost:3000/api/wallet/pwa/${card.customerCardId}`,
+          debug: `http://localhost:3000/api/wallet/apple/${card.customerCardId}?debug=true`
+        }))
+      })
+    }
+
     // Generate test data based on scenario
     const result = await generateTestData(supabase, scenario, count)
     
@@ -38,7 +76,16 @@ export async function POST(request: NextRequest) {
       scenario,
       count,
       data: result,
-      message: `Generated ${result.length} test customer cards`
+      message: `Generated ${result.length} test customer cards`,
+      testUrls: result.map(card => ({
+        id: card.customerCardId,
+        scenario: card.scenario,
+        progress: `${card.currentStamps}/${card.totalStamps}`,
+        apple: `http://localhost:3000/api/wallet/apple/${card.customerCardId}`,
+        google: `http://localhost:3000/api/wallet/google/${card.customerCardId}`,
+        pwa: `http://localhost:3000/api/wallet/pwa/${card.customerCardId}`,
+        debug: `http://localhost:3000/api/wallet/apple/${card.customerCardId}?debug=true`
+      }))
     })
 
   } catch (error) {
