@@ -23,7 +23,12 @@ import {
   Wallet,
   CreditCard,
   Trophy,
-  Star
+  Star,
+  Plus,
+  Trash2,
+  Database,
+  TestTube,
+  Zap
 } from 'lucide-react'
 
 interface CustomerCard {
@@ -76,11 +81,10 @@ interface DatabaseCustomerCard {
 
 interface TestResult {
   success: boolean
-  message?: string
-  data?: unknown
+  message: string
+  data?: any
   size?: string
   structured?: boolean
-  error?: string
 }
 
 interface WalletStatus {
@@ -101,6 +105,25 @@ interface WalletStatus {
   }
 }
 
+interface DevSeedCard {
+  id: string
+  current_stamps: number
+  total_stamps: number
+  completion_percentage: number
+  stamp_card_name: string
+  business_name: string
+  customer_name: string
+  customer_email: string
+  created_at: string
+  updated_at: string
+  test_urls: {
+    apple: string
+    google: string
+    pwa: string
+    debug: string
+  }
+}
+
 export default function WalletPreviewPage() {
   const [customerCards, setCustomerCards] = useState<CustomerCard[]>([])
   const [selectedCard, setSelectedCard] = useState<CustomerCard | null>(null)
@@ -108,6 +131,7 @@ export default function WalletPreviewPage() {
   const [loading, setLoading] = useState(false)
   const [searchLoading, setSearchLoading] = useState(false)
   const [walletStatusLoading, setWalletStatusLoading] = useState(true)
+  const [devSeedLoading, setDevSeedLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [walletStatus, setWalletStatus] = useState<WalletStatus>({
     apple: {
@@ -127,6 +151,9 @@ export default function WalletPreviewPage() {
     }
   })
   const [testResults, setTestResults] = useState<Record<string, TestResult>>({})
+  const [devSeedCards, setDevSeedCards] = useState<DevSeedCard[]>([])
+  const [selectedScenario, setSelectedScenario] = useState('default')
+  const [seedCount, setSeedCount] = useState(1)
   const supabase = createClient()
 
   const fetchAllCustomerCards = useCallback(async () => {
@@ -241,11 +268,100 @@ export default function WalletPreviewPage() {
     }
   }, [])
 
+  // New function to fetch dev seed cards
+  const fetchDevSeedCards = useCallback(async () => {
+    try {
+      const response = await fetch('/api/dev-seed')
+      if (response.ok) {
+        const data = await response.json()
+        setDevSeedCards(data.cards || [])
+      }
+    } catch (err) {
+      console.error('Error fetching dev seed cards:', err)
+    }
+  }, [])
+
+  // New function to generate dev seed data
+  const generateDevSeedData = async () => {
+    try {
+      setDevSeedLoading(true)
+      setError(null)
+      
+      const response = await fetch('/api/dev-seed', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          scenario: selectedScenario,
+          count: seedCount
+        })
+      })
+      
+      const data = await response.json()
+      
+      if (response.ok) {
+        await fetchDevSeedCards()
+        await fetchAllCustomerCards()
+        setError(null)
+        
+        // Auto-select the first generated card
+        if (data.data && data.data.length > 0) {
+          setCustomerCardId(data.data[0].customer_card_id)
+          await searchCustomerCard(data.data[0].customer_card_id)
+        }
+      } else {
+        setError(data.error || 'Failed to generate test data')
+      }
+    } catch (err) {
+      console.error('Error generating dev seed data:', err)
+      setError('Failed to generate test data')
+    } finally {
+      setDevSeedLoading(false)
+    }
+  }
+
+  // New function to cleanup dev seed data
+  const cleanupDevSeedData = async () => {
+    try {
+      setDevSeedLoading(true)
+      setError(null)
+      
+      const response = await fetch('/api/dev-seed', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          cleanup: true
+        })
+      })
+      
+      const data = await response.json()
+      
+      if (response.ok) {
+        await fetchDevSeedCards()
+        await fetchAllCustomerCards()
+        setSelectedCard(null)
+        setCustomerCardId('')
+        setError(null)
+      } else {
+        setError(data.error || 'Failed to cleanup test data')
+      }
+    } catch (err) {
+      console.error('Error cleaning up dev seed data:', err)
+      setError('Failed to cleanup test data')
+    } finally {
+      setDevSeedLoading(false)
+    }
+  }
+
   // Load all customer cards on component mount
   useEffect(() => {
     fetchAllCustomerCards()
     checkWalletStatus()
-  }, [fetchAllCustomerCards, checkWalletStatus])
+    fetchDevSeedCards()
+  }, [fetchAllCustomerCards, checkWalletStatus, fetchDevSeedCards])
 
   const searchCustomerCard = async (cardId: string) => {
     if (!cardId.trim()) {
@@ -313,6 +429,7 @@ export default function WalletPreviewPage() {
         return
       }
 
+      // Format the card data
       const formattedCard: CustomerCard = {
         id: cardData.id,
         customer_id: cardData.customer_id,
@@ -336,10 +453,11 @@ export default function WalletPreviewPage() {
       }
 
       setSelectedCard(formattedCard)
-      setCustomerCardId(cardId)
+      setError(null)
     } catch (err) {
       console.error('Error searching customer card:', err)
-      setError('Something went wrong while searching')
+      setError('Error searching for customer card')
+      setSelectedCard(null)
     } finally {
       setLoading(false)
     }
@@ -379,24 +497,24 @@ export default function WalletPreviewPage() {
             }))
           } else {
             // On desktop, download the file
-          const url = window.URL.createObjectURL(blob)
-          const a = document.createElement('a')
-          a.href = url
-          a.download = `${selectedCard.stamp_card.name.replace(/[^a-zA-Z0-9]/g, '_')}.pkpass`
-          document.body.appendChild(a)
-          a.click()
-          document.body.removeChild(a)
-          window.URL.revokeObjectURL(url)
-          
-          setTestResults(prev => ({
-            ...prev,
+            const url = window.URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `${selectedCard.stamp_card.name.replace(/[^a-zA-Z0-9]/g, '_')}.pkpass`
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+            window.URL.revokeObjectURL(url)
+            
+            setTestResults(prev => ({
+              ...prev,
               [walletType]: { 
                 success: true, 
                 message: `PKPass downloaded (${sizeKB} KB)`,
                 size: sizeKB,
                 structured: blob.size > 2000 // Basic size check
               }
-          }))
+            }))
           }
         } else if (walletType === 'google' && !debug) {
           // Redirect to Google Wallet
@@ -421,30 +539,14 @@ export default function WalletPreviewPage() {
           }))
         }
       } else {
-        let errorMessage = 'Request failed'
-        let errorDetails = ''
-        
-        try {
         const errorData = await response.json()
-          errorMessage = errorData.error || `HTTP ${response.status}: ${response.statusText}`
-          errorDetails = JSON.stringify(errorData, null, 2)
-        } catch (e) {
-          const errorText = await response.text()
-          errorMessage = `HTTP ${response.status}: ${response.statusText}`
-          errorDetails = errorText.substring(0, 200)
-        }
-        
         setTestResults(prev => ({
           ...prev,
-          [walletType]: { 
-            success: false, 
-            message: errorMessage,
-            error: errorDetails
-          }
+          [walletType]: { success: false, message: errorData.error || 'Failed to generate wallet' }
         }))
       }
-    } catch (err) {
-      console.error('Error testing wallet endpoint:', err)
+    } catch (error) {
+      console.error('Error testing wallet endpoint:', error)
       setTestResults(prev => ({
         ...prev,
         [walletType]: { success: false, message: 'Network error' }
@@ -464,10 +566,25 @@ export default function WalletPreviewPage() {
 
   const getProgressColor = (current: number, total: number) => {
     const percentage = (current / total) * 100
-    if (percentage >= 100) return 'bg-green-500'
-    if (percentage >= 70) return 'bg-yellow-500'
-    return 'bg-blue-500'
+    if (percentage >= 100) return '🏆'
+    if (percentage >= 80) return '🔥'
+    if (percentage >= 60) return '⚡'
+    if (percentage >= 40) return '💪'
+    if (percentage >= 20) return '🌟'
+    return '🎯'
   }
+
+  const scenarios = [
+    { value: 'default', label: 'Default (5/10 stamps)', description: 'Standard test card' },
+    { value: 'empty', label: 'Empty (0/10 stamps)', description: 'New customer card' },
+    { value: 'half_complete', label: 'Half Complete (5/10 stamps)', description: 'Partially filled card' },
+    { value: 'almost_complete', label: 'Almost Complete (9/10 stamps)', description: 'One stamp away' },
+    { value: 'completed', label: 'Completed (10/10 stamps)', description: 'Reward earned' },
+    { value: 'over_complete', label: 'Over Complete (12/10 stamps)', description: 'Edge case testing' },
+    { value: 'large_card', label: 'Large Card (15/50 stamps)', description: 'High stamp count' },
+    { value: 'small_card', label: 'Small Card (2/3 stamps)', description: 'Low stamp count' },
+    { value: 'long_names', label: 'Long Names', description: 'Text overflow testing' }
+  ]
 
   return (
     <Fragment>
@@ -592,6 +709,109 @@ export default function WalletPreviewPage() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Dev Seed Data Generator */}
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <TestTube className="w-5 h-5 mr-2" />
+                Development Test Data Generator
+              </CardTitle>
+              <CardDescription>
+                Generate test customer cards for different scenarios and edge cases
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="scenario">Test Scenario</Label>
+                    <select
+                      id="scenario"
+                      value={selectedScenario}
+                      onChange={(e) => setSelectedScenario(e.target.value)}
+                      className="w-full p-2 border border-gray-300 rounded-md"
+                    >
+                      {scenarios.map(scenario => (
+                        <option key={scenario.value} value={scenario.value}>
+                          {scenario.label}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-sm text-gray-600">
+                      {scenarios.find(s => s.value === selectedScenario)?.description}
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="count">Number of Cards</Label>
+                    <Input
+                      id="count"
+                      type="number"
+                      min="1"
+                      max="10"
+                      value={seedCount}
+                      onChange={(e) => setSeedCount(parseInt(e.target.value) || 1)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Actions</Label>
+                    <div className="flex space-x-2">
+                      <Button
+                        onClick={generateDevSeedData}
+                        disabled={devSeedLoading}
+                        className="flex-1"
+                      >
+                        {devSeedLoading ? (
+                          <RefreshCw className="w-4 h-4 animate-spin mr-2" />
+                        ) : (
+                          <Plus className="w-4 h-4 mr-2" />
+                        )}
+                        Generate
+                      </Button>
+                      <Button
+                        onClick={cleanupDevSeedData}
+                        disabled={devSeedLoading}
+                        variant="outline"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {devSeedCards.length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="font-semibold mb-2">Generated Test Cards ({devSeedCards.length})</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-48 overflow-y-auto">
+                      {devSeedCards.map((card) => (
+                        <div
+                          key={card.id}
+                          className="p-3 border rounded-lg cursor-pointer hover:border-blue-300 transition-colors"
+                          onClick={() => {
+                            setCustomerCardId(card.id)
+                            searchCustomerCard(card.id)
+                          }}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-medium text-sm">{card.stamp_card_name}</span>
+                            <Badge variant="outline" className="text-xs">
+                              {card.current_stamps}/{card.total_stamps}
+                            </Badge>
+                          </div>
+                          <div className="text-xs text-gray-600">
+                            <div>{card.business_name}</div>
+                            <div>{card.completion_percentage}% complete</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Fixed PKPass Download Section */}
           <Card className="mb-8">
@@ -772,6 +992,32 @@ export default function WalletPreviewPage() {
                     </div>
                   </div>
                   
+                  {/* Quick Test ID Button */}
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const testId = '550e8400-e29b-41d4-a716-446655440006'
+                        setCustomerCardId(testId)
+                        searchCustomerCard(testId)
+                      }}
+                    >
+                      <Zap className="w-4 h-4 mr-2" />
+                      Use Static Test ID
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const testId = '550e8400-e29b-41d4-a716-446655440006'
+                        copyToClipboard(testId)
+                      }}
+                    >
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  
                   {error && (
                     <div className="flex items-center space-x-2 text-red-600 text-sm">
                       <AlertCircle className="w-4 h-4" />
@@ -786,7 +1032,7 @@ export default function WalletPreviewPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
                     <div className="flex items-center">
-                      <CreditCard className="w-5 h-5 mr-2" />
+                      <Database className="w-5 h-5 mr-2" />
                       Recent Customer Cards
                     </div>
                     <Button 
@@ -799,7 +1045,7 @@ export default function WalletPreviewPage() {
                     </Button>
                   </CardTitle>
                   <CardDescription>
-                    Click on any card to select it for testing
+                    Click any card to select it for testing
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -832,31 +1078,14 @@ export default function WalletPreviewPage() {
                           <div>Customer: {card.customer.name}</div>
                           <div>Created: {formatDate(card.created_at)}</div>
                         </div>
-                        <div className="mt-2">
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div 
-                              className={`h-2 rounded-full ${getProgressColor(card.current_stamps, card.stamp_card.total_stamps)}`}
-                              style={{ width: `${Math.min((card.current_stamps / card.stamp_card.total_stamps) * 100, 100)}%` }}
-                            />
-                          </div>
-                        </div>
                       </div>
                     ))}
                     
                     {customerCards.length === 0 && !searchLoading && (
                       <div className="text-center text-gray-500 py-8">
-                        <CreditCard className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                        <div className="font-medium mb-2">No customer cards found.</div>
-                        <div className="text-sm text-gray-400 mb-4">
-                          Please join a card by scanning a QR code at a business.
-                        </div>
-                        <div className="text-xs text-gray-400 text-left space-y-1">
-                          <div><strong>To create test data:</strong></div>
-                          <div>1. Go to <Link href="/business/dashboard" className="text-blue-500 hover:underline">/business/dashboard</Link></div>
-                          <div>2. Create a stamp card</div>
-                          <div>3. Use the QR code to join as a customer</div>
-                          <div>4. The customer card will appear here for testing</div>
-                        </div>
+                        <Database className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                        <div>No customer cards found</div>
+                        <div className="text-sm">Generate some test data to get started</div>
                       </div>
                     )}
                   </div>
@@ -972,7 +1201,7 @@ export default function WalletPreviewPage() {
               </Card>
 
               {/* Selected Card Info */}
-              {selectedCard ? (
+              {selectedCard && (
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center">
@@ -995,22 +1224,6 @@ export default function WalletPreviewPage() {
                         <div className="font-semibold">{selectedCard.customer.name}</div>
                       </div>
                       <div>
-                        <span className="font-medium text-gray-600">Status:</span>
-                        <div className="font-semibold flex items-center">
-                          {selectedCard.current_stamps >= selectedCard.stamp_card.total_stamps ? (
-                            <Badge className="bg-green-100 text-green-800">
-                              <Trophy className="w-3 h-3 mr-1" />
-                              Completed
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline">
-                              <Star className="w-3 h-3 mr-1" />
-                              In Progress
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                      <div>
                         <span className="font-medium text-gray-600">Progress:</span>
                         <div className="font-semibold">
                           {selectedCard.current_stamps}/{selectedCard.stamp_card.total_stamps} stamps
@@ -1018,29 +1231,53 @@ export default function WalletPreviewPage() {
                       </div>
                     </div>
                     
-                    <div>
-                      <span className="font-medium text-gray-600">Reward:</span>
-                      <div className="text-sm mt-1">{selectedCard.stamp_card.reward_description}</div>
+                    <div className="space-y-2">
+                      <span className="font-medium text-gray-600">Reward Description:</span>
+                      <div className="text-sm bg-gray-50 p-3 rounded">
+                        {selectedCard.stamp_card.reward_description}
+                      </div>
                     </div>
                     
-                    <div>
-                      <span className="font-medium text-gray-600">Customer Card ID:</span>
-                      <div className="flex items-center space-x-2 mt-1">
-                        <code className="text-xs bg-gray-100 px-2 py-1 rounded flex-1">{selectedCard.id}</code>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => copyToClipboard(selectedCard.id)}
-                        >
-                          <Copy className="w-3 h-3" />
-                        </Button>
+                    <div className="space-y-2">
+                      <span className="font-medium text-gray-600">Test URLs:</span>
+                      <div className="space-y-1 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span>Apple Wallet:</span>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => copyToClipboard(`/api/wallet/apple/${selectedCard.id}`)}
+                          >
+                            <Copy className="w-3 h-3" />
+                          </Button>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>Google Wallet:</span>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => copyToClipboard(`/api/wallet/google/${selectedCard.id}`)}
+                          >
+                            <Copy className="w-3 h-3" />
+                          </Button>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>PWA Wallet:</span>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => copyToClipboard(`/api/wallet/pwa/${selectedCard.id}`)}
+                          >
+                            <Copy className="w-3 h-3" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
-              ) : null}
+              )}
 
-              {/* Wallet Testing Buttons */}
+              {/* Wallet Testing */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center">
@@ -1066,8 +1303,8 @@ export default function WalletPreviewPage() {
                             <Smartphone className="w-5 h-5 mr-2" />
                             <span className="font-medium">Apple Wallet</span>
                           </div>
-                          <Badge variant={walletStatus?.apple.configured ? "default" : "secondary"}>
-                            {walletStatus?.apple.configured ? "Ready" : "Setup Required"}
+                          <Badge variant={walletStatus.apple.configured ? "default" : "secondary"}>
+                            {walletStatus.apple.configured ? "Ready" : "Setup Required"}
                           </Badge>
                         </div>
                         <div className="flex space-x-2">
@@ -1077,7 +1314,7 @@ export default function WalletPreviewPage() {
                             className="flex-1"
                           >
                             <Download className="w-4 h-4 mr-2" />
-                            {/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ? 'Add to Apple Wallet' : 'Download PKPass'}
+                            Download PKPass
                           </Button>
                           <Button 
                             variant="outline"
@@ -1088,21 +1325,8 @@ export default function WalletPreviewPage() {
                           </Button>
                         </div>
                         {testResults.apple && (
-                          <div className="mt-2 space-y-1">
-                            <div className={`text-sm ${testResults.apple.success ? 'text-green-600' : 'text-red-600'}`}>
+                          <div className={`mt-2 text-sm ${testResults.apple.success ? 'text-green-600' : 'text-red-600'}`}>
                             {testResults.apple.success ? '✅' : '❌'} {testResults.apple.message}
-                            </div>
-                            {testResults.apple.size && (
-                              <div className="text-xs text-gray-500">
-                                Size: {testResults.apple.size} KB {testResults.apple.structured ? '(Structured ✅)' : '(Too small ⚠️)'}
-                              </div>
-                            )}
-                            {testResults.apple.error && (
-                              <details className="text-xs text-red-500">
-                                <summary className="cursor-pointer">Show error details</summary>
-                                <pre className="mt-1 whitespace-pre-wrap">{testResults.apple.error}</pre>
-                              </details>
-                            )}
                           </div>
                         )}
                       </div>
@@ -1114,8 +1338,8 @@ export default function WalletPreviewPage() {
                             <Wallet className="w-5 h-5 mr-2" />
                             <span className="font-medium">Google Wallet</span>
                           </div>
-                          <Badge variant={walletStatus?.google.configured ? "default" : "secondary"}>
-                            {walletStatus?.google.configured ? "Ready" : "Setup Required"}
+                          <Badge variant={walletStatus.google.configured ? "default" : "secondary"}>
+                            {walletStatus.google.configured ? "Ready" : "Setup Required"}
                           </Badge>
                         </div>
                         <div className="flex space-x-2">
@@ -1125,7 +1349,7 @@ export default function WalletPreviewPage() {
                             className="flex-1"
                           >
                             <ExternalLink className="w-4 h-4 mr-2" />
-                            Save to Google Pay
+                            Open Google Pay
                           </Button>
                           <Button 
                             variant="outline"
