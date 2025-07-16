@@ -204,6 +204,10 @@ export async function GET(
       maxDistance: 1000,
       relevantDate: new Date().toISOString(),
       
+      // Additional metadata for better Apple Wallet recognition
+      suppressStripShine: false,
+      sharingProhibited: false,
+      
       webServiceURL: `${process.env.BASE_URL || 'https://rewardjar.com'}/api/wallet/apple/updates`,
       authenticationToken: customerCardId,
       
@@ -254,8 +258,8 @@ export async function GET(
         return new NextResponse(pkpassBuffer, {
           headers: {
             'Content-Type': 'application/vnd.apple.pkpass',
-            'Content-Disposition': `attachment; filename="${stampCard.name.replace(/[^a-zA-Z0-9]/g, '_')}.pkpass"`,
-            'Cache-Control': 'no-cache, no-store, must-revalidate'
+            'Content-Disposition': `inline; filename="${stampCard.name.replace(/[^a-zA-Z0-9]/g, '_')}.pkpass"`,
+            'Cache-Control': 'no-store'
           }
         })
       } catch (error) {

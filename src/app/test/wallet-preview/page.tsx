@@ -355,21 +355,33 @@ export default function WalletPreviewPage() {
       
       if (response.ok) {
         if (walletType === 'apple' && !debug) {
-          // Download PKPass file
-          const blob = await response.blob()
-          const url = window.URL.createObjectURL(blob)
-          const a = document.createElement('a')
-          a.href = url
-          a.download = `${selectedCard.stamp_card.name.replace(/[^a-zA-Z0-9]/g, '_')}.pkpass`
-          document.body.appendChild(a)
-          a.click()
-          document.body.removeChild(a)
-          window.URL.revokeObjectURL(url)
+          // Open PKPass directly in Apple Wallet (for mobile) or download (for desktop)
+          const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
           
-          setTestResults(prev => ({
-            ...prev,
-            [walletType]: { success: true, message: 'PKPass downloaded successfully' }
-          }))
+          if (isMobile) {
+            // On mobile, open directly to trigger Apple Wallet
+            window.open(`/api/wallet/${walletType}/${selectedCard.id}`, '_blank')
+            setTestResults(prev => ({
+              ...prev,
+              [walletType]: { success: true, message: 'Opened in Apple Wallet' }
+            }))
+          } else {
+            // On desktop, download the file
+            const blob = await response.blob()
+            const url = window.URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `${selectedCard.stamp_card.name.replace(/[^a-zA-Z0-9]/g, '_')}.pkpass`
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+            window.URL.revokeObjectURL(url)
+            
+            setTestResults(prev => ({
+              ...prev,
+              [walletType]: { success: true, message: 'PKPass downloaded successfully' }
+            }))
+          }
         } else if (walletType === 'google' && !debug) {
           // Redirect to Google Wallet
           window.open(response.url, '_blank')
@@ -784,7 +796,7 @@ export default function WalletPreviewPage() {
                             className="flex-1"
                           >
                             <Download className="w-4 h-4 mr-2" />
-                            Download PKPass
+                            {/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ? 'Add to Apple Wallet' : 'Download PKPass'}
                           </Button>
                           <Button 
                             variant="outline"
