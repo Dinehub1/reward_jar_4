@@ -598,10 +598,10 @@ export default function WalletPreviewPage() {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Download className="w-5 h-5 mr-2" />
-                Working PKPass - Reference Structure Fixed
+                Apple Wallet PKPass - Direct Install Links
               </CardTitle>
               <CardDescription>
-                Test the iOS-compatible PKPass based on working reference structure with proper images
+                ✅ Direct links for iOS Safari - tap to add to Apple Wallet immediately (no JavaScript required)
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -653,68 +653,67 @@ export default function WalletPreviewPage() {
                 </div>
                 
                 <div className="flex flex-wrap gap-3">
-                  <Button 
-                    onClick={() => window.open('/working_updated_fixed.pkpass', '_blank')}
-                    className="flex items-center space-x-2 bg-green-600 hover:bg-green-700"
+                  <a
+                    href="/working_updated_fixed.pkpass"
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 text-center transition-colors"
                   >
                     <Download className="w-4 h-4" />
-                    <span>Download Fixed PKPass (16KB)</span>
-                  </Button>
+                    <span>Add to Apple Wallet - Fixed (16KB)</span>
+                  </a>
                   
-                  <Button 
-                    onClick={() => window.open('/working_enhanced.pkpass', '_blank')}
-                    className="flex items-center space-x-2 bg-purple-600 hover:bg-purple-700"
+                  <a
+                    href="/working_enhanced.pkpass"
+                    className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 text-center transition-colors"
                   >
                     <Download className="w-4 h-4" />
-                    <span>Download Enhanced PKPass (574KB)</span>
-                  </Button>
+                    <span>Add to Apple Wallet - Enhanced (574KB)</span>
+                  </a>
                   
-                  <Button 
-                    onClick={() => window.open('/working_fixed.pkpass', '_blank')}
-                    className="flex items-center space-x-2"
+                  <a
+                    href="/referenced.pkpass"
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 text-center transition-colors"
                   >
                     <Download className="w-4 h-4" />
-                    <span>Download Reference PKPass (16KB)</span>
-                  </Button>
+                    <span>Add to Apple Wallet - Reference (17KB)</span>
+                  </a>
                   
-                  <Button 
-                    variant="outline"
-                    onClick={() => window.open('/working_updated.pkpass', '_blank')}
-                    className="flex items-center space-x-2 border-red-300 text-red-600 hover:bg-red-50"
+                  <a
+                    href="/working_updated.pkpass"
+                    className="border border-red-300 text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg flex items-center space-x-2 text-center transition-colors"
                   >
                     <Download className="w-4 h-4" />
                     <span>Broken PKPass (3.5KB)</span>
-                  </Button>
+                  </a>
                   
-                  <Button 
-                    variant="outline"
+                  <button 
                     onClick={() => copyToClipboard(`${window.location.origin}/working_updated_fixed.pkpass`)}
-                    className="flex items-center space-x-2"
+                    className="border border-gray-300 text-gray-600 hover:bg-gray-50 px-4 py-2 rounded-lg flex items-center space-x-2 text-center transition-colors"
                   >
                     <Copy className="w-4 h-4" />
                     <span>Copy Fixed URL</span>
-                  </Button>
+                  </button>
                   
-                  <Button 
-                    variant="outline"
-                    onClick={() => window.open(`${window.location.origin}/working_updated_fixed.pkpass`, '_blank')}
-                    className="flex items-center space-x-2"
+                  <a
+                    href={`${typeof window !== 'undefined' ? window.location.origin : ''}/working_updated_fixed.pkpass`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="border border-gray-300 text-gray-600 hover:bg-gray-50 px-4 py-2 rounded-lg flex items-center space-x-2 text-center transition-colors"
                   >
                     <ExternalLink className="w-4 h-4" />
                     <span>Open in Safari</span>
-                  </Button>
+                  </a>
                 </div>
                 
                 <div className="text-sm text-gray-600 space-y-1">
                   <div>• <strong>Fixed PKPass:</strong> ✅ Includes proper images (icon.png + logo.png) with matching certificates (16KB)</div>
                   <div>• <strong>Enhanced PKPass:</strong> ✅ Full images with @2x/@3x variants + comprehensive pass data (574KB)</div>
-                  <div>• <strong>Reference PKPass:</strong> ✅ Original working baseline for comparison (16KB)</div>
+                  <div>• <strong>Reference PKPass:</strong> ✅ Original working baseline for comparison (17KB)</div>
                   <div>• <strong>Broken PKPass:</strong> ❌ Missing images - only pass.json in manifest (3.5KB)</div>
                   <div>• <strong>Certificate Status:</strong> ✅ Certificate and private key modulus match (2b6c3cc7c5f08edfd4c56b7c75b958d6)</div>
                   <div>• <strong>MIME Type:</strong> ✅ application/vnd.apple.pkpass (Next.js headers configured)</div>
                   <div>• <strong>Signature:</strong> ✅ Generated with updated certificates from .env.local</div>
                   <div>• <strong>Network Access:</strong> Available at http://192.168.29.135:3000/working_updated_fixed.pkpass</div>
-                  <div>• <strong>Test Instructions:</strong> Open URL in iPhone Safari - should prompt "Add to Apple Wallet"</div>
+                  <div>• <strong>Test Instructions:</strong> ✅ <strong>Direct links now active</strong> - Tap on iPhone Safari to add to Apple Wallet</div>
                 </div>
               </div>
             </CardContent>
