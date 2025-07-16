@@ -611,83 +611,82 @@ export default function WalletPreviewPage() {
                     <div className="flex items-center space-x-3">
                       <CheckCircle className="w-5 h-5 text-green-600" />
                       <div>
-                        <div className="font-medium text-green-800">Working Reference</div>
-                        <div className="text-sm text-green-600">Based on working PKPass</div>
+                        <div className="font-medium text-green-800">Updated PKPass</div>
+                        <div className="text-sm text-green-600">With matching certificates</div>
                       </div>
                     </div>
-                    <div className="text-sm text-green-600">16KB</div>
+                    <div className="text-sm text-green-600">3.5KB</div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <Star className="w-5 h-5 text-purple-600" />
+                      <div>
+                        <div className="font-medium text-purple-800">Enhanced PKPass</div>
+                        <div className="text-sm text-purple-600">Full images + all variants</div>
+                      </div>
+                    </div>
+                    <div className="text-sm text-purple-600">574KB</div>
                   </div>
                   
                   <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-200 rounded-lg">
                     <div className="flex items-center space-x-3">
-                      <Star className="w-5 h-5 text-blue-600" />
+                      <AlertCircle className="w-5 h-5 text-blue-600" />
                       <div>
-                        <div className="font-medium text-blue-800">Enhanced PKPass</div>
-                        <div className="text-sm text-blue-600">Complete visual styling + fields</div>
+                        <div className="font-medium text-blue-800">Reference PKPass</div>
+                        <div className="text-sm text-blue-600">Working baseline</div>
                       </div>
                     </div>
-                    <div className="text-sm text-blue-600">4.9KB</div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <AlertCircle className="w-5 h-5 text-yellow-600" />
-                      <div>
-                        <div className="font-medium text-yellow-800">Basic PKPass</div>
-                        <div className="text-sm text-yellow-600">Certificate chain only</div>
-                      </div>
-                    </div>
-                    <div className="text-sm text-yellow-600">4.4KB</div>
+                    <div className="text-sm text-blue-600">16KB</div>
                   </div>
                 </div>
                 
                 <div className="flex flex-wrap gap-3">
                   <Button 
+                    onClick={() => window.open('/working_updated.pkpass', '_blank')}
+                    className="flex items-center space-x-2 bg-green-600 hover:bg-green-700"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Download Updated PKPass (3.5KB)</span>
+                  </Button>
+                  
+                  <Button 
+                    onClick={() => window.open('/working_enhanced.pkpass', '_blank')}
+                    className="flex items-center space-x-2 bg-purple-600 hover:bg-purple-700"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Download Enhanced PKPass (574KB)</span>
+                  </Button>
+                  
+                  <Button 
                     onClick={() => window.open('/working_fixed.pkpass', '_blank')}
                     className="flex items-center space-x-2"
                   >
                     <Download className="w-4 h-4" />
-                    <span>Download Working PKPass</span>
-                  </Button>
-                  
-                  <Button 
-                    onClick={() => window.open('/working.pkpass', '_blank')}
-                    className="flex items-center space-x-2 bg-green-600 hover:bg-green-700"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span>Download NEW Generated PKPass</span>
+                    <span>Download Reference PKPass (16KB)</span>
                   </Button>
                   
                   <Button 
                     variant="outline"
-                    onClick={() => window.open('/manual_fixed.pkpass', '_blank')}
-                    className="flex items-center space-x-2"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span>Download Enhanced PKPass</span>
-                  </Button>
-                  
-                  <Button 
-                    variant="outline"
-                    onClick={() => window.open('/test_chain_fixed.pkpass', '_blank')}
-                    className="flex items-center space-x-2"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span>Download Basic PKPass</span>
-                  </Button>
-                  
-                  <Button 
-                    variant="outline"
-                    onClick={() => copyToClipboard(`${window.location.origin}/working_fixed.pkpass`)}
+                    onClick={() => copyToClipboard(`${window.location.origin}/working_updated.pkpass`)}
                     className="flex items-center space-x-2"
                   >
                     <Copy className="w-4 h-4" />
-                    <span>Copy Working URL</span>
+                    <span>Copy Updated URL</span>
                   </Button>
                   
                   <Button 
                     variant="outline"
-                    onClick={() => window.open(`${window.location.origin}/working_fixed.pkpass`, '_blank')}
+                    onClick={() => copyToClipboard(`${window.location.origin}/working_enhanced.pkpass`)}
+                    className="flex items-center space-x-2"
+                  >
+                    <Copy className="w-4 h-4" />
+                    <span>Copy Enhanced URL</span>
+                  </Button>
+                  
+                  <Button 
+                    variant="outline"
+                    onClick={() => window.open(`${window.location.origin}/working_updated.pkpass`, '_blank')}
                     className="flex items-center space-x-2"
                   >
                     <ExternalLink className="w-4 h-4" />
@@ -696,12 +695,13 @@ export default function WalletPreviewPage() {
                 </div>
                 
                 <div className="text-sm text-gray-600 space-y-1">
-                  <div>• <strong>Working PKPass:</strong> Based on reference structure with proper 29x29 icon and 160x50 logo</div>
-                  <div>• <strong>NEW Generated PKPass:</strong> Complete with all image variants (@1x, @2x, @3x) - 40KB</div>
+                  <div>• <strong>Updated PKPass:</strong> Generated with matching certificate/key pair (3.5KB)</div>
+                  <div>• <strong>Enhanced PKPass:</strong> Full images with @2x/@3x variants + comprehensive pass data (574KB)</div>
+                  <div>• <strong>Reference PKPass:</strong> Original working baseline for comparison (16KB)</div>
+                  <div>• <strong>Certificate Status:</strong> ✅ Certificate and private key modulus match (2b6c3cc7c5f08edfd4c56b7c75b958d6)</div>
                   <div>• <strong>MIME Type:</strong> application/vnd.apple.pkpass (✅ Next.js headers configured)</div>
-                  <div>• <strong>File Structure:</strong> Comprehensive pass.json with all fields (Pizza Club theme)</div>
-                  <div>• <strong>iOS Compatible:</strong> Should install directly in Apple Wallet without errors</div>
-                  <div>• <strong>Network Access:</strong> Available at http://192.168.29.135:3000/working.pkpass</div>
+                  <div>• <strong>Signature:</strong> Generated with updated certificates from .env.local</div>
+                  <div>• <strong>Network Access:</strong> Available at http://192.168.29.135:3000/working_updated.pkpass</div>
                   <div>• <strong>Test Instructions:</strong> Open URL in iPhone Safari - should prompt "Add to Apple Wallet"</div>
                 </div>
               </div>

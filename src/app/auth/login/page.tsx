@@ -152,7 +152,7 @@ function LoginContent() {
         
         if (!profile) {
           throw new Error('Failed to create user profile')
-        }
+      }
       }
 
       // Show success message
@@ -165,13 +165,13 @@ function LoginContent() {
         // Redirect to the next URL if provided
         router.push(decodeURIComponent(nextUrl))
       } else {
-        // Redirect based on role
+      // Redirect based on role
         if (profile.role_id === 2) { // Business role
-          router.push('/business/dashboard')
+        router.push('/business/dashboard')
         } else if (profile.role_id === 3) { // Customer role
-          router.push('/customer/dashboard')
-        } else {
-          throw new Error('Invalid user role')
+        router.push('/customer/dashboard')
+      } else {
+        throw new Error('Invalid user role')
         }
       }
 
@@ -184,7 +184,7 @@ function LoginContent() {
           setError('Please check your email and click the confirmation link before logging in.')
         } else {
           setError(err.message)
-        }
+      }
       } else {
         setError('An unexpected error occurred. Please try again.')
       }
@@ -215,7 +215,7 @@ function LoginContent() {
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-2">
             <AlertCircle className="h-5 w-5 text-red-600" />
             <p className="text-red-800 text-sm">{error}</p>
-          </div>
+        </div>
         )}
 
         {/* Login Form */}
@@ -233,13 +233,13 @@ function LoginContent() {
                 <Label htmlFor="email">Email</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="Enter your email"
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email"
                     className="pl-10"
-                    {...form.register('email')}
-                  />
+                  {...form.register('email')}
+                />
                 </div>
                 {form.formState.errors.email && (
                   <p className="text-red-600 text-sm">{form.formState.errors.email.message}</p>
@@ -251,13 +251,13 @@ function LoginContent() {
                 <Label htmlFor="password">Password</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Enter your password"
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Enter your password"
                     className="pl-10"
-                    {...form.register('password')}
-                  />
+                  {...form.register('password')}
+                />
                 </div>
                 {form.formState.errors.password && (
                   <p className="text-red-600 text-sm">{form.formState.errors.password.message}</p>
@@ -267,7 +267,7 @@ function LoginContent() {
               {/* Submit Button */}
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full" 
                 disabled={isSubmitting}
               >
                 {isSubmitting ? 'Signing in...' : 'Sign In'}
@@ -299,8 +299,8 @@ function LoginContent() {
 
         {/* Back to Home */}
         <div className="text-center">
-          <Link
-            href="/"
+          <Link 
+            href="/" 
             className="inline-flex items-center text-gray-600 hover:text-gray-800 text-sm"
           >
             <ArrowLeft className="h-4 w-4 mr-1" />
@@ -310,7 +310,7 @@ function LoginContent() {
       </div>
     </div>
   )
-}
+} 
 
 export default function LoginPage() {
   return (
