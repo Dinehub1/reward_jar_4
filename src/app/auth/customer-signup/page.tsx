@@ -109,10 +109,10 @@ function CustomerSignupContent() {
         }
       } else {
         // User needs email confirmation
-        if (nextUrl) {
-          router.push(`/auth/login?message=Please check your email to confirm your account&next=${encodeURIComponent(nextUrl)}`)
-        } else {
-          router.push('/auth/login?message=Please check your email to confirm your account')
+      if (nextUrl) {
+        router.push(`/auth/login?message=Please check your email to confirm your account&next=${encodeURIComponent(nextUrl)}`)
+      } else {
+        router.push('/auth/login?message=Please check your email to confirm your account')
         }
       }
 
