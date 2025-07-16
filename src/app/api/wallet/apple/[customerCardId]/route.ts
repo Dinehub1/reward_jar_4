@@ -258,10 +258,13 @@ export async function GET(
         const pkpassBuffer = await generatePKPass(passData)
         
         return new NextResponse(pkpassBuffer, {
+          status: 200,
           headers: {
             'Content-Type': 'application/vnd.apple.pkpass',
             'Content-Disposition': `inline; filename="${stampCard.name.replace(/[^a-zA-Z0-9]/g, '_')}.pkpass"`,
-            'Cache-Control': 'no-store'
+            'Content-Transfer-Encoding': 'binary',
+            'Cache-Control': 'no-store, no-cache, must-revalidate',
+            'Pragma': 'no-cache'
           }
         })
       } catch (error) {
