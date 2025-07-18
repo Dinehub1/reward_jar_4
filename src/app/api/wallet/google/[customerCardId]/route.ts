@@ -327,7 +327,7 @@ export async function GET(
   }
 }
 
-// Google Wallet JWT generation
+// Google Wallet JWT generation with proper private key handling
 function generateGoogleWalletJWT(loyaltyObject: Record<string, unknown>): string {
   const jwtPayload = {
     iss: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
@@ -343,7 +343,44 @@ function generateGoogleWalletJWT(loyaltyObject: Record<string, unknown>): string
     throw new Error('Google service account private key not configured')
   }
 
-  return jwt.sign(jwtPayload, process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY, {
+  // Process the private key to handle various formats properly
+  let privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY
+  
+  // Handle different newline formats
+  if (privateKey.includes('\\n')) {
+    privateKey = privateKey.replace(/\\n/g, '\n')
+  }
+  
+  // Remove any surrounding quotes that might be present
+  privateKey = privateKey.replace(/^["']|["']$/g, '')
+  
+  // Ensure proper line endings for PEM format
+  if (!privateKey.includes('\n')) {
+    // If no newlines, try to detect and add them after header/footer
+    privateKey = privateKey
+      .replace('-----BEGIN PRIVATE KEY-----', '-----BEGIN PRIVATE KEY-----\n')
+      .replace('-----END PRIVATE KEY-----', '\n-----END PRIVATE KEY-----')
+  }
+
+  // Validate PEM format
+  if (!privateKey.includes('-----BEGIN PRIVATE KEY-----') || !privateKey.includes('-----END PRIVATE KEY-----')) {
+    throw new Error('Invalid private key format - must be PEM format')
+  }
+  
+  // Additional validation for JWT library compatibility
+  if (!privateKey.trim().startsWith('-----BEGIN PRIVATE KEY-----')) {
+    throw new Error('Private key must start with PEM header')
+  }
+
+  console.log('🔐 Signing JWT with RS256 algorithm for Google Wallet')
+  console.log('🔍 Private key format validated:', {
+    hasBeginMarker: privateKey.includes('-----BEGIN PRIVATE KEY-----'),
+    hasEndMarker: privateKey.includes('-----END PRIVATE KEY-----'),
+    hasNewlines: privateKey.includes('\n'),
+    length: privateKey.length
+  })
+
+  return jwt.sign(jwtPayload, privateKey, {
     algorithm: 'RS256'
   })
 }

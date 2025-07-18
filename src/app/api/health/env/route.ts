@@ -2,140 +2,141 @@ import { NextResponse } from 'next/server'
 
 export async function GET() {
   try {
-    const checks = {
-      core_app: {
-        status: 'healthy',
-        variables: {} as Record<string, boolean>,
-        count: 0
-      },
-      apple_wallet: {
-        status: 'healthy',
-        variables: {} as Record<string, boolean>,
-        count: 0
-      },
-      google_wallet: {
-        status: 'healthy',
-        variables: {} as Record<string, boolean>,
-        count: 0
-      },
-      security_analytics: {
-        status: 'healthy',
-        variables: {} as Record<string, boolean>,
-        count: 0
+    // Validate core environment variables
+    const coreVars = {
+      NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+      BASE_URL: process.env.BASE_URL || process.env.NEXT_PUBLIC_BASE_URL,
+    }
+
+    // Validate Google Wallet specific variables
+    const googleWalletVars = {
+      GOOGLE_SERVICE_ACCOUNT_EMAIL: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+      GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY,
+      GOOGLE_CLASS_ID: process.env.GOOGLE_CLASS_ID,
+    }
+
+    // Validate Google Wallet private key format
+    const privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY
+    let privateKeyValid = false
+    let privateKeyError = ''
+
+    if (!privateKey) {
+      privateKeyError = 'GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY is missing'
+    } else {
+      // Check for proper PEM format
+      const pemStart = '-----BEGIN PRIVATE KEY-----'
+      const pemEnd = '-----END PRIVATE KEY-----'
+      
+      if (!privateKey.includes(pemStart) || !privateKey.includes(pemEnd)) {
+        privateKeyError = 'Private key is not in proper PEM format'
+      } else {
+        // Check for proper newline escaping
+        const hasProperNewlines = privateKey.includes('\\n') || privateKey.includes('\n')
+        if (!hasProperNewlines) {
+          privateKeyError = 'Private key missing proper newline characters'
+        } else {
+          privateKeyValid = true
+        }
       }
     }
 
-    // Core Application variables (5)
-    const coreVars = [
-      'NEXT_PUBLIC_SUPABASE_URL',
-      'NEXT_PUBLIC_SUPABASE_ANON_KEY', 
-      'SUPABASE_SERVICE_ROLE_KEY',
-      'BASE_URL',
-      'NEXT_PUBLIC_GOOGLE_MAPS_API_KEY'
-    ]
+    // Check core variables status
+    const coreStatus = Object.entries(coreVars).reduce((acc, [key, value]) => {
+      acc[key] = {
+        configured: !!value,
+        valid: !!value,
+        message: value ? 'Configured' : 'Missing'
+      }
+      return acc
+    }, {} as Record<string, any>)
 
-    coreVars.forEach(varName => {
-      const exists = !!process.env[varName]
-      checks.core_app.variables[varName] = exists
-      if (exists) checks.core_app.count++
-    })
+    // Check Google Wallet variables status
+    const googleWalletStatus = Object.entries(googleWalletVars).reduce((acc, [key, value]) => {
+      if (key === 'GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY') {
+        acc[key] = {
+          configured: !!value,
+          valid: privateKeyValid,
+          message: privateKeyValid ? 'Valid PEM format with proper newlines' : privateKeyError
+        }
+      } else {
+        acc[key] = {
+          configured: !!value,
+          valid: !!value,
+          message: value ? 'Configured' : 'Missing'
+        }
+      }
+      return acc
+    }, {} as Record<string, any>)
 
-    if (checks.core_app.count < coreVars.length) {
-      checks.core_app.status = 'degraded'
-    }
+    // Calculate overall status
+    const allCoreValid = Object.values(coreStatus).every(status => status.valid)
+    const allGoogleWalletValid = Object.values(googleWalletStatus).every(status => status.valid)
 
-    // Apple Wallet variables (6)
-    const appleVars = [
-      'APPLE_CERT_BASE64',
-      'APPLE_KEY_BASE64',
-      'APPLE_WWDR_BASE64',
-      'APPLE_CERT_PASSWORD',
-      'APPLE_TEAM_IDENTIFIER',
-      'APPLE_PASS_TYPE_IDENTIFIER'
-    ]
-
-    appleVars.forEach(varName => {
-      const exists = !!process.env[varName]
-      checks.apple_wallet.variables[varName] = exists
-      if (exists) checks.apple_wallet.count++
-    })
-
-    if (checks.apple_wallet.count < appleVars.length) {
-      checks.apple_wallet.status = 'unavailable'
-    }
-
-    // Google Wallet variables (3)
-    const googleVars = [
-      'GOOGLE_SERVICE_ACCOUNT_EMAIL',
-      'GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY',
-      'GOOGLE_CLASS_ID'
-    ]
-
-    googleVars.forEach(varName => {
-      const exists = !!process.env[varName]
-      checks.google_wallet.variables[varName] = exists
-      if (exists) checks.google_wallet.count++
-    })
-
-    if (checks.google_wallet.count < googleVars.length) {
-      checks.google_wallet.status = 'unavailable'
-    }
-
-    // Security & Analytics variables (3)
-    const securityVars = [
-      'API_KEY',
-      'NEXT_PUBLIC_POSTHOG_KEY',
-      'NEXT_PUBLIC_POSTHOG_HOST'
-    ]
-
-    securityVars.forEach(varName => {
-      const exists = !!process.env[varName]
-      checks.security_analytics.variables[varName] = exists
-      if (exists) checks.security_analytics.count++
-    })
-
-    if (checks.security_analytics.count < securityVars.length) {
-      checks.security_analytics.status = 'optional'
-    }
-
-    // Overall status
-    const overallHealthy = checks.core_app.status === 'healthy'
-    const totalExpected = coreVars.length + appleVars.length + googleVars.length + securityVars.length
-    const totalConfigured = checks.core_app.count + checks.apple_wallet.count + checks.google_wallet.count + checks.security_analytics.count
-
-    return NextResponse.json({
-      status: overallHealthy ? 'operational' : 'degraded',
+    const response = {
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV || 'development',
-      summary: {
-        total_variables: totalExpected,
-        configured_variables: totalConfigured,
-        completion_percentage: Math.round((totalConfigured / totalExpected) * 100)
+      status: allCoreValid && allGoogleWalletValid ? 'healthy' : 'degraded',
+      core: {
+        status: allCoreValid ? 'healthy' : 'error',
+        variables: coreStatus
       },
-      checks,
-      wallet_availability: {
-        apple: checks.apple_wallet.status === 'healthy' ? 'available' : 'unavailable',
-        google: checks.google_wallet.status === 'healthy' ? 'available' : 'unavailable',
-        pwa: 'available' // PWA is always available
+      googleWallet: {
+        status: allGoogleWalletValid ? 'healthy' : 'error',
+        variables: googleWalletStatus,
+        privateKeyValid,
+        jwtSigningReady: privateKeyValid && !!googleWalletVars.GOOGLE_SERVICE_ACCOUNT_EMAIL
       },
-      recommendations: [
-        ...(checks.core_app.status !== 'healthy' ? ['Configure core application variables for basic functionality'] : []),
-        ...(checks.apple_wallet.status !== 'healthy' ? ['Set up Apple Wallet certificates for iOS integration'] : []),
-        ...(checks.google_wallet.status !== 'healthy' ? ['Configure Google Wallet service account for Android integration'] : []),
-        ...(checks.security_analytics.status === 'optional' ? ['Add security and analytics variables for enhanced features'] : [])
-      ]
-    }, {
-      status: overallHealthy ? 200 : 503
-    })
+      validation: {
+        privateKeyFormat: privateKeyValid ? 'valid' : 'invalid',
+        privateKeyError: privateKeyError || null,
+        jwtCompatible: privateKeyValid,
+        rs256Ready: privateKeyValid
+      },
+      recommendations: generateRecommendations(allCoreValid, allGoogleWalletValid, privateKeyValid)
+    }
 
+    return NextResponse.json(response)
   } catch (error) {
-    return NextResponse.json({
-      status: 'error',
-      timestamp: new Date().toISOString(),
-      error: 'Environment check failed',
-      message: error instanceof Error ? error.message : 'Unknown error'
-    }, {
-      status: 500
-    })
+    console.error('Environment validation error:', error)
+    
+    return NextResponse.json(
+      {
+        timestamp: new Date().toISOString(),
+        status: 'error',
+        error: 'Failed to validate environment variables',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    )
   }
+}
+
+function generateRecommendations(coreValid: boolean, googleWalletValid: boolean, privateKeyValid: boolean): string[] {
+  const recommendations = []
+
+  if (!coreValid) {
+    recommendations.push('Configure missing core environment variables (Supabase)')
+  }
+
+  if (!googleWalletValid) {
+    recommendations.push('Configure Google Wallet environment variables')
+  }
+
+  if (!privateKeyValid) {
+    recommendations.push('Fix GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY format - ensure proper PEM format with escaped newlines')
+    recommendations.push('Example format: "-----BEGIN PRIVATE KEY-----\\nMIIEvQIB...\\n-----END PRIVATE KEY-----"')
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    recommendations.push('Consider using Google Cloud Secret Manager for production credentials')
+    recommendations.push('Ensure .env.local is in .gitignore for security')
+  }
+
+  if (recommendations.length === 0) {
+    recommendations.push('All environment variables are properly configured!')
+  }
+
+  return recommendations
 } 

@@ -1,201 +1,430 @@
 # Vercel Deployment Guide - RewardJar 4.0
 
-## 🚨 Issue: Test Cards Not Showing on Vercel
-
-**Problem:** The test interface shows "0 Available test cards" on Vercel because the `dev-seed` API was blocked in production.
-
-**Solution:** We've fixed the production block and need to configure environment variables properly on Vercel.
+**Status**: ✅ Complete Setup Guide  
+**Last Updated**: January 2025  
+**Target**: Production deployment with Google Wallet integration
 
 ---
 
-## 🔧 Required Environment Variables for Vercel
+## 📋 Executive Summary
 
-### 1. Core Database Variables (REQUIRED)
+This guide provides step-by-step instructions for deploying RewardJar 4.0 on Vercel with complete Google Wallet integration, environment variable configuration, and troubleshooting for common deployment issues.
+
+**🎯 Deployment Goals:**
+- ✅ Full Google Wallet functionality on production
+- ✅ Proper environment variable configuration
+- ✅ Test interface working with live data
+- ✅ All API endpoints functional
+- ✅ Security best practices implemented
+
+---
+
+## 🚀 Quick Start (5 Minutes)
+
+### 1. Deploy to Vercel
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+# Clone and deploy
+git clone https://github.com/yourusername/rewardjar_4.0.git
+cd rewardjar_4.0
+npx vercel --prod
+
+# Or use the Vercel dashboard
+# 1. Go to vercel.com
+# 2. Import from GitHub
+# 3. Configure environment variables (see below)
 ```
 
-### 2. Apple Wallet Variables (REQUIRED for Apple Wallet)
-```bash
-APPLE_TEAM_IDENTIFIER=your_apple_team_id
-APPLE_PASS_TYPE_IDENTIFIER=pass.com.yourcompany.rewardjar
-APPLE_CERT_BASE64=your_base64_encoded_certificate
-APPLE_KEY_BASE64=your_base64_encoded_private_key
-APPLE_WWDR_BASE64=your_base64_encoded_wwdr_certificate
-APPLE_CERT_PASSWORD=your_certificate_password
+### 2. Essential Environment Variables
+Add these in Vercel Dashboard → Settings → Environment Variables:
+
+```env
+# Core Application (Required)
+NEXT_PUBLIC_SUPABASE_URL=https://qxomkkjgbqmscxjppkeu.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
+BASE_URL=https://your-app.vercel.app
+NEXT_PUBLIC_BASE_URL=https://your-app.vercel.app
+
+# Google Wallet (Required for testing)
+GOOGLE_SERVICE_ACCOUNT_EMAIL=rewardjar@rewardjar-461310.iam.gserviceaccount.com
+GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIEvQIB...\n-----END PRIVATE KEY-----"
+GOOGLE_CLASS_ID=issuer.loyalty.rewardjar
+
+# Optional (for enhanced security)
+DEV_SEED_API_KEY=your_secure_api_key_here
 ```
 
-### 3. Application Configuration
-```bash
-BASE_URL=https://your-vercel-app.vercel.app
-NODE_ENV=production
+### 3. Verify Deployment
+- Visit: `https://your-app.vercel.app/test/wallet-preview`
+- Check: `https://your-app.vercel.app/api/health/env`
+
+---
+
+## 📊 Complete Environment Variable Setup
+
+### Required Variables (9 total)
+
+#### Core Application (5 variables)
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://qxomkkjgbqmscxjppkeu.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+BASE_URL=https://your-app.vercel.app
+NEXT_PUBLIC_BASE_URL=https://your-app.vercel.app
 ```
 
-### 4. Optional Security (for test endpoints)
-```bash
-DEV_SEED_API_KEY=your_secret_api_key_for_test_endpoints
+#### Google Wallet Integration (3 variables)
+```env
+GOOGLE_SERVICE_ACCOUNT_EMAIL=rewardjar@rewardjar-461310.iam.gserviceaccount.com
+GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC...\n-----END PRIVATE KEY-----"
+GOOGLE_CLASS_ID=issuer.loyalty.rewardjar
+```
+
+#### Security & Testing (1 variable - Optional)
+```env
+DEV_SEED_API_KEY=your_secure_random_key_for_test_endpoints
+```
+
+### Optional Variables (Advanced Features)
+```env
+# Analytics (Optional)
+NEXT_PUBLIC_POSTHOG_KEY=phc_your_posthog_key
+NEXT_PUBLIC_POSTHOG_HOST=https://app.posthog.com
+
+# Additional Security (Optional)
+API_KEY=secure_random_key_for_protected_endpoints
+
+# Google Maps (Optional)
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=AIzaSyB...
 ```
 
 ---
 
-## 🚀 Step-by-Step Vercel Setup
+## ⚙️ Step-by-Step Vercel Configuration
 
-### Step 1: Access Vercel Dashboard
-1. Go to [vercel.com](https://vercel.com)
-2. Navigate to your RewardJar project
-3. Click on "Settings" tab
-4. Click on "Environment Variables" in the sidebar
+### Step 1: Repository Setup
+1. **Push to GitHub**: Ensure your code is pushed to a GitHub repository
+2. **Check .gitignore**: Verify `.env.local` is in `.gitignore`
+3. **Commit latest changes**: `git add . && git commit -m "Ready for Vercel deployment"`
 
-### Step 2: Add Required Variables
-For each environment variable above:
-1. Click "Add New"
-2. Enter the **Name** (e.g., `NEXT_PUBLIC_SUPABASE_URL`)
-3. Enter the **Value** (your actual value)
-4. Select environments: **Production**, **Preview**, and **Development**
-5. Click "Save"
+### Step 2: Create Vercel Project
+1. Go to [vercel.com](https://vercel.com) and sign in
+2. Click **"New Project"**
+3. Import your GitHub repository
+4. Configure settings:
+   - **Framework Preset**: Next.js
+   - **Root Directory**: `./` (default)
+   - **Build Command**: `npm run build` (default)
+   - **Output Directory**: `.next` (default)
 
-### Step 3: Get Your Supabase Credentials
-1. Go to your Supabase project dashboard
-2. Navigate to "Settings" → "API"
-3. Copy the following:
-   - **Project URL** → `NEXT_PUBLIC_SUPABASE_URL`
-   - **Anon public key** → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - **Service role key** → `SUPABASE_SERVICE_ROLE_KEY`
+### Step 3: Environment Variables Configuration
 
-### Step 4: Configure Apple Wallet (if using)
-If you have Apple Wallet certificates:
-1. Convert your certificates to base64:
-   ```bash
-   base64 -i your_certificate.pem -o cert.b64
-   base64 -i your_private_key.pem -o key.b64
-   base64 -i wwdr.pem -o wwdr.b64
-   ```
-2. Copy the base64 content to the respective environment variables
+#### Method 1: Vercel Dashboard (Recommended)
+1. Go to your project → **Settings** → **Environment Variables**
+2. Add each variable individually:
+   - **Name**: `NEXT_PUBLIC_SUPABASE_URL`
+   - **Value**: `https://qxomkkjgbqmscxjppkeu.supabase.co`
+   - **Environments**: Production, Preview, Development (all)
+3. Repeat for all required variables
 
-### Step 5: Set Base URL
-Set `BASE_URL` to your Vercel app URL:
+#### Method 2: Vercel CLI
 ```bash
-BASE_URL=https://your-app-name.vercel.app
+# Install Vercel CLI
+npm i -g vercel
+
+# Set environment variables
+vercel env add NEXT_PUBLIC_SUPABASE_URL production
+vercel env add GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY production
+# ... continue for all variables
 ```
 
-### Step 6: Redeploy
-1. Go to "Deployments" tab in Vercel
-2. Click "Redeploy" on the latest deployment
-3. Wait for the deployment to complete
+#### Method 3: Import from .env file
+```bash
+# Create a temporary .env file with production values
+cat > .env.production << 'EOF'
+NEXT_PUBLIC_SUPABASE_URL=https://qxomkkjgbqmscxjppkeu.supabase.co
+GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n..."
+# ... all your variables
+EOF
+
+# Import to Vercel (requires Vercel CLI)
+vercel env pull .env.local
+```
+
+### Step 4: Private Key Configuration ⚠️ CRITICAL
+
+The `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` requires special handling:
+
+#### Correct Format:
+```env
+GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC...\n-----END PRIVATE KEY-----"
+```
+
+#### Common Mistakes to Avoid:
+❌ **Wrong**: Missing quotes
+❌ **Wrong**: No `\n` characters
+❌ **Wrong**: Spaces in the key
+❌ **Wrong**: Missing BEGIN/END markers
+
+#### Verification Steps:
+1. Check format with: `curl https://your-app.vercel.app/api/health/env`
+2. Look for: `"privateKeyValid": true`
+3. Verify: `"jwtSigningReady": true`
 
 ---
 
-## 🧪 Testing After Deployment
+## 🔍 Testing & Verification
 
-### 1. Check System Health
-Visit: `https://your-app.vercel.app/api/system/health`
+### Automated Health Checks
+```bash
+# Check overall system health
+curl https://your-app.vercel.app/api/health
 
-Expected response:
+# Check environment configuration
+curl https://your-app.vercel.app/api/health/env
+
+# Test Google Wallet API
+curl https://your-app.vercel.app/api/wallet/google/test-id
+```
+
+### Expected Responses
+
+#### Healthy Environment (`/api/health/env`):
 ```json
 {
   "status": "healthy",
-  "checks": {
-    "supabase": { "status": "healthy" },
-    "wallet_certificates": { "status": "healthy" },
-    "file_permissions": { "status": "healthy" },
-    "test_pass_generation": { "status": "healthy" }
+  "googleWallet": {
+    "status": "healthy",
+    "privateKeyValid": true,
+    "jwtSigningReady": true
+  },
+  "validation": {
+    "privateKeyFormat": "valid",
+    "jwtCompatible": true,
+    "rs256Ready": true
   }
 }
 ```
 
-### 2. Test Card Generation
-Visit: `https://your-app.vercel.app/test/wallet-preview`
+#### Working Test Interface:
+- Visit: `https://your-app.vercel.app/test/wallet-preview`
+- Should show: Test cards loaded
+- Google Wallet button: Should generate valid `saveUrl`
+- QR codes: Should point to `https://www.rewardjar.xyz/join/[cardId]`
 
-1. Click "Generate Test Data"
-2. You should see test cards appear
-3. System should show "15 Available test cards"
-
-### 3. Test Apple Wallet Generation
-Click on any test card's "Apple" button - should download a `.pkpass` file
-
----
-
-## 🔒 Security Considerations
-
-### Production Test Endpoints
-The `dev-seed` API is now available in production for testing purposes. To secure it:
-
-1. **Option A: No Security (Current)**
-   - Test endpoints work without authentication
-   - Suitable for staging/testing environments
-
-2. **Option B: API Key Protection**
-   - Add `DEV_SEED_API_KEY=your_secret_key` to Vercel environment variables
-   - Test interface will need to be updated to include the API key
-
-### Database Security
-- Ensure Row Level Security (RLS) is enabled on Supabase
-- Test users should only access test data
-- Production users should not see test data
+### Manual Testing Checklist
+- [ ] **Homepage loads**: `https://your-app.vercel.app`
+- [ ] **Test interface works**: `/test/wallet-preview`
+- [ ] **Test data generates**: Click "Generate Test Data"
+- [ ] **Google Wallet link works**: Click "Add to Google Wallet"
+- [ ] **QR codes display**: Proper production domain
+- [ ] **Environment validation**: Green status in `/api/health/env`
 
 ---
 
-## 🐛 Troubleshooting
+## 🚨 Troubleshooting Common Issues
 
-### Issue: "0 Available test cards"
-**Cause:** Environment variables not set correctly
-**Solution:** 
-1. Check all required environment variables are set in Vercel
-2. Redeploy the application
-3. Check `/api/system/health` for specific errors
+### Issue 1: "0 Available test cards"
+**Symptoms**: Test interface shows no cards
+**Causes**: 
+- Missing `SUPABASE_SERVICE_ROLE_KEY`
+- Incorrect Supabase URL
+- Dev-seed API blocked in production
 
-### Issue: "Supabase connection failed"
-**Cause:** Invalid Supabase credentials
-**Solution:**
-1. Verify `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-2. Check Supabase project is active and accessible
-3. Ensure service role key has proper permissions
+**Solutions**:
+```bash
+# Check Supabase connection
+curl https://your-app.vercel.app/api/health/env
 
-### Issue: "Apple Wallet generation failed"
-**Cause:** Missing or invalid Apple certificates
-**Solution:**
-1. Verify all Apple environment variables are set
-2. Check certificate expiration dates
-3. Ensure certificates are properly base64 encoded
+# Test dev-seed API directly
+curl -X POST https://your-app.vercel.app/api/dev-seed \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: your_dev_seed_api_key" \
+  -d '{"createAll": true}'
+```
 
-### Issue: "Database tables not found"
-**Cause:** Database schema not properly set up
-**Solution:**
-1. Run the SQL scripts in `/scripts/` directory
-2. Ensure all tables exist: `users`, `businesses`, `stamp_cards`, `customers`, `customer_cards`
-3. Check RLS policies are properly configured
+### Issue 2: "Invalid JWT signature"
+**Symptoms**: Google Wallet API returns JWT errors
+**Causes**: 
+- Malformed `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY`
+- Missing newline escaping
+- Wrong key format
+
+**Solutions**:
+```bash
+# Validate private key format
+curl https://your-app.vercel.app/api/health/env | jq '.validation'
+
+# Expected output:
+# {
+#   "privateKeyFormat": "valid",
+#   "jwtCompatible": true,
+#   "rs256Ready": true
+# }
+```
+
+### Issue 3: "secretOrPrivateKey must be an asymmetric key"
+**Symptoms**: JWT signing fails
+**Cause**: Private key not in proper PEM format
+
+**Solution**:
+1. Ensure private key starts with `-----BEGIN PRIVATE KEY-----`
+2. Ensure private key ends with `-----END PRIVATE KEY-----`
+3. Ensure newlines are escaped as `\n`
+4. Wrap entire key in double quotes
+
+### Issue 4: Build Failures
+**Symptoms**: Deployment fails during build
+**Causes**: 
+- Environment variables not available during build
+- Missing dependencies
+- Type errors
+
+**Solutions**:
+```bash
+# Check build logs in Vercel dashboard
+# Ensure all NEXT_PUBLIC_ variables are set
+# Verify no TypeScript errors locally:
+npm run build
+npm run lint
+```
+
+### Issue 5: API Routes Return 500
+**Symptoms**: Internal server errors on API calls
+**Causes**: 
+- Missing environment variables
+- Database connection issues
+- Incorrect Supabase keys
+
+**Solutions**:
+1. Check Vercel Function logs
+2. Verify all environment variables are set
+3. Test Supabase connection locally
+4. Check RLS policies
 
 ---
 
-## 📊 Expected Results After Fix
+## 🔒 Security Best Practices
 
-After following this guide, your Vercel deployment should show:
+### Environment Variable Security
+1. **Never commit `.env.local`** to version control
+2. **Use unique keys** for each environment (dev, staging, prod)
+3. **Rotate keys regularly** (every 90 days)
+4. **Limit access** to Vercel dashboard
 
-- **System Health:** 100% (4/4 checks passing)
-- **Test Cards:** 15 cards across 8 scenarios
-- **Apple Wallet:** PKPass files generating successfully (5-6KB files)
-- **Test Interface:** Fully functional with QR codes and download links
+### Google Wallet Security
+1. **Validate JWT signatures** server-side
+2. **Use HTTPS only** for production
+3. **Implement rate limiting** on test endpoints
+4. **Monitor API usage** for anomalies
+
+### Production Checklist
+- [ ] `.env.local` in `.gitignore`
+- [ ] Production domains configured
+- [ ] API keys are unique for production
+- [ ] Security headers enabled
+- [ ] Rate limiting implemented
+- [ ] Monitoring and alerting set up
 
 ---
 
-## 🆘 Need Help?
+## 📊 Performance Optimization
 
-If you're still experiencing issues:
+### Vercel-Specific Optimizations
+```javascript
+// next.config.ts
+const nextConfig = {
+  experimental: {
+    // Enable optimizations for Vercel
+  },
+  images: {
+    domains: ['storage.googleapis.com', 'api.qrserver.com']
+  },
+  env: {
+    // Custom environment variables
+  }
+}
+```
 
-1. **Check Vercel Function Logs:**
-   - Go to Vercel Dashboard → Functions
-   - Check logs for error messages
+### Database Optimization
+- Use connection pooling
+- Implement proper indexing
+- Cache frequent queries
+- Use CDN for static assets
 
-2. **Test API Endpoints Directly:**
-   ```bash
-   curl https://your-app.vercel.app/api/system/health
-   curl https://your-app.vercel.app/api/dev-seed
-   ```
+### Monitoring Setup
+```bash
+# Add performance monitoring
+NEXT_PUBLIC_POSTHOG_KEY=phc_your_key
+NEXT_PUBLIC_POSTHOG_HOST=https://app.posthog.com
 
-3. **Verify Database Connection:**
-   - Check Supabase dashboard for connection errors
-   - Ensure your IP is not blocked by Supabase
+# Monitor Vercel metrics
+vercel analytics enable
+```
 
-The test interface should now work perfectly on Vercel! 🎉 
+---
+
+## 🎯 Go-Live Checklist
+
+### Pre-Deploy Verification
+- [ ] All environment variables configured
+- [ ] Google Wallet private key validated
+- [ ] Supabase connection working
+- [ ] Test data generation functional
+- [ ] QR codes pointing to production domain
+
+### Post-Deploy Testing
+- [ ] Homepage loads without errors
+- [ ] Test interface shows cards
+- [ ] Google Wallet link generation works
+- [ ] JWT validation passes
+- [ ] Performance metrics within targets
+- [ ] Error logging functional
+
+### Production Monitoring
+- [ ] Set up alerts for failed deployments
+- [ ] Monitor API response times
+- [ ] Track error rates
+- [ ] Monitor Google Wallet usage
+- [ ] Set up backup and recovery
+
+---
+
+## 🆘 Support & Resources
+
+### Quick Commands
+```bash
+# Deploy latest changes
+git push && vercel --prod
+
+# Check deployment status
+vercel ls
+
+# View deployment logs
+vercel logs
+
+# Test environment
+curl https://your-app.vercel.app/api/health/env
+```
+
+### Useful Links
+- **Vercel Dashboard**: https://vercel.com/dashboard
+- **Google Wallet Console**: https://pay.google.com/business/console
+- **Supabase Dashboard**: https://app.supabase.com
+- **JWT Validator**: https://jwt.io
+
+### Getting Help
+1. **Check Vercel logs** in dashboard
+2. **Validate environment** via `/api/health/env`
+3. **Test locally first** with same variables
+4. **Review this guide** for common solutions
+
+---
+
+**Status**: ✅ **READY FOR PRODUCTION**  
+**Deployment Time**: ~10 minutes with this guide  
+**Next Steps**: Monitor performance and user adoption
+
+---
+
+*Last updated: January 2025 | Version: 4.0 Production* 
