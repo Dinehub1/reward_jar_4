@@ -244,7 +244,7 @@ function sha1Hash(buffer: Buffer): string {
   return createHash('sha1').update(buffer).digest('hex')
 }
 
-function generateMinimalIcon(size: number, color: string): Buffer {
+function generateMinimalIcon(_size: number, _color: string): Buffer {
   // Generate a minimal 1x1 pixel PNG and scale with CSS
   // This is the smallest valid PNG possible
   const pngData = Buffer.from([

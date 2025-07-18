@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     // Try to read the production PKPass file
     const pkpassPath = join(process.cwd(), 'dist', 'production.pkpass')
@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     let pkpassBuffer: Buffer
     try {
       pkpassBuffer = readFileSync(pkpassPath)
-    } catch (error) {
+    } catch (_error) {
       return NextResponse.json(
         { error: 'Production PKPass file not found. Run generate-production-pkpass.sh first.' },
         { status: 404 }

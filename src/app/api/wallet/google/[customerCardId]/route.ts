@@ -45,7 +45,7 @@ export async function GET(
     console.log('Fetched customer card:', customerCard)
 
     // Handle the data structure properly - stamp_cards is an object, not an array
-    const stampCardData = customerCard.stamp_cards as {
+    const stampCardData = (customerCard.stamp_cards as unknown) as {
       id: string
       total_stamps: number
       name: string

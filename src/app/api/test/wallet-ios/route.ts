@@ -257,12 +257,12 @@ async function generateSimpleIcon(): Promise<Buffer> {
   return pngData
 }
 
-async function createAppleSignature(manifestBuffer: Buffer): Promise<Buffer> {
+async function createAppleSignature(_manifestBuffer: Buffer): Promise<Buffer> {
   try {
     // Decode the Apple certificates from environment
-    const certPem = Buffer.from(process.env.APPLE_CERT_BASE64!, 'base64').toString('utf8')
-    const keyPem = Buffer.from(process.env.APPLE_KEY_BASE64!, 'base64').toString('utf8')
-    const wwdrPem = Buffer.from(process.env.APPLE_WWDR_BASE64!, 'base64').toString('utf8')
+    const _certPem = Buffer.from(process.env.APPLE_CERT_BASE64!, 'base64').toString('utf8')
+    const _keyPem = Buffer.from(process.env.APPLE_KEY_BASE64!, 'base64').toString('utf8')
+    const _wwdrPem = Buffer.from(process.env.APPLE_WWDR_BASE64!, 'base64').toString('utf8')
     
     console.log('🔐 Creating PKCS#7 signature with real Apple certificates...')
     

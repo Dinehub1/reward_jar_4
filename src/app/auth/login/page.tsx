@@ -277,7 +277,7 @@ function LoginContent() {
             {/* Sign Up Links */}
             <div className="mt-6 text-center space-y-2">
               <p className="text-sm text-gray-600">
-                Don't have an account?
+                Don&apos;t have an account?
               </p>
               <div className="flex flex-col space-y-2">
                 <Link

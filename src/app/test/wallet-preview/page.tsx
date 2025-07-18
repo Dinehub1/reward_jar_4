@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState, useCallback, Fragment } from 'react'
-import { createClient } from '@/lib/supabase'
+import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,27 +10,17 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { 
   Smartphone, 
-  Download, 
   Globe, 
-  Search, 
   RefreshCw, 
-  AlertCircle,
-  CheckCircle,
   Info,
   ExternalLink,
   Copy,
-  Eye,
-  Wallet,
   CreditCard,
-  Trophy,
-  Star,
   Plus,
   Trash2,
   Database,
   TestTube,
-  Zap,
   FileJson,
-  Monitor,
   Clock,
   BarChart3,
   Shield,
@@ -38,16 +28,12 @@ import {
   QrCode,
   Wifi,
   WifiOff,
-  Server,
   Activity,
-  Target,
-  Users,
   Settings,
   AlertTriangle,
   XCircle,
   CheckCircle2,
-  Timer,
-  Gauge
+  Timer
 } from 'lucide-react'
 
 // Types
@@ -288,7 +274,7 @@ export default function WalletPreviewTest() {
       if (debug || contentType.includes('application/json')) {
         try {
           passData = await response.json()
-        } catch (e) {
+        } catch (_e) {
           // Not JSON, that's fine
         }
       }
@@ -745,10 +731,12 @@ export default function WalletPreviewTest() {
                     {/* QR Code Preview */}
                     {showQRCodes && (
                       <div className="flex justify-center">
-                        <img
+                        <Image
                           src={generateQRCodeURL(card.id)}
                           alt={`QR Code for ${card.id}`}
-                          className="w-20 h-20 border rounded"
+                          width={80}
+                          height={80}
+                          className="border rounded"
                         />
                       </div>
                     )}

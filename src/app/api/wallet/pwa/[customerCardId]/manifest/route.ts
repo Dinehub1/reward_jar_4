@@ -63,7 +63,7 @@ export async function GET(
       })
     }
 
-    const stampCardData = customerCard.stamp_cards as {
+    const stampCardData = (customerCard.stamp_cards as unknown) as {
       id: string
       total_stamps: number
       name: string

@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Handle the data structure properly
-    const stampCardData = customerCard.stamp_cards as {
+    const stampCardData = (customerCard.stamp_cards as unknown) as {
       id: string
       name: string
       total_stamps: number
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
       updated_at: string
     }
 
-    const customerData = customerCard.customers as {
+    const customerData = (customerCard.customers as unknown) as {
       name: string
       email: string
       updated_at: string

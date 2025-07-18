@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase-server'
 // This endpoint processes pending wallet updates from the queue
 // Triggered by database changes via triggers
 
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   try {
     const supabase = await createClient()
     

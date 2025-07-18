@@ -342,7 +342,7 @@ async function generateProperIcon(size: number = 32, isLogo: boolean = false): P
   return Buffer.concat([pngSignature, ihdrChunk, idatChunk, iendChunk])
 }
 
-async function createBetterSignature(manifestBuffer: Buffer): Promise<Buffer> {
+async function createBetterSignature(_manifestBuffer: Buffer): Promise<Buffer> {
   try {
     console.log('🔐 Creating enhanced placeholder signature...')
     

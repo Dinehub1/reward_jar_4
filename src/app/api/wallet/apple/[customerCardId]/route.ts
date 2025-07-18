@@ -4,6 +4,10 @@ import crypto from 'crypto'
 import archiver from 'archiver'
 import forge from 'node-forge'
 import sharp from 'sharp'
+import { exec } from 'child_process'
+import fs from 'fs'
+import path from 'path'
+import { promisify } from 'util'
 
 // Helper function to get valid webServiceURL for Apple Wallet
 function getValidWebServiceURL(): string {
@@ -66,7 +70,7 @@ export async function GET(
     console.log('✅ Fetched customer card:', customerCard)
 
     // Handle the data structure properly - stamp_cards is an object, not an array
-    const stampCardData = customerCard.stamp_cards as {
+    const stampCardData = (customerCard.stamp_cards as unknown) as {
       id: string
       total_stamps: number
       name: string
@@ -448,7 +452,7 @@ async function generatePKPass(passData: Record<string, unknown>): Promise<Buffer
 }
 
 // Generate required pass icons
-async function generatePassIcons(stampCard: any, business: any): Promise<Record<string, Buffer>> {
+async function generatePassIcons(_stampCard: any, _business: any): Promise<Record<string, Buffer>> {
   const icons: Record<string, Buffer> = {}
   
   try {
@@ -529,11 +533,7 @@ async function createPKCS7Signature(manifestBuffer: Buffer): Promise<Buffer> {
       throw new Error('Missing Apple certificates')
     }
     
-    // Import required modules
-    const { exec } = require('child_process')
-    const fs = require('fs')
-    const path = require('path')
-    const { promisify } = require('util')
+    // Use imported modules
     const execAsync = promisify(exec)
     
     // Decode certificates
@@ -594,7 +594,7 @@ async function createPKCS7Signature(manifestBuffer: Buffer): Promise<Buffer> {
           if (fs.existsSync(file)) {
             fs.unlinkSync(file)
           }
-        } catch (e) {
+        } catch (_e) {
           console.warn('Could not cleanup temp file:', file)
         }
       })
