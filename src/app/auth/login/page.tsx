@@ -134,11 +134,13 @@ function LoginContent() {
       }
 
       // Get user profile to determine role - using correct users table
-      let { data: profile, error: profileError } = await supabase
+      const { data: initialProfile, error: profileError } = await supabase
         .from('users')
         .select('role_id')
         .eq('id', user.id)
         .single()
+      
+      let profile = initialProfile
 
       // If profile doesn't exist, create a fallback profile
       if (profileError || !profile) {

@@ -100,8 +100,8 @@ export default function CustomerCardPage() {
 
         if (cardData) {
           // Handle the nested structure correctly - stamp_cards and businesses are objects, not arrays
-          const stampCard = cardData.stamp_cards
-          const business = stampCard.businesses
+          const stampCard = (cardData.stamp_cards as unknown) as any
+          const business = (stampCard.businesses as unknown) as any
           
           setCustomerCard({
             ...cardData,

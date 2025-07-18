@@ -306,8 +306,8 @@ export default function CustomerDetailPage() {
                 <div>
                   <label className="text-sm font-medium text-gray-500">Wallet Type</label>
                   <div className="flex items-center space-x-2">
-                    <span className="text-lg">{walletDisplay.icon}</span>
-                    <p className="text-lg">{walletDisplay.name}</p>
+                    <span className="text-lg">📱</span>
+                    <p className="text-lg">Digital Wallet</p>
                   </div>
                 </div>
               </div>
