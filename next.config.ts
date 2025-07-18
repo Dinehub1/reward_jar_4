@@ -13,6 +13,12 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/v1/create-qr-code/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'developers.google.com',
+        port: '',
+        pathname: '/static/wallet/images/**',
+      },
     ],
   },
   async headers() {
@@ -55,7 +61,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: "Access-Control-Allow-Headers",
-            value: "Content-Type, Authorization, X-Requested-With",
+            value: "Content-Type, Authorization",
           },
         ],
       },
