@@ -2,13 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 
 // Development Seed API - Generate test data for wallet testing
-// Only available in development mode
+// Available in production for testing purposes with optional API key protection
 export async function POST(request: NextRequest) {
-  // Only allow in development
-  if (process.env.NODE_ENV === 'production') {
+  // Optional API key protection for production environments
+  const apiKey = request.headers.get('x-api-key')
+  const requiredApiKey = process.env.DEV_SEED_API_KEY
+  
+  if (process.env.NODE_ENV === 'production' && requiredApiKey && apiKey !== requiredApiKey) {
     return NextResponse.json(
-      { error: 'Dev seed endpoint not available in production' },
-      { status: 403 }
+      { error: 'Invalid or missing API key for dev seed endpoint' },
+      { status: 401 }
     )
   }
 
@@ -115,12 +118,15 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET(_request: NextRequest) {
-  // Only allow in development
-  if (process.env.NODE_ENV === 'production') {
+export async function GET(request: NextRequest) {
+  // Optional API key protection for production environments
+  const apiKey = request.headers.get('x-api-key')
+  const requiredApiKey = process.env.DEV_SEED_API_KEY
+  
+  if (process.env.NODE_ENV === 'production' && requiredApiKey && apiKey !== requiredApiKey) {
     return NextResponse.json(
-      { error: 'Dev seed endpoint not available in production' },
-      { status: 403 }
+      { error: 'Invalid or missing API key for dev seed endpoint' },
+      { status: 401 }
     )
   }
 

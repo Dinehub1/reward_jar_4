@@ -23,6 +23,7 @@ export const GOOGLE_CLASS_ID = process.env.GOOGLE_CLASS_ID
 
 // Security & Analytics Variables (Optional)
 export const API_KEY = process.env.API_KEY
+export const DEV_SEED_API_KEY = process.env.DEV_SEED_API_KEY
 export const NEXT_PUBLIC_POSTHOG_KEY = process.env.NEXT_PUBLIC_POSTHOG_KEY
 export const NEXT_PUBLIC_POSTHOG_HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST
 

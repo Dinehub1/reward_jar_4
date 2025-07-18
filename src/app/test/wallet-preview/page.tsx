@@ -238,7 +238,12 @@ export default function WalletPreviewTest() {
       })
       
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        if (response.status === 401) {
+          console.warn('⚠️ API key required for test endpoints in production')
+          // Still try to continue - user might need to set up API key
+        } else {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        }
       }
       
       const data = await response.json()
@@ -926,6 +931,26 @@ export default function WalletPreviewTest() {
               <div className="text-center py-8 text-gray-500">
                 <CreditCard className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                 <p>No test cards available. Generate some test data to get started.</p>
+                
+                {/* Production deployment notice */}
+                {process.env.NODE_ENV === 'production' && (
+                  <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg text-left max-w-md mx-auto">
+                    <h4 className="font-medium text-blue-800 mb-2">🚀 Vercel Deployment Detected</h4>
+                    <p className="text-sm text-blue-700 mb-2">
+                      If you're seeing this on Vercel, make sure you've set up the required environment variables:
+                    </p>
+                    <ul className="text-xs text-blue-600 space-y-1">
+                      <li>• NEXT_PUBLIC_SUPABASE_URL</li>
+                      <li>• NEXT_PUBLIC_SUPABASE_ANON_KEY</li>
+                      <li>• SUPABASE_SERVICE_ROLE_KEY</li>
+                      <li>• BASE_URL (your Vercel app URL)</li>
+                    </ul>
+                    <p className="text-xs text-blue-600 mt-2">
+                      📖 See <code>VERCEL_DEPLOYMENT_GUIDE.md</code> for complete setup instructions.
+                    </p>
+                  </div>
+                )}
+                
                 <Button 
                   onClick={generateTestData}
                   disabled={loading}
