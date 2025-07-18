@@ -36,6 +36,10 @@ import {
   Timer
 } from 'lucide-react'
 
+// Add revalidate = 0 to disable ISR caching
+export const revalidate = 0
+export const dynamic = 'force-dynamic'
+
 // Types
 interface TestCard {
   id: string
@@ -107,6 +111,7 @@ export default function WalletPreviewTest() {
   const [showQRCodes, setShowQRCodes] = useState(false)
   const [autoRefresh, setAutoRefresh] = useState(false)
   const [refreshInterval, setRefreshInterval] = useState(30)
+  const [systemHealthy, setSystemHealthy] = useState(false)
 
   // Browser detection and fallback
   const detectBrowser = () => {
@@ -163,28 +168,104 @@ export default function WalletPreviewTest() {
     return null
   }
 
-  // Fetch environment status
-  const fetchEnvironmentStatus = useCallback(async () => {
+  // Fetch system health status
+  const fetchSystemHealth = useCallback(async () => {
     try {
-      const response = await fetch('/api/health/wallet')
+      console.log('🏥 Fetching system health...')
+      const response = await fetch('/api/system/health', {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      })
       const data = await response.json()
-      setEnvironmentStatus(data)
+      
+      console.log('🏥 System health response:', data)
+      setSystemHealthy(data.status === 'healthy')
+      
+      // Update environment status based on health check
+      if (data.checks) {
+        setEnvironmentStatus({
+          apple_wallet: data.checks.wallet_certificates?.status === 'healthy' ? 'available' : 'missing_certificates',
+          google_wallet: data.checks.wallet_certificates?.details?.google_wallet?.status === 'available' ? 'available' : 'missing_config',
+          pwa_wallet: 'available',
+          certificates: {
+            apple_cert: data.checks.wallet_certificates?.status === 'healthy',
+            apple_key: data.checks.wallet_certificates?.status === 'healthy',
+            apple_wwdr: data.checks.wallet_certificates?.status === 'healthy',
+            google_service_account: data.checks.wallet_certificates?.details?.google_wallet?.status === 'available'
+          },
+          database: data.checks.supabase?.status === 'healthy' ? 'connected' : 'error',
+          overall_status: data.status === 'healthy' ? 'operational' : (data.status === 'degraded' ? 'degraded' : 'error')
+        })
+      }
     } catch (error) {
-      console.error('Error fetching environment status:', error)
+      console.error('❌ Error fetching system health:', error)
+      setSystemHealthy(false)
     }
   }, [])
 
   // Fetch existing test cards
   const fetchTestCards = useCallback(async () => {
     try {
-      const response = await fetch('/api/dev-seed', { method: 'GET' })
+      console.log('🔍 Fetching test cards...')
+      const response = await fetch('/api/dev-seed', { 
+        method: 'GET',
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      })
       const data = await response.json()
+      
+      console.log('🔍 Test cards response:', data)
       
       if (data.success) {
         setTestCards(data.cards || [])
+        console.log('✅ Loaded test cards:', data.cards?.length || 0)
+      } else {
+        console.error('❌ Failed to fetch test cards:', data)
       }
     } catch (error) {
-      console.error('Error fetching test cards:', error)
+      console.error('❌ Error fetching test cards:', error)
+    }
+  }, [])
+
+  // Fetch test results and performance metrics
+  const fetchTestResults = useCallback(async () => {
+    try {
+      console.log('📊 Fetching test results...')
+      const response = await fetch('/api/test/results', {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      })
+      const data = await response.json()
+      
+      console.log('📊 Test results response:', data)
+      
+      if (data.success) {
+        setTestResults(data.results || [])
+        
+        // Update performance metrics
+        const metrics = data.performance_metrics
+        if (metrics) {
+          setPerformanceMetrics({
+            averageResponseTime: metrics.avg_response_time || 0,
+            successRate: metrics.success_rate || 0,
+            totalRequests: metrics.total_tests || 0,
+            errorCount: metrics.failed_tests || 0,
+            averageFileSize: metrics.avg_file_size || 0
+          })
+        }
+        
+        console.log('✅ Loaded test results:', data.results?.length || 0)
+      } else {
+        console.error('❌ Failed to fetch test results:', data)
+      }
+    } catch (error) {
+      console.error('❌ Error fetching test results:', error)
     }
   }, [])
 
@@ -192,6 +273,7 @@ export default function WalletPreviewTest() {
   const generateTestData = async () => {
     setLoading(true)
     try {
+      console.log('🧪 Generating test data:', selectedScenario)
       const payload = selectedScenario === 'createAll' 
         ? { createAll: true }
         : { scenario: selectedScenario, count: 1 }
@@ -205,8 +287,12 @@ export default function WalletPreviewTest() {
       const data = await response.json()
       
       if (data.success) {
-        await fetchTestCards()
         console.log('✅ Test data generated successfully:', data)
+        // Refresh data immediately
+        await Promise.all([
+          fetchTestCards(),
+          fetchTestResults()
+        ])
       } else {
         console.error('❌ Failed to generate test data:', data)
       }
@@ -221,6 +307,7 @@ export default function WalletPreviewTest() {
   const cleanupTestData = async () => {
     setLoading(true)
     try {
+      console.log('🧹 Cleaning up test data...')
       const response = await fetch('/api/dev-seed', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -230,9 +317,18 @@ export default function WalletPreviewTest() {
       const data = await response.json()
       
       if (data.success) {
+        console.log('✅ Test data cleaned up successfully')
         setTestCards([])
         setTestResults([])
-        console.log('✅ Test data cleaned up successfully')
+        setPerformanceMetrics({
+          averageResponseTime: 0,
+          successRate: 0,
+          totalRequests: 0,
+          errorCount: 0,
+          averageFileSize: 0
+        })
+      } else {
+        console.error('❌ Failed to cleanup test data:', data)
       }
     } catch (error) {
       console.error('❌ Error cleaning up test data:', error)
@@ -241,12 +337,14 @@ export default function WalletPreviewTest() {
     }
   }
 
-  // Test wallet pass generation
+  // Test wallet pass generation with logging
   const testWalletPass = async (cardId: string, walletType: 'apple' | 'google' | 'pwa', debug = false) => {
     const testId = `${cardId}-${walletType}${debug ? '-debug' : ''}`
     const url = debug 
       ? `/api/wallet/${walletType}/${cardId}?debug=true`
       : `/api/wallet/${walletType}/${cardId}`
+
+    console.log('🧪 Testing wallet pass:', { testId, url, walletType })
 
     // Add pending result
     const pendingResult: TestResult = {
@@ -263,7 +361,12 @@ export default function WalletPreviewTest() {
 
     try {
       const startTime = Date.now()
-      const response = await fetch(url)
+      const response = await fetch(url, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      })
       const responseTime = Date.now() - startTime
       
       const contentType = response.headers.get('content-type') || ''
@@ -294,7 +397,32 @@ export default function WalletPreviewTest() {
       setTestResults(prev => [result, ...prev.filter(r => r.id !== testId)])
       updatePerformanceMetrics(result)
 
+      console.log('✅ Test completed:', result)
+
+      // Log to database
+      try {
+        await fetch('/api/test/results', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            test_id: testId,
+            test_type: walletType,
+            customer_card_id: cardId,
+            url,
+            status: result.status,
+            response_time_ms: responseTime,
+            file_size_bytes: fileSize,
+            content_type: contentType,
+            error_message: result.errorMessage,
+            pass_data: passData
+          })
+        })
+      } catch (logError) {
+        console.warn('⚠️ Could not log test result to database:', logError)
+      }
+
     } catch (error) {
+      console.error('❌ Test failed:', error)
       const result: TestResult = {
         id: testId,
         url,
@@ -369,20 +497,28 @@ export default function WalletPreviewTest() {
 
   // Initialize data
   useEffect(() => {
-    fetchEnvironmentStatus()
-    fetchTestCards()
-  }, [fetchEnvironmentStatus, fetchTestCards])
+    console.log('🚀 Initializing test interface...')
+    Promise.all([
+      fetchSystemHealth(),
+      fetchTestCards(),
+      fetchTestResults()
+    ])
+  }, [fetchSystemHealth, fetchTestCards, fetchTestResults])
 
   // Auto-refresh
   useEffect(() => {
     if (autoRefresh) {
+      console.log(`⏰ Auto-refresh enabled: ${refreshInterval}s`)
       const interval = setInterval(() => {
-        fetchTestCards()
-        fetchEnvironmentStatus()
+        Promise.all([
+          fetchSystemHealth(),
+          fetchTestCards(),
+          fetchTestResults()
+        ])
       }, refreshInterval * 1000)
       return () => clearInterval(interval)
     }
-  }, [autoRefresh, refreshInterval, fetchTestCards, fetchEnvironmentStatus])
+  }, [autoRefresh, refreshInterval, fetchSystemHealth, fetchTestCards, fetchTestResults])
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">
@@ -398,6 +534,12 @@ export default function WalletPreviewTest() {
               <p className="text-gray-600 mt-1">
                 Comprehensive testing and debugging for Apple Wallet integration
               </p>
+              {!systemHealthy && (
+                <div className="mt-2 flex items-center gap-2 text-yellow-600">
+                  <AlertTriangle className="h-4 w-4" />
+                  <span className="text-sm">System health check failed - some features may not work</span>
+                </div>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -413,8 +555,11 @@ export default function WalletPreviewTest() {
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  fetchTestCards()
-                  fetchEnvironmentStatus()
+                  Promise.all([
+                    fetchSystemHealth(),
+                    fetchTestCards(),
+                    fetchTestResults()
+                  ])
                 }}
               >
                 <RefreshCw className="h-4 w-4" />

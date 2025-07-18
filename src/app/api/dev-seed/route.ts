@@ -22,6 +22,8 @@ export async function POST(request: NextRequest) {
       createAll = false
     } = body
 
+    console.log('🧪 Dev-seed API called:', { scenario, count, cleanup, createAll })
+
     // Cleanup existing test data if requested
     if (cleanup) {
       await cleanupTestData(supabase)
@@ -44,11 +46,21 @@ export async function POST(request: NextRequest) {
         'over_complete'
       ]
       
+      console.log('🎯 Generating all test scenarios:', allScenarios)
       const results = []
+      
       for (const scenarioType of allScenarios) {
-        const result = await generateTestData(supabase, scenarioType, 1)
-        results.push(...result)
+        try {
+          const result = await generateTestData(supabase, scenarioType, 1)
+          results.push(...result)
+          console.log(`✅ Generated scenario: ${scenarioType}`)
+        } catch (error) {
+          console.error(`❌ Failed to generate scenario ${scenarioType}:`, error)
+          // Continue with other scenarios
+        }
       }
+      
+      const baseUrl = process.env.BASE_URL || 'https://www.rewardjar.xyz'
       
       return NextResponse.json({
         success: true,
@@ -60,16 +72,19 @@ export async function POST(request: NextRequest) {
           id: card.customerCardId,
           scenario: card.scenario,
           progress: `${card.currentStamps}/${card.totalStamps}`,
-          apple: `${process.env.BASE_URL || 'https://www.rewardjar.xyz'}/api/wallet/apple/${card.customerCardId}`,
-          google: `${process.env.BASE_URL || 'https://www.rewardjar.xyz'}/api/wallet/google/${card.customerCardId}`,
-          pwa: `${process.env.BASE_URL || 'https://www.rewardjar.xyz'}/api/wallet/pwa/${card.customerCardId}`,
-          debug: `${process.env.BASE_URL || 'https://www.rewardjar.xyz'}/api/wallet/apple/${card.customerCardId}?debug=true`
+          apple: `${baseUrl}/api/wallet/apple/${card.customerCardId}`,
+          google: `${baseUrl}/api/wallet/google/${card.customerCardId}`,
+          pwa: `${baseUrl}/api/wallet/pwa/${card.customerCardId}`,
+          debug: `${baseUrl}/api/wallet/apple/${card.customerCardId}?debug=true`
         }))
       })
     }
 
     // Generate test data based on scenario
+    console.log('🎯 Generating single scenario:', scenario)
     const result = await generateTestData(supabase, scenario, count)
+    
+    const baseUrl = process.env.BASE_URL || 'https://www.rewardjar.xyz'
     
     return NextResponse.json({
       success: true,
@@ -81,15 +96,15 @@ export async function POST(request: NextRequest) {
         id: card.customerCardId,
         scenario: card.scenario,
         progress: `${card.currentStamps}/${card.totalStamps}`,
-        apple: `${process.env.BASE_URL || 'https://www.rewardjar.xyz'}/api/wallet/apple/${card.customerCardId}`,
-        google: `${process.env.BASE_URL || 'https://www.rewardjar.xyz'}/api/wallet/google/${card.customerCardId}`,
-        pwa: `${process.env.BASE_URL || 'https://www.rewardjar.xyz'}/api/wallet/pwa/${card.customerCardId}`,
-        debug: `${process.env.BASE_URL || 'https://www.rewardjar.xyz'}/api/wallet/apple/${card.customerCardId}?debug=true`
+        apple: `${baseUrl}/api/wallet/apple/${card.customerCardId}`,
+        google: `${baseUrl}/api/wallet/google/${card.customerCardId}`,
+        pwa: `${baseUrl}/api/wallet/pwa/${card.customerCardId}`,
+        debug: `${baseUrl}/api/wallet/apple/${card.customerCardId}?debug=true`
       }))
     })
 
   } catch (error) {
-    console.error('Error in dev seed endpoint:', error)
+    console.error('❌ Error in dev seed endpoint:', error)
     return NextResponse.json(
       { 
         error: 'Failed to generate test data',
@@ -110,9 +125,10 @@ export async function GET(_request: NextRequest) {
   }
 
   try {
+    console.log('🔍 Fetching existing test data...')
     const supabase = await createClient()
     
-    // Get existing test data
+    // Get existing test data with proper joins
     const { data: testCards, error } = await supabase
       .from('customer_cards')
       .select(`
@@ -136,31 +152,46 @@ export async function GET(_request: NextRequest) {
         )
       `)
       .order('created_at', { ascending: false })
-      .limit(20)
+      .limit(50)
 
     if (error) {
+      console.error('❌ Database error:', error)
       throw error
     }
 
-    // Format response
-    const formattedCards = testCards?.map(card => ({
-      id: card.id,
-      current_stamps: card.current_stamps,
-      total_stamps: (card.stamp_cards as any)?.total_stamps || 0,
-      completion_percentage: Math.round(((card.current_stamps / ((card.stamp_cards as any)?.total_stamps || 1)) * 100)),
-      stamp_card_name: (card.stamp_cards as any)?.name || 'Unknown',
-      business_name: (card.stamp_cards as any)?.businesses?.name || 'Unknown',
-      customer_name: (card.customers as any)?.name || 'Unknown',
-      customer_email: (card.customers as any)?.email || 'Unknown',
-      created_at: card.created_at,
-      updated_at: card.updated_at,
-      test_urls: {
-        apple: `/api/wallet/apple/${card.id}`,
-        google: `/api/wallet/google/${card.id}`,
-        pwa: `/api/wallet/pwa/${card.id}`,
-        debug: `/api/wallet/apple/${card.id}?debug=true`
+    console.log('📊 Found test cards:', testCards?.length || 0)
+
+    // Format response for test interface
+    const formattedCards = testCards?.map(card => {
+      const stampCard = (card.stamp_cards as unknown) as any
+      const business = (stampCard?.businesses as unknown) as any
+      const customer = (card.customers as unknown) as any
+      
+      const totalStamps = stampCard?.total_stamps || 10
+      const currentStamps = card.current_stamps || 0
+      const completionPercentage = Math.round((currentStamps / totalStamps) * 100)
+      
+      return {
+        id: card.id,
+        current_stamps: currentStamps,
+        total_stamps: totalStamps,
+        completion_percentage: completionPercentage,
+        stamp_card_name: stampCard?.name || 'Unknown Card',
+        business_name: business?.name || 'Unknown Business',
+        customer_name: customer?.name || 'Unknown Customer',
+        customer_email: customer?.email || 'unknown@example.com',
+        created_at: card.created_at,
+        updated_at: card.updated_at,
+        test_urls: {
+          apple: `/api/wallet/apple/${card.id}`,
+          google: `/api/wallet/google/${card.id}`,
+          pwa: `/api/wallet/pwa/${card.id}`,
+          debug: `/api/wallet/apple/${card.id}?debug=true`
+        }
       }
-    })) || []
+    }) || []
+
+    console.log('✅ Formatted cards for test interface:', formattedCards.length)
 
     return NextResponse.json({
       success: true,
@@ -176,24 +207,34 @@ export async function GET(_request: NextRequest) {
         'large_card',
         'small_card',
         'long_names'
-      ]
+      ],
+      message: `Found ${formattedCards.length} test cards`
     })
 
   } catch (error) {
-    console.error('Error fetching test data:', error)
+    console.error('❌ Error fetching test data:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch test data' },
+      { 
+        error: 'Failed to fetch test data',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     )
   }
 }
 
 async function generateTestData(supabase: any, scenario: string, count: number) {
+  console.log(`🎯 Generating ${count} test cards for scenario: ${scenario}`)
   const results = []
   
   for (let i = 0; i < count; i++) {
-    const testData = await createTestCard(supabase, scenario, i + 1)
-    results.push(testData)
+    try {
+      const testData = await createTestCard(supabase, scenario, i + 1)
+      results.push(testData)
+    } catch (error) {
+      console.error(`❌ Failed to create test card ${i + 1} for scenario ${scenario}:`, error)
+      // Continue with other cards
+    }
   }
   
   return results
@@ -202,54 +243,62 @@ async function generateTestData(supabase: any, scenario: string, count: number) 
 async function createTestCard(supabase: any, scenario: string, index: number) {
   // Generate UUIDs for test entities
   const businessId = crypto.randomUUID()
-  const businessOwnerId = crypto.randomUUID()
   const customerId = crypto.randomUUID()
-  const customerUserId = crypto.randomUUID()
   const stampCardId = crypto.randomUUID()
   const customerCardId = crypto.randomUUID()
 
   // Configure scenario-specific data
   const scenarioConfig = getScenarioConfig(scenario, index)
   
+  console.log(`🏗️ Creating test card: ${scenario} #${index}`)
+  
   try {
-    // SIMPLIFIED APPROACH: Use existing users or create simple test data
-    // First, try to get existing users to avoid foreign key constraints
+    // Get or create test users to avoid foreign key constraints
+    let businessOwnerId = businessId
+    let customerUserId = customerId
+    
+    // Try to get existing test users
     const { data: existingUsers } = await supabase
       .from('users')
-      .select('id, role_id')
+      .select('id, role_id, email')
+      .or('email.like.*test*,email.like.*example*')
       .limit(10)
 
-    let businessOwnerUserId = businessOwnerId
-    let customerUserUserId = customerUserId
-
-    // If we have existing users, use them
     if (existingUsers && existingUsers.length > 0) {
       const businessUser = existingUsers.find((u: any) => u.role_id === 2)
       const customerUser = existingUsers.find((u: any) => u.role_id === 3)
       
-      if (businessUser) businessOwnerUserId = businessUser.id
-      if (customerUser) customerUserUserId = customerUser.id
+      if (businessUser) {
+        businessOwnerId = businessUser.id
+        console.log('📋 Using existing business user:', businessUser.email)
+      }
+      if (customerUser) {
+        customerUserId = customerUser.id
+        console.log('📋 Using existing customer user:', customerUser.email)
+      }
     }
 
-    // Create business (using existing user ID if available)
-    const { error: businessError } = await supabase
+    // Create business
+    const { data: business, error: businessError } = await supabase
       .from('businesses')
       .insert({
         id: businessId,
-        owner_id: businessOwnerUserId,
+        owner_id: businessOwnerId,
         name: scenarioConfig.businessName,
         description: scenarioConfig.businessDescription,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
+      .select()
+      .single()
     
     if (businessError) {
-      console.error('Error creating business:', businessError)
+      console.error('❌ Error creating business:', businessError)
       throw businessError
     }
 
     // Create stamp card
-    const { error: stampCardError } = await supabase
+    const { data: stampCard, error: stampCardError } = await supabase
       .from('stamp_cards')
       .insert({
         id: stampCardId,
@@ -261,31 +310,35 @@ async function createTestCard(supabase: any, scenario: string, index: number) {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
+      .select()
+      .single()
     
     if (stampCardError) {
-      console.error('Error creating stamp card:', stampCardError)
+      console.error('❌ Error creating stamp card:', stampCardError)
       throw stampCardError
     }
 
-    // Create customer (using existing user ID if available)
-    const { error: customerError } = await supabase
+    // Create customer
+    const { data: customer, error: customerError } = await supabase
       .from('customers')
       .insert({
         id: customerId,
-        user_id: customerUserUserId,
+        user_id: customerUserId,
         name: scenarioConfig.customerName,
         email: `test-customer-${scenario}-${index}@example.com`,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
+      .select()
+      .single()
     
     if (customerError) {
-      console.error('Error creating customer:', customerError)
+      console.error('❌ Error creating customer:', customerError)
       throw customerError
     }
 
     // Create customer card
-    const { error: customerCardError } = await supabase
+    const { data: customerCard, error: customerCardError } = await supabase
       .from('customer_cards')
       .insert({
         id: customerCardId,
@@ -296,13 +349,15 @@ async function createTestCard(supabase: any, scenario: string, index: number) {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
+      .select()
+      .single()
     
     if (customerCardError) {
-      console.error('Error creating customer card:', customerCardError)
+      console.error('❌ Error creating customer card:', customerCardError)
       throw customerCardError
     }
 
-    console.log(`✅ Successfully created test scenario: ${scenario} (${index})`)
+    console.log(`✅ Successfully created test scenario: ${scenario} #${index}`)
 
     return {
       customerCardId: customerCardId,
@@ -424,25 +479,7 @@ async function cleanupTestData(supabase: any) {
     
     // Delete test data in reverse order of dependencies
     
-    // Delete wallet update queue entries for test cards
-    const { error: queueError } = await supabase
-      .from('wallet_update_queue')
-      .delete()
-      .in('customer_card_id', 
-        supabase
-          .from('customer_cards')
-          .select('id')
-          .in('customer_id', 
-            supabase
-              .from('customers')
-              .select('id')
-              .like('email', '%test-%')
-          )
-      )
-    
-    if (queueError) console.warn('⚠️  Error cleaning wallet update queue:', queueError)
-
-    // Delete customer cards
+    // Delete customer cards first
     const { error: customerCardsError } = await supabase
       .from('customer_cards')
       .delete()
