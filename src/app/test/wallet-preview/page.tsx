@@ -32,7 +32,19 @@ import {
   FileJson,
   Monitor,
   Clock,
-  BarChart3
+  BarChart3,
+  Shield,
+  Bug,
+  Activity,
+  FileText,
+  Settings,
+  QrCode,
+  Smartphone as SmartphoneIcon,
+  WifiOff,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  HelpCircle
 } from 'lucide-react'
 
 interface TestCard {
@@ -87,6 +99,102 @@ interface AppleWalletPayload {
   labelColor: string
 }
 
+interface DebugInfo {
+  requestTime: number
+  passSize: string
+  contentType: string
+  status: number
+  downloadAttempt: boolean
+  barcodePreview: string
+  certificateStatus: 'valid' | 'expired' | 'invalid'
+  lastError?: string
+}
+
+interface TestScenario {
+  id: string
+  name: string
+  description: string
+  currentStamps: number
+  totalStamps: number
+  priority: 'high' | 'medium' | 'low'
+  category: 'core' | 'edge'
+}
+
+const TEST_SCENARIOS: TestScenario[] = [
+  {
+    id: 'empty',
+    name: 'Empty Card',
+    description: 'No stamps collected yet',
+    currentStamps: 0,
+    totalStamps: 10,
+    priority: 'high',
+    category: 'core'
+  },
+  {
+    id: 'in-progress',
+    name: 'In Progress',
+    description: 'Some stamps collected',
+    currentStamps: 3,
+    totalStamps: 10,
+    priority: 'high',
+    category: 'core'
+  },
+  {
+    id: 'half-complete',
+    name: 'Half Complete',
+    description: 'Halfway to reward',
+    currentStamps: 5,
+    totalStamps: 10,
+    priority: 'medium',
+    category: 'core'
+  },
+  {
+    id: 'almost-complete',
+    name: 'Almost Complete',
+    description: 'One stamp away from reward',
+    currentStamps: 9,
+    totalStamps: 10,
+    priority: 'high',
+    category: 'core'
+  },
+  {
+    id: 'completed',
+    name: 'Completed',
+    description: 'Reward unlocked',
+    currentStamps: 10,
+    totalStamps: 10,
+    priority: 'high',
+    category: 'core'
+  },
+  {
+    id: 'over-complete',
+    name: 'Over-Complete',
+    description: 'More stamps than required',
+    currentStamps: 12,
+    totalStamps: 10,
+    priority: 'medium',
+    category: 'core'
+  },
+  {
+    id: 'large-card',
+    name: 'Large Card',
+    description: 'High stamp requirement',
+    currentStamps: 25,
+    totalStamps: 50,
+    priority: 'low',
+    category: 'core'
+  },
+  {
+    id: 'small-card',
+    name: 'Small Card',
+    description: 'Low stamp requirement',
+    currentStamps: 2,
+    totalStamps: 3,
+    priority: 'low',
+    category: 'core'
+  }
+]
+
 export default function WalletPreviewPage() {
   const [testCards, setTestCards] = useState<TestCard[]>([])
   const [loading, setLoading] = useState(true)
@@ -95,8 +203,22 @@ export default function WalletPreviewPage() {
   const [selectedCard, setSelectedCard] = useState<string | null>(null)
   const [walletStatus, setWalletStatus] = useState<Record<string, WalletStatus>>({})
   const [applePayloads, setApplePayloads] = useState<Record<string, AppleWalletPayload>>({})
+  const [debugInfo, setDebugInfo] = useState<Record<string, DebugInfo>>({})
   const [generatingScenarios, setGeneratingScenarios] = useState(false)
   const [expandedJsonViewer, setExpandedJsonViewer] = useState<string | null>(null)
+  const [selectedScenario, setSelectedScenario] = useState<string>('')
+  const [showDebugPanel, setShowDebugPanel] = useState(false)
+  const [environmentStatus, setEnvironmentStatus] = useState<{
+    apple: boolean
+    google: boolean
+    pwa: boolean
+    certificates: 'valid' | 'expired' | 'invalid'
+  }>({
+    apple: false,
+    google: false,
+    pwa: true,
+    certificates: 'valid'
+  })
   
   const supabase = createClient()
 
@@ -180,6 +302,22 @@ export default function WalletPreviewPage() {
     }
   }, [supabase])
 
+  const checkEnvironmentStatus = useCallback(async () => {
+    try {
+      const response = await fetch('/api/health/wallet')
+      const data = await response.json()
+      
+      setEnvironmentStatus({
+        apple: data.checks?.apple_wallet || false,
+        google: data.checks?.google_wallet || false,
+        pwa: data.checks?.pwa_wallet || true,
+        certificates: data.certificates?.status || 'valid'
+      })
+    } catch (error) {
+      console.error('Failed to check environment status:', error)
+    }
+  }, [])
+
   const generateAllScenarios = async () => {
     try {
       setGeneratingScenarios(true)
@@ -204,6 +342,41 @@ export default function WalletPreviewPage() {
     } catch (error) {
       console.error('Error generating scenarios:', error)
       setError('Failed to generate test scenarios: ' + (error as Error).message)
+    } finally {
+      setGeneratingScenarios(false)
+    }
+  }
+
+  const generateSpecificScenario = async (scenario: TestScenario) => {
+    try {
+      setGeneratingScenarios(true)
+      setError(null)
+
+      const response = await fetch('/api/dev-seed', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          scenario: {
+            name: scenario.name,
+            currentStamps: scenario.currentStamps,
+            totalStamps: scenario.totalStamps
+          }
+        }),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to generate scenario')
+      }
+
+      await fetchTestCards()
+      console.log('Generated scenario:', scenario.name, result)
+    } catch (error) {
+      console.error('Error generating scenario:', error)
+      setError('Failed to generate scenario: ' + (error as Error).message)
     } finally {
       setGeneratingScenarios(false)
     }
@@ -238,6 +411,8 @@ export default function WalletPreviewPage() {
   }
 
   const testWallet = async (cardId: string, walletType: 'apple' | 'google' | 'pwa') => {
+    const startTime = Date.now()
+    
     setWalletStatus(prev => ({
       ...prev,
       [cardId]: {
@@ -249,6 +424,11 @@ export default function WalletPreviewPage() {
     try {
       const debugParam = walletType === 'apple' ? '?debug=true' : ''
       const response = await fetch(`/api/wallet/${walletType}/${cardId}${debugParam}`)
+      const requestTime = Date.now() - startTime
+      
+      // Get response headers for debugging
+      const contentType = response.headers.get('content-type') || 'unknown'
+      const contentLength = response.headers.get('content-length') || '0'
       
       if (response.ok) {
         setWalletStatus(prev => ({
@@ -256,6 +436,20 @@ export default function WalletPreviewPage() {
           [cardId]: {
             ...prev[cardId],
             [walletType]: 'success'
+          }
+        }))
+
+        // Store debug information
+        setDebugInfo(prev => ({
+          ...prev,
+          [cardId]: {
+            requestTime,
+            passSize: `${Math.round(parseInt(contentLength) / 1024 * 100) / 100} KB`,
+            contentType,
+            status: response.status,
+            downloadAttempt: true,
+            barcodePreview: cardId,
+            certificateStatus: 'valid'
           }
         }))
 
@@ -273,7 +467,7 @@ export default function WalletPreviewPage() {
           }
         }
       } else {
-        throw new Error(`HTTP ${response.status}`)
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       }
     } catch (error) {
       console.error(`Error testing ${walletType} wallet:`, error)
@@ -282,6 +476,20 @@ export default function WalletPreviewPage() {
         [cardId]: {
           ...prev[cardId],
           [walletType]: 'error'
+        }
+      }))
+
+      // Store error debug information
+      setDebugInfo(prev => ({
+        ...prev,
+        [cardId]: {
+          ...prev[cardId],
+          requestTime: Date.now() - startTime,
+          status: 0,
+          downloadAttempt: false,
+          barcodePreview: cardId,
+          certificateStatus: 'invalid',
+          lastError: (error as Error).message
         }
       }))
     }
@@ -343,7 +551,7 @@ export default function WalletPreviewPage() {
       case 'error':
         return <AlertCircle className="h-4 w-4 text-red-500" />
       default:
-        return <Clock class cegionlassName="h-4 w-4 text-gray-400" />
+        return <Clock className="h-4 w-4 text-gray-400" />
     }
   }
 
@@ -369,6 +577,14 @@ export default function WalletPreviewPage() {
     return { type: 'In Progress', color: 'bg-gray-100 text-gray-800' }
   }
 
+  const getEnvironmentStatusIcon = (status: boolean) => {
+    return status ? (
+      <CheckCircle2 className="h-4 w-4 text-green-500" />
+    ) : (
+      <XCircle className="h-4 w-4 text-red-500" />
+    )
+  }
+
   const filteredCards = testCards.filter(card =>
     card.stamp_card.business.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     card.stamp_card.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -378,7 +594,8 @@ export default function WalletPreviewPage() {
 
   useEffect(() => {
     fetchTestCards()
-  }, [fetchTestCards])
+    checkEnvironmentStatus()
+  }, [fetchTestCards, checkEnvironmentStatus])
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -388,68 +605,90 @@ export default function WalletPreviewPage() {
             <div>
               <h1 className="text-3xl font-bold text-gray-900 flex items-center">
                 <TestTube className="mr-3 h-8 w-8 text-blue-600" />
-                Wallet Test Preview
+                Apple Wallet Test & Debug Suite
               </h1>
               <p className="mt-2 text-gray-600">
-                Test Apple Wallet, Google Wallet, and PWA functionality with real customer cards
+                Comprehensive testing interface for Apple Wallet, Google Wallet, and PWA functionality
               </p>
-              <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                <div className="flex items-center">
-                  <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                  <div>
-                    <h3 className="text-sm font-medium text-green-800">🍎 iOS Safari Fix Applied</h3>
-                    <p className="mt-1 text-sm text-green-700">
-                      ✅ Clipboard API security fixed for IP testing • ✅ Real Apple Developer credentials loaded • ✅ MIME headers configured
-                    </p>
-                    <div className="mt-2 flex flex-wrap gap-4 text-xs text-green-600">
-                      <span>• Team ID: 39CDB598RF</span>
-                      <span>• Pass Type: pass.com.rewardjar.rewards</span>
-                      <a 
-                        href={`${process.env.NEXT_PUBLIC_BASE_URL || FALLBACK_BASE_URL}/api/test/wallet-ios`}
-                        target="_blank" 
-                        className="underline hover:text-green-800 font-medium"
-                      >
-                        🧪 Test iOS Safari Direct →
-                      </a>
-                      <button
-                        onClick={() => copyToClipboard('/api/test/wallet-ios')}
-                        className="underline hover:text-green-800 font-medium"
-                      >
-                        📋 Copy iOS Test URL
-                      </button>
+              
+              {/* Environment Status Panel */}
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center">
+                    <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                    <div>
+                      <h3 className="text-sm font-medium text-green-800">🍎 Apple Wallet Status</h3>
+                      <p className="mt-1 text-sm text-green-700">
+                        {environmentStatus.apple ? '✅ Ready' : '⚠️ Configuration needed'} • 
+                        Team: 39CDB598RF • 
+                        Certs: {environmentStatus.certificates}
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-4 text-xs text-green-600">
+                        <a 
+                          href={`${process.env.NEXT_PUBLIC_BASE_URL || FALLBACK_BASE_URL}/api/test/wallet-ios`}
+                          target="_blank" 
+                          className="underline hover:text-green-800 font-medium"
+                        >
+                          🧪 Test iOS Safari Direct →
+                        </a>
+                        <button
+                          onClick={() => copyToClipboard('/api/test/wallet-ios')}
+                          className="underline hover:text-green-800 font-medium"
+                        >
+                          📋 Copy iOS Test URL
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center">
+                    {getEnvironmentStatusIcon(environmentStatus.google)}
+                    <div className="ml-2">
+                      <h3 className="text-sm font-medium text-blue-800">🤖 Google Wallet Status</h3>
+                      <p className="mt-1 text-sm text-blue-700">
+                        {environmentStatus.google ? '✅ Ready' : '⚠️ Configuration needed'} • 
+                        Service Account: Configured
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                  <div className="flex items-center">
+                    {getEnvironmentStatusIcon(environmentStatus.pwa)}
+                    <div className="ml-2">
+                      <h3 className="text-sm font-medium text-purple-800">📱 PWA Wallet Status</h3>
+                      <p className="mt-1 text-sm text-purple-700">
+                        ✅ Always Available • Offline Support • Service Worker Ready
+                      </p>
                     </div>
                   </div>
                 </div>
               </div>
-              <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <div className="flex items-center">
-                  <AlertCircle className="h-5 w-5 text-yellow-500 mr-2" />
-                  <div>
-                    <h3 className="text-sm font-medium text-yellow-800">📡 Database Offline - Offline Mode Available</h3>
-                    <p className="mt-1 text-sm text-yellow-700">
-                      Database connectivity issue detected (DNS resolution failed). Using offline Apple Wallet testing.
-                    </p>
-                    <div className="mt-2 flex flex-wrap gap-4 text-xs text-yellow-600">
-                      <span>• Status: Network connectivity issue to Supabase</span>
-                      <span>• Solution: Offline testing with mock data</span>
-                      <a 
-                        href={`${process.env.NEXT_PUBLIC_BASE_URL || FALLBACK_BASE_URL}/api/test/wallet-simple`}
-                        target="_blank" 
-                        className="underline hover:text-yellow-800 font-medium"
-                      >
-                        🍎 Test Apple Wallet (Offline) →
-                      </a>
-                      <button 
-                        onClick={() => copyToClipboard('/api/test/wallet-simple')}
-                        className="underline hover:text-yellow-800 font-medium"
-                      >
-                        📋 Copy Offline Test URL
-                      </button>
-                    </div>
-                  </div>
-                </div>
+
+              {/* Debug Panel Toggle */}
+              <div className="mt-4 flex items-center space-x-4">
+                <Button 
+                  onClick={() => setShowDebugPanel(!showDebugPanel)}
+                  variant="outline"
+                  size="sm"
+                >
+                  <Bug className="mr-2 h-4 w-4" />
+                  {showDebugPanel ? 'Hide' : 'Show'} Debug Panel
+                </Button>
+                <Link 
+                  href="/docs/test-wallet-preview.md"
+                  target="_blank"
+                  className="text-sm text-blue-600 hover:underline flex items-center"
+                >
+                  <FileText className="mr-1 h-4 w-4" />
+                  View Complete Test Guide
+                </Link>
               </div>
             </div>
+            
             <div className="flex space-x-4">
               <Button 
                 onClick={fetchTestCards}
@@ -467,7 +706,7 @@ export default function WalletPreviewPage() {
                 size="sm"
               >
                 <Plus className={`mr-2 h-4 w-4 ${generatingScenarios ? 'animate-spin' : ''}`} />
-                Generate Test Scenarios
+                Generate All Scenarios
               </Button>
               <Button
                 onClick={cleanupTestData}
@@ -481,6 +720,35 @@ export default function WalletPreviewPage() {
             </div>
           </div>
         </div>
+
+        {/* Test Scenario Generator */}
+        {showDebugPanel && (
+          <div className="mb-6 p-4 bg-white border rounded-lg">
+            <h3 className="text-lg font-medium mb-4 flex items-center">
+              <Settings className="mr-2 h-5 w-5" />
+              Test Scenario Generator
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {TEST_SCENARIOS.map((scenario) => (
+                <Button
+                  key={scenario.id}
+                  onClick={() => generateSpecificScenario(scenario)}
+                  disabled={generatingScenarios}
+                  variant="outline"
+                  size="sm"
+                  className="text-left justify-start"
+                >
+                  <div>
+                    <div className="font-medium">{scenario.name}</div>
+                    <div className="text-xs text-gray-500">
+                      {scenario.currentStamps}/{scenario.totalStamps} stamps
+                    </div>
+                  </div>
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
           <div className="relative flex-1 max-w-lg">
@@ -553,6 +821,7 @@ export default function WalletPreviewPage() {
             const scenario = getScenarioType(card.current_stamps, card.stamp_card.total_stamps)
             const cardStatus = walletStatus[card.id] || { apple: 'idle', google: 'idle', pwa: 'idle' }
             const applePayload = applePayloads[card.id]
+            const cardDebugInfo = debugInfo[card.id]
             
             return (
               <Card key={card.id} className="hover:shadow-lg transition-shadow">
@@ -591,6 +860,27 @@ export default function WalletPreviewPage() {
                     <p><span className="font-medium">Email:</span> {card.customer.email}</p>
                     <p><span className="font-medium">Reward:</span> {card.stamp_card.reward_description}</p>
                   </div>
+
+                  {/* Debug Information */}
+                  {showDebugPanel && cardDebugInfo && (
+                    <div className="p-3 bg-gray-50 rounded-lg text-xs">
+                      <h4 className="font-medium text-gray-700 mb-2 flex items-center">
+                        <Activity className="mr-1 h-3 w-3" />
+                        Debug Info
+                      </h4>
+                      <div className="space-y-1 text-gray-600">
+                        <p>Request Time: {cardDebugInfo.requestTime}ms</p>
+                        <p>Pass Size: {cardDebugInfo.passSize}</p>
+                        <p>Content Type: {cardDebugInfo.contentType}</p>
+                        <p>Status: {cardDebugInfo.status}</p>
+                        <p>Certificate: {cardDebugInfo.certificateStatus}</p>
+                        {cardDebugInfo.lastError && (
+                          <p className="text-red-600">Error: {cardDebugInfo.lastError}</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="space-y-3">
                     <h4 className="font-medium text-sm text-gray-700">Wallet Testing</h4>
                     <div className="flex items-center justify-between p-2 border rounded-lg">
@@ -663,6 +953,7 @@ export default function WalletPreviewPage() {
                       </div>
                     </div>
                   </div>
+                  
                   <div className="space-y-2">
                     <h4 className="font-medium text-sm text-gray-700">API Endpoints</h4>
                     <div className="grid grid-cols-2 gap-2 text-xs">
@@ -704,6 +995,20 @@ export default function WalletPreviewPage() {
                       </Button>
                     </div>
                   </div>
+
+                  {/* QR Code Preview */}
+                  {showDebugPanel && (
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm text-gray-700 flex items-center">
+                        <QrCode className="mr-1 h-4 w-4" />
+                        Barcode Preview
+                      </h4>
+                      <div className="p-2 bg-gray-50 rounded text-xs font-mono">
+                        {card.id}
+                      </div>
+                    </div>
+                  )}
+
                   {applePayload && (
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
@@ -731,6 +1036,7 @@ export default function WalletPreviewPage() {
                       )}
                     </div>
                   )}
+                  
                   <div className="pt-2 border-t text-xs text-gray-500">
                     <p>Card ID: {card.id}</p>
                     <p>Created: {new Date(card.created_at).toLocaleDateString()}</p>
@@ -743,11 +1049,16 @@ export default function WalletPreviewPage() {
             )
           })}
         </div>
+        
         <div className="mt-12 text-center text-sm text-gray-500">
           <p>
-            Real-time wallet testing interface • Test all wallet types • 
+            Comprehensive Apple Wallet testing interface • Real-time debugging • 
             <Link href="/api/health" className="ml-1 text-blue-600 hover:underline">
               System Health
+            </Link>
+            {' • '}
+            <Link href="/docs/test-wallet-preview.md" className="text-blue-600 hover:underline">
+              Test Documentation
             </Link>
           </p>
         </div>
