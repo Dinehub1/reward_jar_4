@@ -36,9 +36,8 @@ import {
   Timer
 } from 'lucide-react'
 
-// Add revalidate = 0 to disable ISR caching
-export const revalidate = 0
-export const dynamic = 'force-dynamic'
+// NOTE: Removed revalidate and dynamic exports as they don't work with 'use client'
+// Client components handle their own caching through fetch options
 
 // Types
 interface TestCard {
@@ -112,9 +111,12 @@ export default function WalletPreviewTest() {
   const [autoRefresh, setAutoRefresh] = useState(false)
   const [refreshInterval, setRefreshInterval] = useState(30)
   const [systemHealthy, setSystemHealthy] = useState(false)
+  const [copySuccess, setCopySuccess] = useState<string | null>(null)
 
   // Browser detection and fallback
   const detectBrowser = () => {
+    if (typeof window === 'undefined') return { isAndroid: false, isIOS: false, isSafari: false, isDesktop: true }
+    
     const userAgent = navigator.userAgent.toLowerCase()
     const isAndroid = userAgent.includes('android')
     const isIOS = /iphone|ipad|ipod/.test(userAgent)
@@ -178,6 +180,11 @@ export default function WalletPreviewTest() {
           'Cache-Control': 'no-cache'
         }
       })
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+      
       const data = await response.json()
       
       console.log('🏥 System health response:', data)
@@ -202,6 +209,19 @@ export default function WalletPreviewTest() {
     } catch (error) {
       console.error('❌ Error fetching system health:', error)
       setSystemHealthy(false)
+      setEnvironmentStatus({
+        apple_wallet: 'error',
+        google_wallet: 'error',
+        pwa_wallet: 'available',
+        certificates: {
+          apple_cert: false,
+          apple_key: false,
+          apple_wwdr: false,
+          google_service_account: false
+        },
+        database: 'error',
+        overall_status: 'error'
+      })
     }
   }, [])
 
@@ -216,6 +236,11 @@ export default function WalletPreviewTest() {
           'Cache-Control': 'no-cache'
         }
       })
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+      
       const data = await response.json()
       
       console.log('🔍 Test cards response:', data)
@@ -225,9 +250,11 @@ export default function WalletPreviewTest() {
         console.log('✅ Loaded test cards:', data.cards?.length || 0)
       } else {
         console.error('❌ Failed to fetch test cards:', data)
+        setTestCards([])
       }
     } catch (error) {
       console.error('❌ Error fetching test cards:', error)
+      setTestCards([])
     }
   }, [])
 
@@ -241,6 +268,12 @@ export default function WalletPreviewTest() {
           'Cache-Control': 'no-cache'
         }
       })
+      
+      if (!response.ok) {
+        console.warn('⚠️ Test results API not available:', response.status)
+        return
+      }
+      
       const data = await response.json()
       
       console.log('📊 Test results response:', data)
@@ -284,6 +317,10 @@ export default function WalletPreviewTest() {
         body: JSON.stringify(payload)
       })
 
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+
       const data = await response.json()
       
       if (data.success) {
@@ -295,9 +332,11 @@ export default function WalletPreviewTest() {
         ])
       } else {
         console.error('❌ Failed to generate test data:', data)
+        throw new Error(data.error || 'Unknown error')
       }
     } catch (error) {
       console.error('❌ Error generating test data:', error)
+      alert(`Failed to generate test data: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setLoading(false)
     }
@@ -314,6 +353,10 @@ export default function WalletPreviewTest() {
         body: JSON.stringify({ cleanup: true })
       })
 
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+
       const data = await response.json()
       
       if (data.success) {
@@ -329,9 +372,11 @@ export default function WalletPreviewTest() {
         })
       } else {
         console.error('❌ Failed to cleanup test data:', data)
+        throw new Error(data.error || 'Unknown error')
       }
     } catch (error) {
       console.error('❌ Error cleaning up test data:', error)
+      alert(`Failed to cleanup test data: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setLoading(false)
     }
@@ -399,7 +444,7 @@ export default function WalletPreviewTest() {
 
       console.log('✅ Test completed:', result)
 
-      // Log to database
+      // Log to database (optional - may fail if table doesn't exist)
       try {
         await fetch('/api/test/results', {
           method: 'POST',
@@ -463,9 +508,34 @@ export default function WalletPreviewTest() {
     return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(text)}`
   }
 
-  // Copy to clipboard
+  // Copy to clipboard - Fixed for client-side only
   const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
+    if (typeof window !== 'undefined' && navigator?.clipboard) {
+      navigator.clipboard.writeText(text)
+        .then(() => {
+          setCopySuccess(text)
+          setTimeout(() => setCopySuccess(null), 2000)
+        })
+        .catch((err) => {
+          console.error('Failed to copy to clipboard:', err)
+          // Fallback for older browsers
+          const textArea = document.createElement('textarea')
+          textArea.value = text
+          document.body.appendChild(textArea)
+          textArea.focus()
+          textArea.select()
+          try {
+            document.execCommand('copy')
+            setCopySuccess(text)
+            setTimeout(() => setCopySuccess(null), 2000)
+          } catch (fallbackErr) {
+            console.error('Fallback copy failed:', fallbackErr)
+          }
+          document.body.removeChild(textArea)
+        })
+    } else {
+      console.warn('Clipboard API not available')
+    }
   }
 
   // Get status icon
@@ -841,6 +911,14 @@ export default function WalletPreviewTest() {
               <div className="text-center py-8 text-gray-500">
                 <CreditCard className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                 <p>No test cards available. Generate some test data to get started.</p>
+                <Button 
+                  onClick={generateTestData}
+                  disabled={loading}
+                  className="mt-4"
+                >
+                  {loading ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+                  Generate Test Data
+                </Button>
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -870,6 +948,9 @@ export default function WalletPreviewTest() {
                         >
                           <Copy className="h-3 w-3" />
                         </button>
+                        {copySuccess === card.id && (
+                          <span className="text-green-600 text-xs">Copied!</span>
+                        )}
                       </div>
                     </div>
 
