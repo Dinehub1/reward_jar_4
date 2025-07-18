@@ -43,6 +43,68 @@ This guide provides a complete testing framework for Apple Wallet integration in
 
 ---
 
+## 🔧 Quick Start Guide
+
+### 1. Generate Test Data
+```bash
+# Create all 8 test scenarios
+curl -X POST http://localhost:3000/api/dev-seed \
+  -H "Content-Type: application/json" \
+  -d '{"createAll": true}'
+
+# Create specific scenario
+curl -X POST http://localhost:3000/api/dev-seed \
+  -H "Content-Type: application/json" \
+  -d '{"scenario": "completed", "count": 1}'
+
+# Clean up test data
+curl -X POST http://localhost:3000/api/dev-seed \
+  -H "Content-Type: application/json" \
+  -d '{"cleanup": true}'
+```
+
+### 2. Test Wallet Generation
+```bash
+# Get available test cards
+curl http://localhost:3000/api/dev-seed
+
+# Test Apple Wallet PKPass
+curl -I "http://localhost:3000/api/wallet/apple/[CARD_ID]"
+
+# Test with debug info
+curl "http://localhost:3000/api/wallet/apple/[CARD_ID]?debug=true"
+
+# Test Google Wallet
+curl "http://localhost:3000/api/wallet/google/[CARD_ID]"
+
+# Test PWA Wallet
+curl "http://localhost:3000/api/wallet/pwa/[CARD_ID]"
+```
+
+### 3. Check System Health
+```bash
+# Overall system health
+curl http://localhost:3000/api/system/health
+
+# Wallet-specific health
+curl http://localhost:3000/api/health/wallet
+
+# Environment variables
+curl http://localhost:3000/api/health/env
+```
+
+### 4. Enable Test Result Tracking (Optional)
+```bash
+# Create test_results table in Supabase
+# Run this SQL script in your Supabase SQL editor:
+# scripts/create-test-results-table.sql
+
+# Then check test results
+curl http://localhost:3000/api/test/results
+```
+
+---
+
 ## 🔧 Debug Checklist
 
 ### 1. Environment Validation

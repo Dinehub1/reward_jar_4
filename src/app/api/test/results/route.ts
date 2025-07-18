@@ -10,6 +10,36 @@ export async function GET(request: NextRequest) {
 
     console.log('📊 Fetching test results:', { limit, testType })
 
+    // Check if test_results table exists
+    const { data: tableExists, error: tableCheckError } = await supabase
+      .from('test_results')
+      .select('id')
+      .limit(1)
+
+    if (tableCheckError) {
+      console.warn('⚠️ test_results table does not exist:', tableCheckError.message)
+      
+      // Return empty results with default metrics
+      return NextResponse.json({
+        success: true,
+        results: [],
+        performance_metrics: {
+          total_tests: 0,
+          successful_tests: 0,
+          failed_tests: 0,
+          pending_tests: 0,
+          success_rate: 0,
+          avg_duration_ms: 0,
+          avg_response_size_kb: 0,
+          test_type_breakdown: [],
+          time_period: '24h'
+        },
+        count: 0,
+        timestamp: new Date().toISOString(),
+        message: 'test_results table not found - run SQL script to create it'
+      })
+    }
+
     // Build query based on test type
     let query = supabase
       .from('test_results')
@@ -42,18 +72,18 @@ export async function GET(request: NextRequest) {
 
     const successRate = totalTests > 0 ? (successfulTests / totalTests) * 100 : 0
     
-    const responseTimes = recentResults
-      .filter(r => r.response_time_ms > 0)
-      .map(r => r.response_time_ms)
-    const avgResponseTime = responseTimes.length > 0 
-      ? responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length 
+    const durations = recentResults
+      .filter(r => r.duration_ms > 0)
+      .map(r => r.duration_ms)
+    const avgDuration = durations.length > 0 
+      ? durations.reduce((a, b) => a + b, 0) / durations.length 
       : 0
 
-    const fileSizes = recentResults
-      .filter(r => r.file_size_bytes > 0)
-      .map(r => r.file_size_bytes)
-    const avgFileSize = fileSizes.length > 0 
-      ? fileSizes.reduce((a, b) => a + b, 0) / fileSizes.length 
+    const sizes = recentResults
+      .filter(r => r.response_size_kb > 0)
+      .map(r => r.response_size_kb)
+    const avgSize = sizes.length > 0 
+      ? sizes.reduce((a, b) => a + b, 0) / sizes.length 
       : 0
 
     // Get test type breakdown
@@ -68,11 +98,11 @@ export async function GET(request: NextRequest) {
         successful_tests: typeSuccessful,
         failed_tests: typeResults.filter(r => r.status === 'error').length,
         success_rate: typeTotal > 0 ? (typeSuccessful / typeTotal) * 100 : 0,
-        avg_response_time: typeResults.length > 0 
-          ? typeResults.reduce((sum, r) => sum + (r.response_time_ms || 0), 0) / typeResults.length 
+        avg_duration_ms: typeResults.length > 0 
+          ? typeResults.reduce((sum, r) => sum + (r.duration_ms || 0), 0) / typeResults.length 
           : 0,
-        avg_file_size: typeResults.length > 0 
-          ? typeResults.reduce((sum, r) => sum + (r.file_size_bytes || 0), 0) / typeResults.length 
+        avg_response_size_kb: typeResults.length > 0 
+          ? typeResults.reduce((sum, r) => sum + (r.response_size_kb || 0), 0) / typeResults.length 
           : 0
       }
     })
@@ -83,8 +113,8 @@ export async function GET(request: NextRequest) {
       failed_tests: failedTests,
       pending_tests: pendingTests,
       success_rate: Math.round(successRate * 100) / 100,
-      avg_response_time: Math.round(avgResponseTime),
-      avg_file_size: Math.round(avgFileSize),
+      avg_duration_ms: Math.round(avgDuration),
+      avg_response_size_kb: Math.round(avgSize),
       test_type_breakdown: testTypeBreakdown,
       time_period: '24h'
     }
@@ -107,8 +137,23 @@ export async function GET(request: NextRequest) {
     console.error('❌ Error fetching test results:', error)
     return NextResponse.json(
       { 
+        success: false,
         error: 'Failed to fetch test results',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        details: error instanceof Error ? error.message : 'Unknown error',
+        results: [],
+        performance_metrics: {
+          total_tests: 0,
+          successful_tests: 0,
+          failed_tests: 0,
+          pending_tests: 0,
+          success_rate: 0,
+          avg_duration_ms: 0,
+          avg_response_size_kb: 0,
+          test_type_breakdown: [],
+          time_period: '24h'
+        },
+        count: 0,
+        timestamp: new Date().toISOString()
       },
       { status: 500 }
     )
@@ -121,33 +166,42 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     
     const {
-      test_id,
+      card_id,
       test_type,
-      customer_card_id,
-      url,
       status,
-      response_time_ms = 0,
-      file_size_bytes = 0,
-      content_type,
+      duration_ms = 0,
+      response_size_kb = 0,
       error_message,
-      pass_data
+      test_url
     } = body
 
-    console.log('📝 Creating test result:', { test_id, test_type, status })
+    console.log('📝 Creating test result:', { test_type, status, duration_ms })
+
+    // Check if test_results table exists
+    const { data: tableExists, error: tableCheckError } = await supabase
+      .from('test_results')
+      .select('id')
+      .limit(1)
+
+    if (tableCheckError) {
+      console.warn('⚠️ test_results table does not exist, skipping logging')
+      return NextResponse.json({
+        success: false,
+        message: 'test_results table not found - run SQL script to create it',
+        error: tableCheckError.message
+      }, { status: 404 })
+    }
 
     const { data: result, error } = await supabase
       .from('test_results')
       .insert({
-        test_id,
+        card_id,
         test_type,
-        customer_card_id,
-        url,
         status,
-        response_time_ms,
-        file_size_bytes,
-        content_type,
+        duration_ms,
+        response_size_kb,
         error_message,
-        pass_data
+        test_url
       })
       .select()
       .single()
@@ -169,6 +223,7 @@ export async function POST(request: NextRequest) {
     console.error('❌ Error creating test result:', error)
     return NextResponse.json(
       { 
+        success: false,
         error: 'Failed to create test result',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
@@ -184,6 +239,20 @@ export async function DELETE(request: NextRequest) {
     const days = parseInt(searchParams.get('days') || '7')
 
     console.log('🧹 Cleaning up test results older than', days, 'days')
+
+    // Check if test_results table exists
+    const { data: tableExists, error: tableCheckError } = await supabase
+      .from('test_results')
+      .select('id')
+      .limit(1)
+
+    if (tableCheckError) {
+      console.warn('⚠️ test_results table does not exist')
+      return NextResponse.json({
+        success: false,
+        message: 'test_results table not found - nothing to clean up'
+      }, { status: 404 })
+    }
 
     const cutoffDate = new Date()
     cutoffDate.setDate(cutoffDate.getDate() - days)
@@ -209,6 +278,7 @@ export async function DELETE(request: NextRequest) {
     console.error('❌ Error cleaning up test results:', error)
     return NextResponse.json(
       { 
+        success: false,
         error: 'Failed to clean up test results',
         details: error instanceof Error ? error.message : 'Unknown error'
       },

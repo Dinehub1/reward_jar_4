@@ -285,20 +285,38 @@ export default function WalletPreviewTest() {
         const metrics = data.performance_metrics
         if (metrics) {
           setPerformanceMetrics({
-            averageResponseTime: metrics.avg_response_time || 0,
+            averageResponseTime: metrics.avg_duration_ms || 0,
             successRate: metrics.success_rate || 0,
             totalRequests: metrics.total_tests || 0,
             errorCount: metrics.failed_tests || 0,
-            averageFileSize: metrics.avg_file_size || 0
+            averageFileSize: metrics.avg_response_size_kb || 0
           })
         }
         
         console.log('✅ Loaded test results:', data.results?.length || 0)
       } else {
-        console.error('❌ Failed to fetch test results:', data)
+        console.warn('⚠️ Test results not available:', data.message || 'Unknown error')
+        // Set empty results but don't show error to user
+        setTestResults([])
+        setPerformanceMetrics({
+          averageResponseTime: 0,
+          successRate: 0,
+          totalRequests: 0,
+          errorCount: 0,
+          averageFileSize: 0
+        })
       }
     } catch (error) {
       console.error('❌ Error fetching test results:', error)
+      // Set empty results but don't show error to user
+      setTestResults([])
+      setPerformanceMetrics({
+        averageResponseTime: 0,
+        successRate: 0,
+        totalRequests: 0,
+        errorCount: 0,
+        averageFileSize: 0
+      })
     }
   }, [])
 
@@ -391,7 +409,7 @@ export default function WalletPreviewTest() {
 
     console.log('🧪 Testing wallet pass:', { testId, url, walletType })
 
-    // Add pending result
+    // Add pending result to local state
     const pendingResult: TestResult = {
       id: testId,
       url,
@@ -444,22 +462,19 @@ export default function WalletPreviewTest() {
 
       console.log('✅ Test completed:', result)
 
-      // Log to database (optional - may fail if table doesn't exist)
+      // Try to log to database (optional - may fail if table doesn't exist)
       try {
         await fetch('/api/test/results', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            test_id: testId,
+            card_id: cardId,
             test_type: walletType,
-            customer_card_id: cardId,
-            url,
             status: result.status,
-            response_time_ms: responseTime,
-            file_size_bytes: fileSize,
-            content_type: contentType,
+            duration_ms: responseTime,
+            response_size_kb: Math.round(fileSize / 1024),
             error_message: result.errorMessage,
-            pass_data: passData
+            test_url: url
           })
         })
       } catch (logError) {
@@ -1092,7 +1107,18 @@ export default function WalletPreviewTest() {
             {testResults.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 <Activity className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                <p>No test results yet. Run some tests to see results here.</p>
+                <p className="mb-2">No test results yet.</p>
+                <p className="text-sm text-gray-400 mb-4">
+                  Run some tests to see results here, or create the test_results table in Supabase.
+                </p>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
+                  <p className="text-sm font-medium text-blue-800 mb-2">💡 To enable result tracking:</p>
+                  <ol className="text-xs text-blue-700 space-y-1">
+                    <li>1. Run the SQL script: <code className="bg-blue-100 px-1 rounded">scripts/create-test-results-table.sql</code></li>
+                    <li>2. Or use the API: <code className="bg-blue-100 px-1 rounded">POST /api/dev-seed</code></li>
+                    <li>3. Then test wallet passes to see performance metrics</li>
+                  </ol>
+                </div>
               </div>
             ) : (
               <div className="space-y-3">
