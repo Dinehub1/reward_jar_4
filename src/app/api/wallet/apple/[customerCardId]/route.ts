@@ -5,6 +5,22 @@ import archiver from 'archiver'
 import forge from 'node-forge'
 import sharp from 'sharp'
 
+// Helper function to get valid webServiceURL for Apple Wallet
+function getValidWebServiceURL(): string {
+  const baseUrl = process.env.BASE_URL || 'https://rewardjar.'
+  
+  // Apple Wallet requires HTTPS and rejects localhost/IP addresses
+  // If we're using localhost or IP, use the production domain instead
+  if (baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1') || baseUrl.includes('192.168.') || baseUrl.includes('10.0.')) {
+    console.warn('⚠️  Apple Wallet webServiceURL cannot use localhost/IP addresses. Using production domain instead.')
+    return 'https://rewardjar.com/api/wallet/apple/updates'
+  }
+  
+  // Ensure HTTPS
+  const httpsUrl = baseUrl.startsWith('https://') ? baseUrl : `https://${baseUrl.replace('http://', '')}`
+  return `${httpsUrl}/api/wallet/apple/updates`
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ customerCardId: string }> }
@@ -14,7 +30,7 @@ export async function GET(
     const supabase = await createClient()
     const customerCardId = resolvedParams.customerCardId
 
-    console.log('Generating Apple Wallet for card ID:', customerCardId)
+    console.log('🍎 Generating Apple Wallet for card ID:', customerCardId)
 
     // Get customer card with stamp card details
     const { data: customerCard, error } = await supabase
@@ -23,6 +39,7 @@ export async function GET(
         id,
         current_stamps,
         created_at,
+        updated_at,
         stamp_cards (
           id,
           name,
@@ -38,14 +55,14 @@ export async function GET(
       .single()
 
     if (error || !customerCard) {
-      console.error('Customer card not found:', error)
+      console.error('❌ Customer card not found:', error)
       return NextResponse.json(
         { error: 'Customer card not found' },
         { status: 404 }
       )
     }
 
-    console.log('Fetched customer card:', customerCard)
+    console.log('✅ Fetched customer card:', customerCard)
 
     // Handle the data structure properly - stamp_cards is an object, not an array
     const stampCardData = customerCard.stamp_cards as {
@@ -66,51 +83,17 @@ export async function GET(
 
     // Validate required data exists
     if (!stampCardData) {
-      console.error('Stamp card data missing')
+      console.error('❌ Stamp card data missing')
       return NextResponse.json(
         { error: 'Stamp card data not found' },
         { status: 404 }
       )
     }
 
-    if (!businessData) {
-      console.error('Business data missing')
-      return NextResponse.json(
-        { error: 'Business data not found' },
-        { status: 404 }
-      )
-    }
-
-    const stampCard = {
-      id: stampCardData.id,
-      name: stampCardData.name || 'Loyalty Card',
-      total_stamps: stampCardData.total_stamps || 10,
-      reward_description: stampCardData.reward_description || 'Reward'
-    }
-
-    const business = {
-      name: businessData.name || 'Business',
-      description: businessData.description || 'Visit us to collect stamps and earn rewards!'
-    }
-
-    console.log('Stamp Card:', stampCard)
-    console.log('Business:', business)
-    
-    // Calculate progress
-    const progress = Math.min((customerCard.current_stamps / stampCard.total_stamps) * 100, 100)
-    const isCompleted = customerCard.current_stamps >= stampCard.total_stamps
-    const stampsRemaining = Math.max(stampCard.total_stamps - customerCard.current_stamps, 0)
-
-    // Check if Apple Wallet is configured
-    if (!process.env.APPLE_TEAM_IDENTIFIER || !process.env.APPLE_PASS_TYPE_IDENTIFIER) {
-      return NextResponse.json(
-        { 
-          error: 'Apple Wallet not configured', 
-          message: 'Please contact support for Apple Wallet integration'
-        },
-        { status: 503 }
-      )
-    }
+    // Calculate progress and completion status
+    const progress = (customerCard.current_stamps / stampCardData.total_stamps) * 100
+    const isCompleted = customerCard.current_stamps >= stampCardData.total_stamps
+    const stampsRemaining = Math.max(0, stampCardData.total_stamps - customerCard.current_stamps)
 
     // Generate Apple Wallet pass JSON
     const passData = {
@@ -119,7 +102,7 @@ export async function GET(
       serialNumber: customerCardId,
       teamIdentifier: process.env.APPLE_TEAM_IDENTIFIER,
       organizationName: "RewardJar",
-      description: `${stampCard.name} - ${business.name}`,
+      description: `${stampCardData.name} - ${businessData.name}`,
       logoText: "RewardJar",
       backgroundColor: "rgb(16, 185, 129)", // green-500
       foregroundColor: "rgb(255, 255, 255)",
@@ -130,7 +113,7 @@ export async function GET(
           {
             key: "stamps",
             label: "Stamps Collected",
-            value: `${customerCard.current_stamps}/${stampCard.total_stamps}`,
+            value: `${customerCard.current_stamps}/${stampCardData.total_stamps}`,
             textAlignment: "PKTextAlignmentCenter"
           }
         ],
@@ -152,13 +135,13 @@ export async function GET(
           {
             key: "business",
             label: "Business",
-            value: business.name,
+            value: businessData.name,
             textAlignment: "PKTextAlignmentLeft"
           },
           {
             key: "reward",
             label: "Reward",
-            value: stampCard.reward_description,
+            value: stampCardData.reward_description,
             textAlignment: "PKTextAlignmentLeft"
           }
         ],
@@ -166,7 +149,7 @@ export async function GET(
           {
             key: "card_name",
             label: "Loyalty Card",
-            value: stampCard.name,
+            value: stampCardData.name,
             textAlignment: "PKTextAlignmentCenter"
           }
         ],
@@ -174,12 +157,12 @@ export async function GET(
           {
             key: "description",
             label: "About",
-            value: `Collect ${stampCard.total_stamps} stamps to earn: ${stampCard.reward_description}`
+            value: `Collect ${stampCardData.total_stamps} stamps to earn: ${stampCardData.reward_description}`
           },
           {
             key: "business_info",
-            label: business.name,
-            value: business.description || "Visit us to collect stamps and earn rewards!"
+            label: businessData.name,
+            value: businessData.description || "Visit us to collect stamps and earn rewards!"
           },
           {
             key: "instructions",
@@ -221,15 +204,17 @@ export async function GET(
       suppressStripShine: false,
       sharingProhibited: false,
       
-      webServiceURL: `${process.env.BASE_URL || 'https://rewardjar.com'}/api/wallet/apple/updates`,
+      // CRITICAL FIX: webServiceURL must be HTTPS domain, not localhost/IP
+      // Apple Wallet rejects localhost and IP addresses
+      webServiceURL: getValidWebServiceURL(),
       authenticationToken: customerCardId,
       
       associatedStoreIdentifiers: [],
       
       userInfo: {
         customerCardId: customerCardId,
-        stampCardId: stampCard.id,
-        businessName: business.name
+        stampCardId: stampCardData.id,
+        businessName: businessData.name
       }
     }
 
@@ -243,6 +228,7 @@ export async function GET(
       const debugInfo = {
         passData,
         certificatesConfigured: hasAllCertificates,
+        webServiceURL: getValidWebServiceURL(),
         environment: {
           teamIdentifier: !!process.env.APPLE_TEAM_IDENTIFIER,
           passTypeIdentifier: !!process.env.APPLE_PASS_TYPE_IDENTIFIER,
@@ -269,7 +255,7 @@ export async function GET(
         // Validate pass structure before generation
         const validationErrors = validatePKPassStructure(passData)
         if (validationErrors.length > 0) {
-          console.error('PKPass validation failed:', validationErrors)
+          console.error('❌ PKPass validation failed:', validationErrors)
           return NextResponse.json(
             { 
               error: 'PKPass validation failed',
@@ -281,23 +267,29 @@ export async function GET(
         
         const pkpassBuffer = await generatePKPass(passData)
         
-        console.log('PKPass generated successfully:', {
+        console.log('✅ PKPass generated successfully:', {
           size: pkpassBuffer.length,
           sizeKB: (pkpassBuffer.length / 1024).toFixed(1)
         })
         
+        // IMPROVED HEADERS for better iOS Safari compatibility
         return new NextResponse(pkpassBuffer, {
           status: 200,
           headers: {
             'Content-Type': 'application/vnd.apple.pkpass',
-            'Content-Disposition': `inline; filename="${stampCard.name.replace(/[^a-zA-Z0-9]/g, '_')}.pkpass"`,
+            'Content-Disposition': `attachment; filename="${stampCardData.name.replace(/[^a-zA-Z0-9]/g, '_')}.pkpass"`,
             'Content-Transfer-Encoding': 'binary',
             'Cache-Control': 'no-store, no-cache, must-revalidate',
-            'Pragma': 'no-cache'
+            'Pragma': 'no-cache',
+            'Expires': '0',
+            'X-Content-Type-Options': 'nosniff',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization'
           }
         })
       } catch (error) {
-        console.error('Error generating PKPass:', error)
+        console.error('❌ Error generating PKPass:', error)
         return NextResponse.json(
           { 
             error: 'Failed to generate Apple Wallet pass',
@@ -317,32 +309,42 @@ export async function GET(
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
-    <div class="bg-white rounded-lg shadow-lg p-6 max-w-md w-full">
-        <div class="text-center mb-6">
-            <div class="w-16 h-16 bg-gray-200 rounded-full mx-auto mb-4 flex items-center justify-center">
-                <svg class="w-8 h-8 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm12 4l-3 3-3-3 3-3 3 3z"></path>
-                </svg>
-            </div>
-            <h1 class="text-xl font-bold text-gray-900 mb-2">Apple Wallet Integration</h1>
-            <p class="text-gray-600">Apple Wallet passes require additional setup</p>
-        </div>
-        
-        <div class="space-y-4 mb-6">
-            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h3 class="font-semibold text-blue-900 mb-2">Required Setup:</h3>
-                <ul class="text-sm text-blue-800 space-y-1">
-                    <li>• Apple Developer Account</li>
-                    <li>• Pass Type ID Certificate</li>
-                    <li>• Signing certificates</li>
-                    <li>• Web service configuration</li>
-                </ul>
+<body class="bg-gray-100 min-h-screen py-8">
+    <div class="max-w-2xl mx-auto px-4 space-y-6">
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="text-center mb-6">
+                <h1 class="text-2xl font-bold text-gray-900 mb-2">Apple Wallet Setup Required</h1>
+                <p class="text-gray-600">Apple Wallet certificates need to be configured to generate passes.</p>
             </div>
             
-            <div class="bg-green-50 border border-green-200 rounded-lg p-4">
-                <h3 class="font-semibold text-green-900 mb-2">Alternative Options:</h3>
-                <div class="space-y-2">
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-yellow-800">Configuration Required</h3>
+                        <p class="text-sm text-yellow-700 mt-1">
+                            To generate Apple Wallet passes, you need to configure your Apple Developer certificates.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="space-y-4">
+                <h2 class="text-lg font-semibold text-gray-900">Required Environment Variables:</h2>
+                <ul class="space-y-2 text-sm text-gray-600">
+                    <li>• APPLE_CERT_BASE64 - Your pass certificate (Base64 encoded)</li>
+                    <li>• APPLE_KEY_BASE64 - Your private key (Base64 encoded)</li>
+                    <li>• APPLE_WWDR_BASE64 - Apple's WWDR certificate (Base64 encoded)</li>
+                    <li>• APPLE_CERT_PASSWORD - Certificate password</li>
+                    <li>• APPLE_TEAM_IDENTIFIER - Your Apple team identifier</li>
+                    <li>• APPLE_PASS_TYPE_IDENTIFIER - Your pass type identifier</li>
+                </ul>
+                
+                <div class="mt-6 flex flex-col sm:flex-row gap-3">
                     <a href="/api/wallet/pwa/${customerCardId}" class="block w-full bg-green-600 hover:bg-green-700 text-white text-center py-2 px-4 rounded font-medium">
                         Use Web App Instead
                     </a>
@@ -370,7 +372,7 @@ export async function GET(
     })
 
   } catch (error) {
-    console.error('Error generating Apple Wallet pass:', error)
+    console.error('❌ Error generating Apple Wallet pass:', error)
     return NextResponse.json(
       { error: 'Failed to generate Apple Wallet pass' },
       { status: 500 }

@@ -35,1030 +35,809 @@ import {
   BarChart3,
   Shield,
   Bug,
-  Activity,
-  FileText,
-  Settings,
   QrCode,
-  Smartphone as SmartphoneIcon,
+  Wifi,
   WifiOff,
-  CheckCircle2,
-  XCircle,
+  Server,
+  Activity,
+  Target,
+  Users,
+  Settings,
   AlertTriangle,
-  HelpCircle
+  XCircle,
+  CheckCircle2,
+  Timer,
+  Gauge
 } from 'lucide-react'
 
+// Types
 interface TestCard {
   id: string
-  customer_id: string
   current_stamps: number
-  wallet_pass_id: string | null
+  total_stamps: number
+  completion_percentage: number
+  stamp_card_name: string
+  business_name: string
+  customer_name: string
+  customer_email: string
   created_at: string
-  updated_at?: string
-  stamp_card: {
-    id: string
-    name: string
-    total_stamps: number
-    reward_description: string
-    business: {
-      name: string
-      description: string | null
-    }
-  }
-  customer: {
-    name: string
-    email: string
+  updated_at: string
+  test_urls: {
+    apple: string
+    google: string
+    pwa: string
+    debug: string
   }
 }
 
-interface WalletStatus {
-  apple: 'loading' | 'success' | 'error' | 'idle'
-  google: 'loading' | 'success' | 'error' | 'idle'
-  pwa: 'loading' | 'success' | 'error' | 'idle'
-}
-
-interface AppleWalletPayload {
-  formatVersion: number
-  passTypeIdentifier: string
-  serialNumber: string
-  teamIdentifier: string
-  organizationName: string
-  description: string
-  storeCard: {
-    headerFields: Array<{ key: string; label: string; value: string }>
-    primaryFields: Array<{ key: string; label: string; value: string }>
-    secondaryFields: Array<{ key: string; label: string; value: string }>
-    auxiliaryFields: Array<{ key: string; label: string; value: string }>
+interface EnvironmentStatus {
+  apple_wallet: 'available' | 'missing_certificates' | 'error'
+  google_wallet: 'available' | 'missing_config' | 'error'
+  pwa_wallet: 'available' | 'error'
+  certificates: {
+    apple_cert: boolean
+    apple_key: boolean
+    apple_wwdr: boolean
+    google_service_account: boolean
   }
-  barcode: {
-    format: string
-    message: string
-    messageEncoding: string
-  }
-  backgroundColor: string
-  foregroundColor: string
-  labelColor: string
+  database: 'connected' | 'error'
+  overall_status: 'operational' | 'degraded' | 'error'
 }
 
-interface DebugInfo {
-  requestTime: number
-  passSize: string
-  contentType: string
-  status: number
-  downloadAttempt: boolean
-  barcodePreview: string
-  certificateStatus: 'valid' | 'expired' | 'invalid'
-  lastError?: string
-}
-
-interface TestScenario {
+interface TestResult {
   id: string
-  name: string
-  description: string
-  currentStamps: number
-  totalStamps: number
-  priority: 'high' | 'medium' | 'low'
-  category: 'core' | 'edge'
+  url: string
+  status: 'success' | 'error' | 'pending'
+  responseTime: number
+  fileSize: number
+  contentType: string
+  errorMessage?: string
+  timestamp: string
+  passData?: any
 }
 
-const TEST_SCENARIOS: TestScenario[] = [
-  {
-    id: 'empty',
-    name: 'Empty Card',
-    description: 'No stamps collected yet',
-    currentStamps: 0,
-    totalStamps: 10,
-    priority: 'high',
-    category: 'core'
-  },
-  {
-    id: 'in-progress',
-    name: 'In Progress',
-    description: 'Some stamps collected',
-    currentStamps: 3,
-    totalStamps: 10,
-    priority: 'high',
-    category: 'core'
-  },
-  {
-    id: 'half-complete',
-    name: 'Half Complete',
-    description: 'Halfway to reward',
-    currentStamps: 5,
-    totalStamps: 10,
-    priority: 'medium',
-    category: 'core'
-  },
-  {
-    id: 'almost-complete',
-    name: 'Almost Complete',
-    description: 'One stamp away from reward',
-    currentStamps: 9,
-    totalStamps: 10,
-    priority: 'high',
-    category: 'core'
-  },
-  {
-    id: 'completed',
-    name: 'Completed',
-    description: 'Reward unlocked',
-    currentStamps: 10,
-    totalStamps: 10,
-    priority: 'high',
-    category: 'core'
-  },
-  {
-    id: 'over-complete',
-    name: 'Over-Complete',
-    description: 'More stamps than required',
-    currentStamps: 12,
-    totalStamps: 10,
-    priority: 'medium',
-    category: 'core'
-  },
-  {
-    id: 'large-card',
-    name: 'Large Card',
-    description: 'High stamp requirement',
-    currentStamps: 25,
-    totalStamps: 50,
-    priority: 'low',
-    category: 'core'
-  },
-  {
-    id: 'small-card',
-    name: 'Small Card',
-    description: 'Low stamp requirement',
-    currentStamps: 2,
-    totalStamps: 3,
-    priority: 'low',
-    category: 'core'
-  }
-]
+interface PerformanceMetrics {
+  averageResponseTime: number
+  successRate: number
+  totalRequests: number
+  errorCount: number
+  averageFileSize: number
+}
 
-export default function WalletPreviewPage() {
+export default function WalletPreviewTest() {
   const [testCards, setTestCards] = useState<TestCard[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [selectedCard, setSelectedCard] = useState<string | null>(null)
-  const [walletStatus, setWalletStatus] = useState<Record<string, WalletStatus>>({})
-  const [applePayloads, setApplePayloads] = useState<Record<string, AppleWalletPayload>>({})
-  const [debugInfo, setDebugInfo] = useState<Record<string, DebugInfo>>({})
-  const [generatingScenarios, setGeneratingScenarios] = useState(false)
-  const [expandedJsonViewer, setExpandedJsonViewer] = useState<string | null>(null)
-  const [selectedScenario, setSelectedScenario] = useState<string>('')
-  const [showDebugPanel, setShowDebugPanel] = useState(false)
-  const [environmentStatus, setEnvironmentStatus] = useState<{
-    apple: boolean
-    google: boolean
-    pwa: boolean
-    certificates: 'valid' | 'expired' | 'invalid'
-  }>({
-    apple: false,
-    google: false,
-    pwa: true,
-    certificates: 'valid'
+  const [environmentStatus, setEnvironmentStatus] = useState<EnvironmentStatus | null>(null)
+  const [testResults, setTestResults] = useState<TestResult[]>([])
+  const [performanceMetrics, setPerformanceMetrics] = useState<PerformanceMetrics>({
+    averageResponseTime: 0,
+    successRate: 0,
+    totalRequests: 0,
+    errorCount: 0,
+    averageFileSize: 0
   })
-  
-  const supabase = createClient()
+  const [loading, setLoading] = useState(false)
+  const [selectedScenario, setSelectedScenario] = useState('createAll')
+  const [customCardId, setCustomCardId] = useState('')
+  const [showQRCodes, setShowQRCodes] = useState(false)
+  const [autoRefresh, setAutoRefresh] = useState(false)
+  const [refreshInterval, setRefreshInterval] = useState(30)
 
-  // Define a fallback base URL for local development
-  const FALLBACK_BASE_URL = 'http://172.20.10.2:3001'
-
-  const fetchTestCards = useCallback(async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      
-      const { data: cards, error } = await supabase
-        .from('customer_cards')
-        .select(`
-          id,
-          customer_id,
-          current_stamps,
-          wallet_pass_id,
-          created_at,
-          updated_at,
-          stamp_cards (
-            id,
-            name,
-            total_stamps,
-            reward_description,
-            businesses (
-              name,
-              description
-            )
-          ),
-          customers (
-            name,
-            email
-          )
-        `)
-        .order('created_at', { ascending: false })
-        .limit(50)
-
-      if (error) {
-        console.error('Error fetching customer cards:', error)
-        setError('Failed to load customer cards: ' + error.message)
-        return
-      }
-
-      if (cards && cards.length > 0) {
-        const formattedCards = (cards as any[])
-          .filter(card => 
-            card.stamp_cards && card.customers && card.stamp_cards.businesses
-          )
-          .map(card => ({
-            id: card.id,
-            customer_id: card.customer_id,
-            current_stamps: card.current_stamps,
-            wallet_pass_id: card.wallet_pass_id,
-            created_at: card.created_at,
-            updated_at: card.updated_at,
-            stamp_card: {
-              id: card.stamp_cards.id,
-              name: card.stamp_cards.name,
-              total_stamps: card.stamp_cards.total_stamps,
-              reward_description: card.stamp_cards.reward_description,
-              business: {
-                name: card.stamp_cards.businesses.name,
-                description: card.stamp_cards.businesses.description
-              }
-            },
-            customer: {
-              name: card.customers.name,
-              email: card.customers.email
-            }
-          }))
-        setTestCards(formattedCards)
-      } else {
-        setTestCards([])
-      }
-    } catch (error) {
-      console.error('Error fetching test cards:', error)
-      setError('Failed to load test cards')
-    } finally {
-      setLoading(false)
-    }
-  }, [supabase])
-
-  const checkEnvironmentStatus = useCallback(async () => {
+  // Fetch environment status
+  const fetchEnvironmentStatus = useCallback(async () => {
     try {
       const response = await fetch('/api/health/wallet')
       const data = await response.json()
-      
-      setEnvironmentStatus({
-        apple: data.checks?.apple_wallet || false,
-        google: data.checks?.google_wallet || false,
-        pwa: data.checks?.pwa_wallet || true,
-        certificates: data.certificates?.status || 'valid'
-      })
+      setEnvironmentStatus(data)
     } catch (error) {
-      console.error('Failed to check environment status:', error)
+      console.error('Error fetching environment status:', error)
     }
   }, [])
 
-  const generateAllScenarios = async () => {
+  // Fetch existing test cards
+  const fetchTestCards = useCallback(async () => {
     try {
-      setGeneratingScenarios(true)
-      setError(null)
-
-      const response = await fetch('/api/dev-seed', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ createAll: true }),
-      })
-
-      const result = await response.json()
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Failed to generate test scenarios')
-      }
-
-      await fetchTestCards()
-      console.log('Generated test scenarios:', result)
-    } catch (error) {
-      console.error('Error generating scenarios:', error)
-      setError('Failed to generate test scenarios: ' + (error as Error).message)
-    } finally {
-      setGeneratingScenarios(false)
-    }
-  }
-
-  const generateSpecificScenario = async (scenario: TestScenario) => {
-    try {
-      setGeneratingScenarios(true)
-      setError(null)
-
-      const response = await fetch('/api/dev-seed', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          scenario: {
-            name: scenario.name,
-            currentStamps: scenario.currentStamps,
-            totalStamps: scenario.totalStamps
-          }
-        }),
-      })
-
-      const result = await response.json()
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Failed to generate scenario')
-      }
-
-      await fetchTestCards()
-      console.log('Generated scenario:', scenario.name, result)
-    } catch (error) {
-      console.error('Error generating scenario:', error)
-      setError('Failed to generate scenario: ' + (error as Error).message)
-    } finally {
-      setGeneratingScenarios(false)
-    }
-  }
-
-  const cleanupTestData = async () => {
-    try {
-      setLoading(true)
-      setError(null)
+      const response = await fetch('/api/dev-seed', { method: 'GET' })
+      const data = await response.json()
       
+      if (data.success) {
+        setTestCards(data.cards || [])
+      }
+    } catch (error) {
+      console.error('Error fetching test cards:', error)
+    }
+  }, [])
+
+  // Generate test data
+  const generateTestData = async () => {
+    setLoading(true)
+    try {
+      const payload = selectedScenario === 'createAll' 
+        ? { createAll: true }
+        : { scenario: selectedScenario, count: 1 }
+
       const response = await fetch('/api/dev-seed', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ cleanup: true }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
       })
 
-      const result = await response.json()
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Failed to cleanup test data')
+      const data = await response.json()
+      
+      if (data.success) {
+        await fetchTestCards()
+        console.log('✅ Test data generated successfully:', data)
+      } else {
+        console.error('❌ Failed to generate test data:', data)
       }
-
-      await fetchTestCards()
     } catch (error) {
-      console.error('Error cleaning up test data:', error)
-      setError('Failed to cleanup test data: ' + (error as Error).message)
+      console.error('❌ Error generating test data:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  const testWallet = async (cardId: string, walletType: 'apple' | 'google' | 'pwa') => {
-    const startTime = Date.now()
-    
-    setWalletStatus(prev => ({
-      ...prev,
-      [cardId]: {
-        ...prev[cardId],
-        [walletType]: 'loading'
-      }
-    }))
-
+  // Clean up test data
+  const cleanupTestData = async () => {
+    setLoading(true)
     try {
-      const debugParam = walletType === 'apple' ? '?debug=true' : ''
-      const response = await fetch(`/api/wallet/${walletType}/${cardId}${debugParam}`)
-      const requestTime = Date.now() - startTime
-      
-      // Get response headers for debugging
-      const contentType = response.headers.get('content-type') || 'unknown'
-      const contentLength = response.headers.get('content-length') || '0'
-      
-      if (response.ok) {
-        setWalletStatus(prev => ({
-          ...prev,
-          [cardId]: {
-            ...prev[cardId],
-            [walletType]: 'success'
-          }
-        }))
+      const response = await fetch('/api/dev-seed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cleanup: true })
+      })
 
-        // Store debug information
-        setDebugInfo(prev => ({
-          ...prev,
-          [cardId]: {
-            requestTime,
-            passSize: `${Math.round(parseInt(contentLength) / 1024 * 100) / 100} KB`,
-            contentType,
-            status: response.status,
-            downloadAttempt: true,
-            barcodePreview: cardId,
-            certificateStatus: 'valid'
-          }
-        }))
-
-        if (walletType === 'apple' && debugParam) {
-          try {
-            const debugData = await response.json()
-            if (debugData.pass_json) {
-              setApplePayloads(prev => ({
-                ...prev,
-                [cardId]: debugData.pass_json
-              }))
-            }
-          } catch (e) {
-            console.warn('Failed to parse Apple Wallet debug response')
-          }
-        }
-      } else {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      const data = await response.json()
+      
+      if (data.success) {
+        setTestCards([])
+        setTestResults([])
+        console.log('✅ Test data cleaned up successfully')
       }
     } catch (error) {
-      console.error(`Error testing ${walletType} wallet:`, error)
-      setWalletStatus(prev => ({
-        ...prev,
-        [cardId]: {
-          ...prev[cardId],
-          [walletType]: 'error'
-        }
-      }))
-
-      // Store error debug information
-      setDebugInfo(prev => ({
-        ...prev,
-        [cardId]: {
-          ...prev[cardId],
-          requestTime: Date.now() - startTime,
-          status: 0,
-          downloadAttempt: false,
-          barcodePreview: cardId,
-          certificateStatus: 'invalid',
-          lastError: (error as Error).message
-        }
-      }))
+      console.error('❌ Error cleaning up test data:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
-  const downloadWallet = async (cardId: string, walletType: 'apple' | 'google' | 'pwa') => {
+  // Test wallet pass generation
+  const testWalletPass = async (cardId: string, walletType: 'apple' | 'google' | 'pwa', debug = false) => {
+    const testId = `${cardId}-${walletType}${debug ? '-debug' : ''}`
+    const url = debug 
+      ? `/api/wallet/${walletType}/${cardId}?debug=true`
+      : `/api/wallet/${walletType}/${cardId}`
+
+    // Add pending result
+    const pendingResult: TestResult = {
+      id: testId,
+      url,
+      status: 'pending',
+      responseTime: 0,
+      fileSize: 0,
+      contentType: '',
+      timestamp: new Date().toISOString()
+    }
+
+    setTestResults(prev => [pendingResult, ...prev.filter(r => r.id !== testId)])
+
     try {
-      const response = await fetch(`/api/wallet/${walletType}/${cardId}`)
+      const startTime = Date.now()
+      const response = await fetch(url)
+      const responseTime = Date.now() - startTime
       
-      if (response.ok) {
-        if (walletType === 'apple') {
-          const blob = await response.blob()
-          const url = window.URL.createObjectURL(blob)
-          const a = document.createElement('a')
-          a.href = url
-          a.download = `wallet-${cardId}.pkpass`
-          document.body.appendChild(a)
-          a.click()
-          document.body.removeChild(a)
-          window.URL.revokeObjectURL(url)
-        } else if (walletType === 'google') {
-          const data = await response.json()
-          if (data.saveUrl) {
-            window.open(data.saveUrl, '_blank')
-          }
-        } else if (walletType === 'pwa') {
-          window.open(`/api/wallet/pwa/${cardId}`, '_blank')
+      const contentType = response.headers.get('content-type') || ''
+      const contentLength = response.headers.get('content-length')
+      const fileSize = contentLength ? parseInt(contentLength) : 0
+
+      let passData = null
+      if (debug || contentType.includes('application/json')) {
+        try {
+          passData = await response.json()
+        } catch (e) {
+          // Not JSON, that's fine
         }
-      } else {
-        throw new Error(`HTTP ${response.status}`)
       }
+
+      const result: TestResult = {
+        id: testId,
+        url,
+        status: response.ok ? 'success' : 'error',
+        responseTime,
+        fileSize,
+        contentType,
+        errorMessage: response.ok ? undefined : `HTTP ${response.status}: ${response.statusText}`,
+        timestamp: new Date().toISOString(),
+        passData
+      }
+
+      setTestResults(prev => [result, ...prev.filter(r => r.id !== testId)])
+      updatePerformanceMetrics(result)
+
     } catch (error) {
-      console.error(`Error downloading ${walletType} wallet:`, error)
-    }
-  }
-
-  const copyToClipboard = async (text: string) => {
-    try {
-      const fullUrl = `${process.env.NEXT_PUBLIC_BASE_URL || FALLBACK_BASE_URL}${text}`
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(fullUrl)
-        console.log('Copied to clipboard:', fullUrl)
-      } else {
-        // Fallback for iPhone: Show full URL in alert for manual copy
-        alert(`Please manually copy this URL: ${fullUrl}`)
+      const result: TestResult = {
+        id: testId,
+        url,
+        status: 'error',
+        responseTime: 0,
+        fileSize: 0,
+        contentType: '',
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
       }
-    } catch (err) {
-      console.error('Clipboard copy failed:', err)
-      alert(`Please manually copy this URL: ${text}`)
+
+      setTestResults(prev => [result, ...prev.filter(r => r.id !== testId)])
+      updatePerformanceMetrics(result)
     }
   }
 
-  const getStatusIcon = (status: 'loading' | 'success' | 'error' | 'idle') => {
+  // Update performance metrics
+  const updatePerformanceMetrics = (result: TestResult) => {
+    setPerformanceMetrics(prev => {
+      const newTotalRequests = prev.totalRequests + 1
+      const newErrorCount = prev.errorCount + (result.status === 'error' ? 1 : 0)
+      const newSuccessRate = ((newTotalRequests - newErrorCount) / newTotalRequests) * 100
+
+      return {
+        averageResponseTime: (prev.averageResponseTime * prev.totalRequests + result.responseTime) / newTotalRequests,
+        successRate: newSuccessRate,
+        totalRequests: newTotalRequests,
+        errorCount: newErrorCount,
+        averageFileSize: result.fileSize > 0 
+          ? (prev.averageFileSize * prev.totalRequests + result.fileSize) / newTotalRequests
+          : prev.averageFileSize
+      }
+    })
+  }
+
+  // Generate QR code URL
+  const generateQRCodeURL = (text: string) => {
+    return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(text)}`
+  }
+
+  // Copy to clipboard
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text)
+  }
+
+  // Get status icon
+  const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'loading':
-        return <RefreshCw className="h-4 w-4 animate-spin" />
       case 'success':
-        return <CheckCircle className="h-4 w-4 text-green-500" />
+      case 'available':
+      case 'operational':
+        return <CheckCircle2 className="h-4 w-4 text-green-600" />
       case 'error':
-        return <AlertCircle className="h-4 w-4 text-red-500" />
+        return <XCircle className="h-4 w-4 text-red-600" />
+      case 'pending':
+        return <Timer className="h-4 w-4 text-yellow-600" />
+      case 'degraded':
+        return <AlertTriangle className="h-4 w-4 text-yellow-600" />
       default:
-        return <Clock className="h-4 w-4 text-gray-400" />
+        return <Info className="h-4 w-4 text-gray-600" />
     }
   }
 
-  const getCompletionBadge = (current: number, total: number) => {
-    const percentage = Math.round((current / total) * 100)
-    const variant = percentage === 100 ? 'default' : percentage >= 80 ? 'secondary' : 'outline'
-    return (
-      <Badge variant={variant} className="ml-2">
-        {percentage}% ({current}/{total})
-      </Badge>
-    )
+  // Get completion status badge
+  const getCompletionBadge = (percentage: number) => {
+    if (percentage === 0) return <Badge variant="secondary">Empty</Badge>
+    if (percentage < 50) return <Badge variant="outline">In Progress</Badge>
+    if (percentage < 100) return <Badge variant="default">Almost Complete</Badge>
+    if (percentage === 100) return <Badge className="bg-green-600">Completed</Badge>
+    return <Badge className="bg-purple-600">Over-Complete</Badge>
   }
 
-  const getScenarioType = (current: number, total: number) => {
-    const percentage = (current / total) * 100
-    if (percentage === 0) return { type: 'Empty', color: 'bg-gray-100 text-gray-800' }
-    if (percentage > 100) return { type: 'Over-Complete', color: 'bg-purple-100 text-purple-800' }
-    if (percentage === 100) return { type: 'Completed', color: 'bg-green-100 text-green-800' }
-    if (percentage >= 80) return { type: 'Almost Complete', color: 'bg-orange-100 text-orange-800' }
-    if (percentage >= 50) return { type: 'Half Complete', color: 'bg-blue-100 text-blue-800' }
-    if (total >= 50) return { type: 'Large Card', color: 'bg-indigo-100 text-indigo-800' }
-    if (total <= 3) return { type: 'Small Card', color: 'bg-yellow-100 text-yellow-800' }
-    return { type: 'In Progress', color: 'bg-gray-100 text-gray-800' }
-  }
-
-  const getEnvironmentStatusIcon = (status: boolean) => {
-    return status ? (
-      <CheckCircle2 className="h-4 w-4 text-green-500" />
-    ) : (
-      <XCircle className="h-4 w-4 text-red-500" />
-    )
-  }
-
-  const filteredCards = testCards.filter(card =>
-    card.stamp_card.business.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    card.stamp_card.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    card.customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    card.customer.email.toLowerCase().includes(searchTerm.toLowerCase())
-  )
-
+  // Initialize data
   useEffect(() => {
+    fetchEnvironmentStatus()
     fetchTestCards()
-    checkEnvironmentStatus()
-  }, [fetchTestCards, checkEnvironmentStatus])
+  }, [fetchEnvironmentStatus, fetchTestCards])
+
+  // Auto-refresh
+  useEffect(() => {
+    if (autoRefresh) {
+      const interval = setInterval(() => {
+        fetchTestCards()
+        fetchEnvironmentStatus()
+      }, refreshInterval * 1000)
+      return () => clearInterval(interval)
+    }
+  }, [autoRefresh, refreshInterval, fetchTestCards, fetchEnvironmentStatus])
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
+    <div className="min-h-screen bg-gray-50 p-4">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="bg-white rounded-lg shadow-sm p-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 flex items-center">
-                <TestTube className="mr-3 h-8 w-8 text-blue-600" />
-                Apple Wallet Test & Debug Suite
+              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+                <TestTube className="h-8 w-8 text-blue-600" />
+                Apple Wallet Test Suite
               </h1>
-              <p className="mt-2 text-gray-600">
-                Comprehensive testing interface for Apple Wallet, Google Wallet, and PWA functionality
+              <p className="text-gray-600 mt-1">
+                Comprehensive testing and debugging for Apple Wallet integration
               </p>
-              
-              {/* Environment Status Panel */}
-              <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                    <div>
-                      <h3 className="text-sm font-medium text-green-800">🍎 Apple Wallet Status</h3>
-                      <p className="mt-1 text-sm text-green-700">
-                        {environmentStatus.apple ? '✅ Ready' : '⚠️ Configuration needed'} • 
-                        Team: 39CDB598RF • 
-                        Certs: {environmentStatus.certificates}
-                      </p>
-                      <div className="mt-2 flex flex-wrap gap-4 text-xs text-green-600">
-                        <a 
-                          href={`${process.env.NEXT_PUBLIC_BASE_URL || FALLBACK_BASE_URL}/api/test/wallet-ios`}
-                          target="_blank" 
-                          className="underline hover:text-green-800 font-medium"
-                        >
-                          🧪 Test iOS Safari Direct →
-                        </a>
-                        <button
-                          onClick={() => copyToClipboard('/api/test/wallet-ios')}
-                          className="underline hover:text-green-800 font-medium"
-                        >
-                          📋 Copy iOS Test URL
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="flex items-center">
-                    {getEnvironmentStatusIcon(environmentStatus.google)}
-                    <div className="ml-2">
-                      <h3 className="text-sm font-medium text-blue-800">🤖 Google Wallet Status</h3>
-                      <p className="mt-1 text-sm text-blue-700">
-                        {environmentStatus.google ? '✅ Ready' : '⚠️ Configuration needed'} • 
-                        Service Account: Configured
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                  <div className="flex items-center">
-                    {getEnvironmentStatusIcon(environmentStatus.pwa)}
-                    <div className="ml-2">
-                      <h3 className="text-sm font-medium text-purple-800">📱 PWA Wallet Status</h3>
-                      <p className="mt-1 text-sm text-purple-700">
-                        ✅ Always Available • Offline Support • Service Worker Ready
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Debug Panel Toggle */}
-              <div className="mt-4 flex items-center space-x-4">
-                <Button 
-                  onClick={() => setShowDebugPanel(!showDebugPanel)}
-                  variant="outline"
-                  size="sm"
-                >
-                  <Bug className="mr-2 h-4 w-4" />
-                  {showDebugPanel ? 'Hide' : 'Show'} Debug Panel
-                </Button>
-                <Link 
-                  href="/docs/test-wallet-preview.md"
-                  target="_blank"
-                  className="text-sm text-blue-600 hover:underline flex items-center"
-                >
-                  <FileText className="mr-1 h-4 w-4" />
-                  View Complete Test Guide
-                </Link>
-              </div>
             </div>
-            
-            <div className="flex space-x-4">
-              <Button 
-                onClick={fetchTestCards}
-                disabled={loading}
+            <div className="flex items-center gap-2">
+              <Button
                 variant="outline"
                 size="sm"
+                onClick={() => setAutoRefresh(!autoRefresh)}
+                className={autoRefresh ? 'bg-green-50 border-green-200' : ''}
               >
-                <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                {autoRefresh ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}
+                Auto-refresh
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  fetchTestCards()
+                  fetchEnvironmentStatus()
+                }}
+              >
+                <RefreshCw className="h-4 w-4" />
                 Refresh
               </Button>
-              <Button 
-                onClick={generateAllScenarios}
-                disabled={generatingScenarios}
-                variant="default"
-                size="sm"
+            </div>
+          </div>
+        </div>
+
+        {/* Environment Status */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Shield className="h-4 w-4" />
+                System Status
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-2">
+                {getStatusIcon(environmentStatus?.overall_status || 'error')}
+                <span className="text-sm capitalize">
+                  {environmentStatus?.overall_status || 'Unknown'}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Smartphone className="h-4 w-4" />
+                Apple Wallet
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-2">
+                {getStatusIcon(environmentStatus?.apple_wallet || 'error')}
+                <span className="text-sm capitalize">
+                  {environmentStatus?.apple_wallet?.replace('_', ' ') || 'Unknown'}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <CreditCard className="h-4 w-4" />
+                Google Wallet
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-2">
+                {getStatusIcon(environmentStatus?.google_wallet || 'error')}
+                <span className="text-sm capitalize">
+                  {environmentStatus?.google_wallet?.replace('_', ' ') || 'Unknown'}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Globe className="h-4 w-4" />
+                PWA Wallet
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-2">
+                {getStatusIcon(environmentStatus?.pwa_wallet || 'available')}
+                <span className="text-sm capitalize">
+                  {environmentStatus?.pwa_wallet || 'Available'}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Performance Metrics */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <BarChart3 className="h-4 w-4" />
+                Success Rate
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">
+                {performanceMetrics.successRate.toFixed(1)}%
+              </div>
+              <div className="text-xs text-gray-500">
+                {performanceMetrics.totalRequests} total requests
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                Avg Response
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">
+                {performanceMetrics.averageResponseTime.toFixed(0)}ms
+              </div>
+              <div className="text-xs text-gray-500">
+                Average response time
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <FileJson className="h-4 w-4" />
+                Avg File Size
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-purple-600">
+                {(performanceMetrics.averageFileSize / 1024).toFixed(1)}KB
+              </div>
+              <div className="text-xs text-gray-500">
+                Average PKPass size
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <XCircle className="h-4 w-4" />
+                Error Count
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-600">
+                {performanceMetrics.errorCount}
+              </div>
+              <div className="text-xs text-gray-500">
+                Total errors
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Database className="h-4 w-4" />
+                Test Cards
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-gray-900">
+                {testCards.length}
+              </div>
+              <div className="text-xs text-gray-500">
+                Available test cards
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Test Controls */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              Test Controls
+            </CardTitle>
+            <CardDescription>
+              Generate test data and configure testing scenarios
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="scenario">Test Scenario</Label>
+                <select
+                  id="scenario"
+                  value={selectedScenario}
+                  onChange={(e) => setSelectedScenario(e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                >
+                  <option value="createAll">All Scenarios (8 cards)</option>
+                  <option value="empty">Empty Card (0 stamps)</option>
+                  <option value="half_complete">Half Complete (5/10)</option>
+                  <option value="almost_complete">Almost Complete (9/10)</option>
+                  <option value="completed">Completed (10/10)</option>
+                  <option value="over_complete">Over-Complete (12/10)</option>
+                  <option value="large_card">Large Card (15/50)</option>
+                  <option value="small_card">Small Card (2/3)</option>
+                  <option value="long_names">Long Names Test</option>
+                </select>
+              </div>
+
+              <div>
+                <Label htmlFor="customCard">Custom Card ID</Label>
+                <Input
+                  id="customCard"
+                  value={customCardId}
+                  onChange={(e) => setCustomCardId(e.target.value)}
+                  placeholder="Enter existing card ID"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="refreshInterval">Auto-refresh (seconds)</Label>
+                <Input
+                  id="refreshInterval"
+                  type="number"
+                  value={refreshInterval}
+                  onChange={(e) => setRefreshInterval(parseInt(e.target.value))}
+                  min="10"
+                  max="300"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Button
+                onClick={generateTestData}
+                disabled={loading}
+                className="flex items-center gap-2"
               >
-                <Plus className={`mr-2 h-4 w-4 ${generatingScenarios ? 'animate-spin' : ''}`} />
-                Generate All Scenarios
+                {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                Generate Test Data
               </Button>
+
               <Button
                 onClick={cleanupTestData}
                 disabled={loading}
-                variant="destructive"
-                size="sm"
+                variant="outline"
+                className="flex items-center gap-2"
               >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Cleanup Test Data
+                <Trash2 className="h-4 w-4" />
+                Clean Up Test Data
+              </Button>
+
+              <Button
+                onClick={() => setShowQRCodes(!showQRCodes)}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <QrCode className="h-4 w-4" />
+                {showQRCodes ? 'Hide' : 'Show'} QR Codes
+              </Button>
+
+              <Button
+                onClick={() => setTestResults([])}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Clear Results
               </Button>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        {/* Test Scenario Generator */}
-        {showDebugPanel && (
-          <div className="mb-6 p-4 bg-white border rounded-lg">
-            <h3 className="text-lg font-medium mb-4 flex items-center">
-              <Settings className="mr-2 h-5 w-5" />
-              Test Scenario Generator
-            </h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {TEST_SCENARIOS.map((scenario) => (
-                <Button
-                  key={scenario.id}
-                  onClick={() => generateSpecificScenario(scenario)}
-                  disabled={generatingScenarios}
-                  variant="outline"
-                  size="sm"
-                  className="text-left justify-start"
-                >
-                  <div>
-                    <div className="font-medium">{scenario.name}</div>
-                    <div className="text-xs text-gray-500">
-                      {scenario.currentStamps}/{scenario.totalStamps} stamps
-                    </div>
-                  </div>
-                </Button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
-          <div className="relative flex-1 max-w-lg">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              type="text"
-              placeholder="Search cards by business, customer, or email..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <div className="flex items-center space-x-4">
-            <Badge variant="outline" className="text-sm">
-              <Database className="mr-1 h-3 w-3" />
-              {filteredCards.length} cards
-            </Badge>
-            <Badge variant="outline" className="text-sm">
-              <BarChart3 className="mr-1 h-3 w-3" />
-              {testCards.filter(card => card.current_stamps >= card.stamp_card.total_stamps).length} completed
-            </Badge>
-          </div>
-        </div>
-        
-        {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-md p-4">
-            <div className="flex">
-              <AlertCircle className="h-5 w-5 text-red-400" />
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">Error</h3>
-                <p className="mt-1 text-sm text-red-700">{error}</p>
+        {/* Test Cards */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5" />
+              Test Cards ({testCards.length})
+            </CardTitle>
+            <CardDescription>
+              Available test cards for wallet testing
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {testCards.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <CreditCard className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                <p>No test cards available. Generate some test data to get started.</p>
               </div>
-            </div>
-          </div>
-        )}
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {testCards.map((card) => (
+                  <div key={card.id} className="border rounded-lg p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-semibold text-sm">{card.stamp_card_name}</h3>
+                        <p className="text-xs text-gray-600">{card.business_name}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {getCompletionBadge(card.completion_percentage)}
+                        <span className="text-sm font-mono">
+                          {card.current_stamps}/{card.total_stamps}
+                        </span>
+                      </div>
+                    </div>
 
-        {loading && testCards.length === 0 && (
-          <div className="text-center py-12">
-            <RefreshCw className="mx-auto h-12 w-12 text-gray-400 animate-spin" />
-            <h3 className="mt-4 text-lg font-medium text-gray-900">Loading test cards...</h3>
-            <p className="mt-2 text-gray-500">Fetching customer cards from Supabase</p>
-          </div>
-        )}
+                    <div className="text-xs text-gray-500">
+                      <div>Customer: {card.customer_name}</div>
+                      <div>Created: {new Date(card.created_at).toLocaleDateString()}</div>
+                      <div className="flex items-center gap-2">
+                        ID: {card.id}
+                        <button
+                          onClick={() => copyToClipboard(card.id)}
+                          className="text-blue-600 hover:text-blue-800"
+                        >
+                          <Copy className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </div>
 
-        {!loading && filteredCards.length === 0 && (
-          <div className="text-center py-12">
-            <Wallet className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-4 text-lg font-medium text-gray-900">No test cards found</h3>
-            <p className="mt-2 text-gray-500">
-              {testCards.length === 0 
-                ? "Generate test scenarios to start testing wallet functionality" 
-                : "No cards match your search criteria"
-              }
-            </p>
-            {testCards.length === 0 && (
-              <Button 
-                onClick={generateAllScenarios}
-                disabled={generatingScenarios}
-                className="mt-4"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Generate Test Scenarios
-              </Button>
-            )}
-          </div>
-        )}
+                    {/* QR Code Preview */}
+                    {showQRCodes && (
+                      <div className="flex justify-center">
+                        <img
+                          src={generateQRCodeURL(card.id)}
+                          alt={`QR Code for ${card.id}`}
+                          className="w-20 h-20 border rounded"
+                        />
+                      </div>
+                    )}
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {filteredCards.map((card) => {
-            const scenario = getScenarioType(card.current_stamps, card.stamp_card.total_stamps)
-            const cardStatus = walletStatus[card.id] || { apple: 'idle', google: 'idle', pwa: 'idle' }
-            const applePayload = applePayloads[card.id]
-            const cardDebugInfo = debugInfo[card.id]
-            
-            return (
-              <Card key={card.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="text-lg">{card.stamp_card.business.name}</CardTitle>
-                      <CardDescription className="text-sm">
-                        {card.stamp_card.name}
-                      </CardDescription>
-                    </div>
-                    <Badge className={scenario.color} variant="secondary">
-                      {scenario.type}
-                    </Badge>
-                  </div>
-                  <div className="mt-3">
-                    <div className="flex items-center justify-between text-sm text-gray-600 mb-1">
-                      <span>Progress</span>
-                      <span>{card.current_stamps} / {card.stamp_card.total_stamps} stamps</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-blue-600 h-2 rounded-full" 
-                        style={{ 
-                          width: `${Math.min((card.current_stamps / card.stamp_card.total_stamps) * 100, 100)}%` 
-                        }}
-                      ></div>
-                    </div>
-                    {getCompletionBadge(card.current_stamps, card.stamp_card.total_stamps)}
-                  </div>
-                </CardHeader>
-
-                <CardContent className="space-y-4">
-                  <div className="text-sm text-gray-600">
-                    <p><span className="font-medium">Customer:</span> {card.customer.name}</p>
-                    <p><span className="font-medium">Email:</span> {card.customer.email}</p>
-                    <p><span className="font-medium">Reward:</span> {card.stamp_card.reward_description}</p>
-                  </div>
-
-                  {/* Debug Information */}
-                  {showDebugPanel && cardDebugInfo && (
-                    <div className="p-3 bg-gray-50 rounded-lg text-xs">
-                      <h4 className="font-medium text-gray-700 mb-2 flex items-center">
-                        <Activity className="mr-1 h-3 w-3" />
-                        Debug Info
-                      </h4>
-                      <div className="space-y-1 text-gray-600">
-                        <p>Request Time: {cardDebugInfo.requestTime}ms</p>
-                        <p>Pass Size: {cardDebugInfo.passSize}</p>
-                        <p>Content Type: {cardDebugInfo.contentType}</p>
-                        <p>Status: {cardDebugInfo.status}</p>
-                        <p>Certificate: {cardDebugInfo.certificateStatus}</p>
-                        {cardDebugInfo.lastError && (
-                          <p className="text-red-600">Error: {cardDebugInfo.lastError}</p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="space-y-3">
-                    <h4 className="font-medium text-sm text-gray-700">Wallet Testing</h4>
-                    <div className="flex items-center justify-between p-2 border rounded-lg">
-                      <div className="flex items-center space-x-2">
-                        <Smartphone className="h-4 w-4 text-gray-600" />
-                        <span className="text-sm font-medium">Apple Wallet</span>
-                        {getStatusIcon(cardStatus.apple)}
-                      </div>
-                      <div className="flex space-x-1">
-                        <Button 
-                          size="sm"
-                          variant="outline" 
-                          onClick={() => testWallet(card.id, 'apple')}
-                          disabled={cardStatus.apple === 'loading'}
-                        >
-                          Test
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => downloadWallet(card.id, 'apple')}
-                        >
-                          <Download className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between p-2 border rounded-lg">
-                      <div className="flex items-center space-x-2">
-                        <CreditCard className="h-4 w-4 text-gray-600" />
-                        <span className="text-sm font-medium">Google Wallet</span>
-                        {getStatusIcon(cardStatus.google)}
-                      </div>
-                      <div className="flex space-x-1">
-                        <Button 
-                          size="sm"
-                          variant="outline"
-                          onClick={() => testWallet(card.id, 'google')}
-                          disabled={cardStatus.google === 'loading'}
-                        >
-                          Test
-                        </Button>
-                        <Button 
-                          size="sm"
-                          onClick={() => downloadWallet(card.id, 'google')}
-                        >
-                          <Download className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between p-2 border rounded-lg">
-                      <div className="flex items-center space-x-2">
-                        <Globe className="h-4 w-4 text-gray-600" />
-                        <span className="text-sm font-medium">PWA Wallet</span>
-                        {getStatusIcon(cardStatus.pwa)}
-                      </div>
-                      <div className="flex space-x-1">
-                        <Button 
-                          size="sm"
-                          variant="outline"
-                          onClick={() => testWallet(card.id, 'pwa')}
-                          disabled={cardStatus.pwa === 'loading'}
-                        >
-                          Test
-                        </Button>
-                        <Button 
-                          size="sm"
-                          onClick={() => downloadWallet(card.id, 'pwa')}
-                        >
-                          <Download className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <h4 className="font-medium text-sm text-gray-700">API Endpoints</h4>
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <Button 
-                        variant="ghost"
+                    {/* Test Buttons */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
                         size="sm"
-                        className="justify-start h-8 px-2"
-                        onClick={() => copyToClipboard(`/api/wallet/apple/${card.id}`)}
+                        onClick={() => testWalletPass(card.id, 'apple')}
+                        className="flex items-center gap-1"
                       >
-                        <Copy className="h-3 w-3 mr-1" />
+                        <Smartphone className="h-3 w-3" />
                         Apple
                       </Button>
-                      <Button 
-                        variant="ghost"
+                      <Button
                         size="sm"
-                        className="justify-start h-8 px-2"
-                        onClick={() => copyToClipboard(`/api/wallet/google/${card.id}`)}
+                        onClick={() => testWalletPass(card.id, 'google')}
+                        className="flex items-center gap-1"
                       >
-                        <Copy className="h-3 w-3 mr-1" />
+                        <CreditCard className="h-3 w-3" />
                         Google
                       </Button>
                       <Button
-                        variant="ghost"
                         size="sm"
-                        className="justify-start h-8 px-2"
-                        onClick={() => copyToClipboard(`/api/wallet/pwa/${card.id}`)}
+                        onClick={() => testWalletPass(card.id, 'pwa')}
+                        className="flex items-center gap-1"
                       >
-                        <Copy className="h-3 w-3 mr-1" />
+                        <Globe className="h-3 w-3" />
                         PWA
                       </Button>
                       <Button
-                        variant="ghost"
                         size="sm"
-                        className="justify-start h-8 px-2"
-                        onClick={() => copyToClipboard(`/api/wallet/apple/${card.id}?debug=true`)}
+                        variant="outline"
+                        onClick={() => testWalletPass(card.id, 'apple', true)}
+                        className="flex items-center gap-1"
                       >
-                        <Copy className="h-3 w-3 mr-1" />
+                        <Bug className="h-3 w-3" />
                         Debug
                       </Button>
                     </div>
+
+                    {/* Direct Links */}
+                    <div className="flex flex-wrap gap-1 text-xs">
+                      <a
+                        href={card.test_urls.apple}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        Apple
+                      </a>
+                      <a
+                        href={card.test_urls.google}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        Google
+                      </a>
+                      <a
+                        href={card.test_urls.pwa}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        PWA
+                      </a>
+                    </div>
                   </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-                  {/* QR Code Preview */}
-                  {showDebugPanel && (
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-sm text-gray-700 flex items-center">
-                        <QrCode className="mr-1 h-4 w-4" />
-                        Barcode Preview
-                      </h4>
-                      <div className="p-2 bg-gray-50 rounded text-xs font-mono">
-                        {card.id}
+        {/* Test Results */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              Test Results ({testResults.length})
+            </CardTitle>
+            <CardDescription>
+              Real-time test results and performance monitoring
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {testResults.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <Activity className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                <p>No test results yet. Run some tests to see results here.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {testResults.slice(0, 10).map((result) => (
+                  <div key={result.id} className="border rounded-lg p-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {getStatusIcon(result.status)}
+                        <span className="text-sm font-mono">{result.url}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        {result.responseTime > 0 && (
+                          <span>{result.responseTime}ms</span>
+                        )}
+                        {result.fileSize > 0 && (
+                          <span>{(result.fileSize / 1024).toFixed(1)}KB</span>
+                        )}
+                        <span>{new Date(result.timestamp).toLocaleTimeString()}</span>
                       </div>
                     </div>
-                  )}
-
-                  {applePayload && (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-medium text-sm text-gray-700">Apple Wallet Payload</h4>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setExpandedJsonViewer(
-                            expandedJsonViewer === card.id ? null : card.id
-                          )}
-                        >
-                          {expandedJsonViewer === card.id ? (
-                            <Eye className="h-3 w-3" />
-                          ) : (
-                            <FileJson className="h-3 w-3" />
-                          )}
-                        </Button>
+                    
+                    {result.errorMessage && (
+                      <div className="mt-2 text-xs text-red-600 bg-red-50 p-2 rounded">
+                        {result.errorMessage}
                       </div>
-                      {expandedJsonViewer === card.id && (
-                        <div className="border rounded-lg p-3 bg-gray-50 max-h-64 overflow-auto">
-                          <pre className="text-xs text-gray-700 whitespace-pre-wrap">
-                            {JSON.stringify(applePayload, null, 2)}
-                          </pre>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  
-                  <div className="pt-2 border-t text-xs text-gray-500">
-                    <p>Card ID: {card.id}</p>
-                    <p>Created: {new Date(card.created_at).toLocaleDateString()}</p>
-                    {card.updated_at && (
-                      <p>Updated: {new Date(card.updated_at).toLocaleDateString()}</p>
+                    )}
+                    
+                    {result.passData && (
+                      <details className="mt-2">
+                        <summary className="text-xs text-blue-600 cursor-pointer">
+                          View Pass Data
+                        </summary>
+                        <pre className="text-xs bg-gray-50 p-2 rounded mt-1 overflow-auto">
+                          {JSON.stringify(result.passData, null, 2)}
+                        </pre>
+                      </details>
                     )}
                   </div>
-                </CardContent>
-              </Card>
-            )
-          })}
-        </div>
-        
-        <div className="mt-12 text-center text-sm text-gray-500">
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Footer */}
+        <div className="text-center text-sm text-gray-500">
           <p>
-            Comprehensive Apple Wallet testing interface • Real-time debugging • 
-            <Link href="/api/health" className="ml-1 text-blue-600 hover:underline">
-              System Health
-            </Link>
-            {' • '}
-            <Link href="/docs/test-wallet-preview.md" className="text-blue-600 hover:underline">
-              Test Documentation
+            RewardJar 4.0 Apple Wallet Test Suite - 
+            <Link href="/doc/test-wallet-preview.md" className="text-blue-600 hover:text-blue-800 ml-1">
+              Documentation
             </Link>
           </p>
         </div>

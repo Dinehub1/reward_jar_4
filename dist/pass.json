@@ -66,12 +66,6 @@
       }
     ]
   },
-  "barcode": {
-    "message": "pizza-pass-001",
-    "format": "PKBarcodeFormatQR",
-    "messageEncoding": "iso-8859-1",
-    "altText": "Card ID: pizza-pass-001"
-  },
   "barcodes": [
     {
       "message": "pizza-pass-001",
@@ -81,7 +75,5 @@
     }
   ],
   "relevantDate": "2025-07-16T13:14:29Z",
-  "maxDistance": 1000,
-  "webServiceURL": "https://rewardjar.com/api/wallet/apple/updates",
-  "authenticationToken": "pizza-pass-001"
-} 
+  "maxDistance": 1000
+}
