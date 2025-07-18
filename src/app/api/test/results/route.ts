@@ -1,9 +1,123 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase-server'
+import { createClient } from '@supabase/supabase-js'
+
+// Winston logger for wallet errors
+import winston from 'winston'
+
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.json()
+  ),
+  transports: [
+    new winston.transports.File({ filename: 'wallet-errors.log', level: 'error' }),
+    new winston.transports.File({ filename: 'wallet-combined.log' })
+  ]
+})
+
+export async function POST(request: NextRequest) {
+  try {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
+    // Check if test_results table exists
+    const { error: tableCheckError } = await supabase
+      .from('test_results')
+      .select('id')
+      .limit(1)
+
+    if (tableCheckError) {
+      console.warn('⚠️ test_results table not found, returning graceful fallback')
+      logger.warn('test_results table not found', { error: tableCheckError.message })
+      
+      return NextResponse.json({
+        success: false,
+        message: 'Test results table not configured. Please run the migration script.',
+        error: 'table_not_found',
+        help: 'Run: psql -d your_database -f scripts/create-test-results-table.sql'
+      }, { status: 200 }) // Return 200 with helpful message instead of 500
+    }
+
+    const body = await request.json()
+    const { card_id, test_type, status, duration_ms, response_size_kb } = body
+
+    console.log('📝 Creating test result:', { test_type, status, duration_ms })
+
+    // Fix: Cast duration_ms to integer using Math.floor() to prevent type mismatch
+    const durationInteger = Math.floor(parseFloat(duration_ms) || 0)
+    const responseSizeInteger = Math.floor(parseFloat(response_size_kb) || 0)
+
+    const { data, error } = await supabase
+      .from('test_results')
+      .insert({
+        card_id,
+        test_type,
+        status,
+        duration_ms: durationInteger, // Now properly cast to integer
+        response_size_kb: responseSizeInteger, // Also cast response size
+        created_at: new Date().toISOString()
+      })
+      .select()
+
+    if (error) {
+      console.error('❌ Error creating test result:', error)
+      logger.error('Failed to create test result', {
+        error: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        test_type,
+        card_id,
+        duration_ms: durationInteger
+      })
+      
+      return NextResponse.json({
+        success: false,
+        error: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint
+      }, { status: 500 })
+    }
+
+    console.log('✅ Test result created successfully:', data)
+    logger.info('Test result created successfully', {
+      test_type,
+      status,
+      duration_ms: durationInteger,
+      response_size_kb: responseSizeInteger
+    })
+
+    return NextResponse.json({
+      success: true,
+      data: data[0]
+    })
+
+  } catch (error) {
+    console.error('❌ Unexpected error in test results API:', error)
+    logger.error('Unexpected error in test results API', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    })
+    
+    return NextResponse.json({
+      success: false,
+      error: 'Internal server error',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 })
+  }
+}
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
     const { searchParams } = new URL(request.url)
     const limit = parseInt(searchParams.get('limit') || '50')
     const testType = searchParams.get('test_type') || 'all'
@@ -17,30 +131,18 @@ export async function GET(request: NextRequest) {
       .limit(1)
 
     if (tableCheckError) {
-      console.warn('⚠️ test_results table does not exist:', tableCheckError.message)
+      console.warn('⚠️ test_results table not found, returning empty results')
+      logger.warn('test_results table not found for GET request', { error: tableCheckError.message })
       
-      // Return empty results with default metrics
       return NextResponse.json({
         success: true,
-        results: [],
-        performance_metrics: {
-          total_tests: 0,
-          successful_tests: 0,
-          failed_tests: 0,
-          pending_tests: 0,
-          success_rate: 0,
-          avg_duration_ms: 0,
-          avg_response_size_kb: 0,
-          test_type_breakdown: [],
-          time_period: '24h'
-        },
-        count: 0,
-        timestamp: new Date().toISOString(),
-        message: 'test_results table not found - run SQL script to create it'
+        data: [],
+        total: 0,
+        message: 'Test results table not configured. Set up the database schema to enable result tracking.',
+        setup_required: true
       })
     }
 
-    // Build query based on test type
     let query = supabase
       .from('test_results')
       .select('*')
@@ -51,194 +153,57 @@ export async function GET(request: NextRequest) {
       query = query.eq('test_type', testType)
     }
 
-    const { data: testResults, error } = await query
+    const { data, error } = await query
 
     if (error) {
       console.error('❌ Error fetching test results:', error)
-      throw error
-    }
-
-    // Calculate performance metrics
-    const now = new Date()
-    const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-    const recentResults = testResults?.filter(result => 
-      new Date(result.created_at) >= last24Hours
-    ) || []
-
-    const totalTests = recentResults.length
-    const successfulTests = recentResults.filter(r => r.status === 'success').length
-    const failedTests = recentResults.filter(r => r.status === 'error').length
-    const pendingTests = recentResults.filter(r => r.status === 'pending').length
-
-    const successRate = totalTests > 0 ? (successfulTests / totalTests) * 100 : 0
-    
-    const durations = recentResults
-      .filter(r => r.duration_ms > 0)
-      .map(r => r.duration_ms)
-    const avgDuration = durations.length > 0 
-      ? durations.reduce((a, b) => a + b, 0) / durations.length 
-      : 0
-
-    const sizes = recentResults
-      .filter(r => r.response_size_kb > 0)
-      .map(r => r.response_size_kb)
-    const avgSize = sizes.length > 0 
-      ? sizes.reduce((a, b) => a + b, 0) / sizes.length 
-      : 0
-
-    // Get test type breakdown
-    const testTypeBreakdown = ['apple', 'google', 'pwa'].map(type => {
-      const typeResults = recentResults.filter(r => r.test_type === type)
-      const typeSuccessful = typeResults.filter(r => r.status === 'success').length
-      const typeTotal = typeResults.length
+      logger.error('Failed to fetch test results', {
+        error: error.message,
+        code: error.code,
+        testType,
+        limit
+      })
       
-      return {
-        test_type: type,
-        total_tests: typeTotal,
-        successful_tests: typeSuccessful,
-        failed_tests: typeResults.filter(r => r.status === 'error').length,
-        success_rate: typeTotal > 0 ? (typeSuccessful / typeTotal) * 100 : 0,
-        avg_duration_ms: typeResults.length > 0 
-          ? typeResults.reduce((sum, r) => sum + (r.duration_ms || 0), 0) / typeResults.length 
-          : 0,
-        avg_response_size_kb: typeResults.length > 0 
-          ? typeResults.reduce((sum, r) => sum + (r.response_size_kb || 0), 0) / typeResults.length 
-          : 0
-      }
-    })
-
-    const performanceMetrics = {
-      total_tests: totalTests,
-      successful_tests: successfulTests,
-      failed_tests: failedTests,
-      pending_tests: pendingTests,
-      success_rate: Math.round(successRate * 100) / 100,
-      avg_duration_ms: Math.round(avgDuration),
-      avg_response_size_kb: Math.round(avgSize),
-      test_type_breakdown: testTypeBreakdown,
-      time_period: '24h'
-    }
-
-    console.log('✅ Test results fetched:', {
-      total: testResults?.length || 0,
-      recent: totalTests,
-      successRate: `${performanceMetrics.success_rate}%`
-    })
-
-    return NextResponse.json({
-      success: true,
-      results: testResults || [],
-      performance_metrics: performanceMetrics,
-      count: testResults?.length || 0,
-      timestamp: new Date().toISOString()
-    })
-
-  } catch (error) {
-    console.error('❌ Error fetching test results:', error)
-    return NextResponse.json(
-      { 
-        success: false,
-        error: 'Failed to fetch test results',
-        details: error instanceof Error ? error.message : 'Unknown error',
-        results: [],
-        performance_metrics: {
-          total_tests: 0,
-          successful_tests: 0,
-          failed_tests: 0,
-          pending_tests: 0,
-          success_rate: 0,
-          avg_duration_ms: 0,
-          avg_response_size_kb: 0,
-          test_type_breakdown: [],
-          time_period: '24h'
-        },
-        count: 0,
-        timestamp: new Date().toISOString()
-      },
-      { status: 500 }
-    )
-  }
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    const supabase = await createClient()
-    const body = await request.json()
-    
-    const {
-      card_id,
-      test_type,
-      status,
-      duration_ms = 0,
-      response_size_kb = 0,
-      error_message,
-      test_url
-    } = body
-
-    console.log('📝 Creating test result:', { test_type, status, duration_ms })
-
-    // Check if test_results table exists
-    const { error: tableCheckError } = await supabase
-      .from('test_results')
-      .select('id')
-      .limit(1)
-
-    if (tableCheckError) {
-      console.warn('⚠️ test_results table does not exist, skipping logging')
       return NextResponse.json({
         success: false,
-        message: 'test_results table not found - run SQL script to create it',
-        error: tableCheckError.message
-      }, { status: 404 })
+        error: error.message
+      }, { status: 500 })
     }
 
-    const { data: result, error } = await supabase
-      .from('test_results')
-      .insert({
-        card_id,
-        test_type,
-        status,
-        duration_ms,
-        response_size_kb,
-        error_message,
-        test_url
-      })
-      .select()
-      .single()
+    const successCount = data?.filter(result => result.status === 'success').length || 0
+    const total = data?.length || 0
+    const successRate = total > 0 ? ((successCount / total) * 100).toFixed(2) : '0.00'
 
-    if (error) {
-      console.error('❌ Error creating test result:', error)
-      throw error
-    }
-
-    console.log('✅ Test result created:', result.id)
+    console.log('✅ Test results fetched:', { total, recent: total, successRate: `${successRate}%` })
 
     return NextResponse.json({
       success: true,
-      result,
-      message: 'Test result created successfully'
+      data: data || [],
+      total,
+      successRate: `${successRate}%`,
+      recent: total
     })
 
   } catch (error) {
-    console.error('❌ Error creating test result:', error)
-    return NextResponse.json(
-      { 
-        success: false,
-        error: 'Failed to create test result',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    )
+    console.error('❌ Unexpected error fetching test results:', error)
+    logger.error('Unexpected error fetching test results', {
+      error: error instanceof Error ? error.message : String(error)
+    })
+    
+    return NextResponse.json({
+      success: false,
+      error: 'Internal server error',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 })
   }
 }
 
 export async function DELETE(request: NextRequest) {
   try {
-    const supabase = await createClient()
-    const { searchParams } = new URL(request.url)
-    const days = parseInt(searchParams.get('days') || '7')
-
-    console.log('🧹 Cleaning up test results older than', days, 'days')
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
 
     // Check if test_results table exists
     const { error: tableCheckError } = await supabase
@@ -247,42 +212,53 @@ export async function DELETE(request: NextRequest) {
       .limit(1)
 
     if (tableCheckError) {
-      console.warn('⚠️ test_results table does not exist')
+      console.warn('⚠️ test_results table not found for DELETE')
+      logger.warn('test_results table not found for DELETE request', { error: tableCheckError.message })
+      
       return NextResponse.json({
-        success: false,
-        message: 'test_results table not found - nothing to clean up'
-      }, { status: 404 })
+        success: true,
+        message: 'No test results to clear (table not configured)',
+        cleared: 0
+      })
     }
-
-    const cutoffDate = new Date()
-    cutoffDate.setDate(cutoffDate.getDate() - days)
 
     const { error } = await supabase
       .from('test_results')
       .delete()
-      .lt('created_at', cutoffDate.toISOString())
+      .neq('id', '00000000-0000-0000-0000-000000000000') // Delete all records
 
     if (error) {
-      console.error('❌ Error cleaning up test results:', error)
-      throw error
+      console.error('❌ Error clearing test results:', error)
+      logger.error('Failed to clear test results', {
+        error: error.message,
+        code: error.code
+      })
+      
+      return NextResponse.json({
+        success: false,
+        error: error.message
+      }, { status: 500 })
     }
 
-    console.log('✅ Test results cleanup completed')
+    console.log('🗑️ Test results cleared successfully')
+    logger.info('Test results cleared successfully')
 
     return NextResponse.json({
       success: true,
-      message: `Cleaned up test results older than ${days} days`
+      message: 'Test results cleared successfully',
+      cleared: 'all'
     })
 
   } catch (error) {
-    console.error('❌ Error cleaning up test results:', error)
-    return NextResponse.json(
-      { 
-        success: false,
-        error: 'Failed to clean up test results',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    )
+    console.error('❌ Unexpected error clearing test results:', error)
+    logger.error('Unexpected error clearing test results', {
+      error: error instanceof Error ? error.message : String(error)
+    })
+    
+    return NextResponse.json({
+      success: false,
+      error: 'Internal server error',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 })
   }
 } 

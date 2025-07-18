@@ -20,7 +20,7 @@ import {
   Activity
 } from 'lucide-react'
 
-// Type definitions based on Google Wallet best practices
+// Type definitions based on Google Wallet best practices 2025
 interface TestCard {
   id: string
   name: string
@@ -28,22 +28,15 @@ interface TestCard {
   current_stamps: number
   total_stamps: number
   reward_description: string
+  scenario: string
   created_at: string
-  wallet_type?: string
-}
-
-interface WalletCardProps {
-  card: TestCard
-  onSelect: (cardId: string) => void
-  isSelected: boolean
-  passData?: Record<string, unknown>
 }
 
 interface TestResult {
   id: string
   card_id: string
   test_type: string
-  status: 'success' | 'failed' | 'pending'
+  status: 'success' | 'error' | 'timeout'
   duration_ms: number
   response_size_kb: number
   created_at: string
@@ -53,7 +46,7 @@ interface TestResult {
 interface PerformanceMetrics {
   averageResponseTime: number
   successRate: number
-  totalTests: number
+  totalRequests: number
   errorCount: number
   averageFileSize: number
 }
@@ -64,6 +57,7 @@ interface EnvironmentStatus {
     configured: boolean
     privateKeyValid: boolean
     serviceAccountValid: boolean
+    classIdValid: boolean
   }
   appleWallet: {
     configured: boolean
@@ -75,299 +69,277 @@ interface EnvironmentStatus {
 }
 
 export default function WalletPreviewPage() {
-  // State management
+  // State management with proper TypeScript types
   const [testCards, setTestCards] = useState<TestCard[]>([])
-  const [selectedCard, setSelectedCard] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
+  const [selectedCard, setSelectedCard] = useState<TestCard | null>(null)
   const [testResults, setTestResults] = useState<TestResult[]>([])
   const [performanceMetrics, setPerformanceMetrics] = useState<PerformanceMetrics>({
     averageResponseTime: 0,
     successRate: 0,
-    totalTests: 0,
+    totalRequests: 0,
     errorCount: 0,
     averageFileSize: 0
   })
   const [environmentStatus, setEnvironmentStatus] = useState<EnvironmentStatus | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [isAutoRefresh, setIsAutoRefresh] = useState(false)
+  // Fixed: Properly typed as NodeJS.Timeout | null instead of number | null
   const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(null)
+  const [qrCodeUrl, setQrCodeUrl] = useState<string>('')
 
-  // Fetch test cards from dev-seed API
+  // Enhanced error logging function
+  const logWalletError = useCallback((operation: string, error: unknown, context?: Record<string, unknown>) => {
+    const errorData = {
+      operation,
+      error: error instanceof Error ? error.message : String(error),
+      timestamp: new Date().toISOString(),
+      userAgent: typeof window !== 'undefined' ? navigator.userAgent : 'unknown',
+      context
+    }
+    
+    console.error('🚨 Wallet Error:', errorData)
+    
+    // Send to error tracking endpoint
+    fetch('/api/errors/wallet', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(errorData)
+    }).catch(() => {
+      // Silent fail for error logging
+    })
+  }, [])
+
+  // Fetch test cards with enhanced error handling
   const fetchTestCards = useCallback(async () => {
     try {
-      setIsLoading(true)
+      setLoading(true)
+      setError(null)
+      
+      console.log('🔍 Fetching existing test data...')
       const response = await fetch('/api/dev-seed')
       
       if (!response.ok) {
         if (response.status === 401) {
-          console.warn('Dev-seed API requires authentication in production. Set DEV_SEED_API_KEY environment variable.')
+          console.warn('⚠️ API key required for production environment')
+          setError('API key required. Configure DEV_SEED_API_KEY environment variable for production testing.')
+          return
         }
-        throw new Error(`Failed to fetch test cards: ${response.status}`)
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       }
       
       const data = await response.json()
-      setTestCards(data.cards || [])
+      console.log('📊 Found test cards:', data.cards?.length || 0)
+      
+      if (data.cards && Array.isArray(data.cards)) {
+        setTestCards(data.cards)
+        
+        // Auto-select first card if none selected
+        if (!selectedCard && data.cards.length > 0) {
+          setSelectedCard(data.cards[0])
+          generateQrCode(data.cards[0].id)
+        }
+      }
+      
     } catch (error) {
-      console.error('Error fetching test cards:', error)
-      setTestCards([])
+      console.error('❌ Error fetching test cards:', error)
+      logWalletError('fetch_test_cards', error)
+      setError(error instanceof Error ? error.message : 'Failed to fetch test cards')
     } finally {
-      setIsLoading(false)
+      setLoading(false)
+    }
+  }, [selectedCard, logWalletError])
+
+  // Fetch test results with error handling
+  const fetchTestResults = useCallback(async () => {
+    try {
+      const response = await fetch('/api/test/results?limit=50&test_type=all')
+      
+      if (!response.ok) {
+        console.warn('⚠️ Test results API unavailable')
+        return
+      }
+      
+      const data = await response.json()
+      console.log('✅ Test results fetched:', { total: data.total, recent: data.recent, successRate: data.successRate })
+      
+      if (data.success && data.data) {
+        setTestResults(data.data)
+        calculatePerformanceMetrics(data.data)
+      }
+      
+    } catch (error) {
+      console.warn('⚠️ Could not fetch test results:', error)
+      // Don't show error for missing test results - it's optional
     }
   }, [])
 
-  // Generate test data
-  const generateTestData = async () => {
-    try {
-      setIsLoading(true)
-      const response = await fetch('/api/dev-seed', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ createAll: true })
+  // Calculate performance metrics based on 2025 Google Wallet testing standards
+  const calculatePerformanceMetrics = useCallback((results: TestResult[]) => {
+    if (results.length === 0) {
+      setPerformanceMetrics({
+        averageResponseTime: 0,
+        successRate: 0,
+        totalRequests: 0,
+        errorCount: 0,
+        averageFileSize: 0
       })
-      
-      if (!response.ok) {
-        throw new Error(`Failed to generate test data: ${response.status}`)
-      }
-      
-      await fetchTestCards()
-    } catch (error) {
-      console.error('Error generating test data:', error)
-    } finally {
-      setIsLoading(false)
+      return
     }
-  }
+
+    const totalRequests = results.length
+    const successfulRequests = results.filter(r => r.status === 'success')
+    const errorCount = results.filter(r => r.status === 'error').length
+    const successRate = (successfulRequests.length / totalRequests) * 100
+    
+    const averageResponseTime = results.reduce((sum, r) => sum + r.duration_ms, 0) / totalRequests
+    const averageFileSize = results.reduce((sum, r) => sum + (r.response_size_kb || 0), 0) / totalRequests
+
+    setPerformanceMetrics({
+      averageResponseTime: Math.round(averageResponseTime),
+      successRate: Math.round(successRate * 100) / 100,
+      totalRequests,
+      errorCount,
+      averageFileSize: Math.round(averageFileSize * 100) / 100
+    })
+  }, [])
 
   // Check environment status
   const checkEnvironmentStatus = useCallback(async () => {
     try {
       const response = await fetch('/api/health/env')
-      if (response.ok) {
-        const data = await response.json()
-        setEnvironmentStatus(data)
+      
+      if (!response.ok) {
+        console.warn('⚠️ Environment health check failed')
+        return
       }
+      
+      const data = await response.json()
+      setEnvironmentStatus({
+        status: data.status,
+        googleWallet: data.googleWallet || { configured: false, privateKeyValid: false, serviceAccountValid: false, classIdValid: false },
+        appleWallet: data.appleWallet || { configured: false, certificatesValid: false },
+        pwaWallet: data.pwaWallet || { available: true }
+      })
+      
     } catch (error) {
-      console.error('Error checking environment status:', error)
+      console.warn('⚠️ Could not check environment status:', error)
     }
   }, [])
 
-  // Fetch test results
-  const fetchTestResults = useCallback(async () => {
+  // Generate QR code for production domain
+  const generateQrCode = useCallback((cardId: string) => {
+    const joinUrl = `https://www.rewardjar.xyz/join/${cardId}`
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(joinUrl)}`
+    setQrCodeUrl(qrUrl)
+  }, [])
+
+  // Test Google Wallet link generation with comprehensive metrics
+  const testGoogleWalletLink = useCallback(async (card: TestCard) => {
+    const startTime = Date.now()
+    const testData = {
+      card_id: card.id,
+      test_type: 'google_wallet',
+      status: 'pending' as const,
+      duration_ms: 0,
+      response_size_kb: 0
+    }
+
     try {
-      const response = await fetch('/api/test/results')
-      if (response.ok) {
-        const data = await response.json()
-        setTestResults(data.results || [])
-        
-        // Calculate performance metrics
-        if (data.results && data.results.length > 0) {
-          const results = data.results as TestResult[]
-          const successCount = results.filter(r => r.status === 'success').length
-          const totalTests = results.length
-          const avgResponseTime = results.reduce((acc, r) => acc + r.duration_ms, 0) / totalTests
-          const avgFileSize = results.reduce((acc, r) => acc + r.response_size_kb, 0) / totalTests
-          const errorCount = results.filter(r => r.status === 'failed').length
+      setLoading(true)
+      console.log('🤖 Testing Google Wallet link for card:', card.id)
+      
+      const response = await fetch(`/api/wallet/google/${card.id}`)
+      const endTime = Date.now()
+      const duration = endTime - startTime
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+      
+      const responseText = await response.text()
+      const responseSize = new Blob([responseText]).size / 1024 // Convert to KB
+      
+      // Extract the JWT token or saveUrl from the response
+      let saveUrl = ''
+      if (responseText.includes('pay.google.com/gp/v/save/')) {
+        const urlMatch = responseText.match(/https:\/\/pay\.google\.com\/gp\/v\/save\/[^"'\s>]+/)
+        if (urlMatch) {
+          saveUrl = urlMatch[0]
+          console.log('✅ Google Wallet saveUrl generated:', saveUrl.substring(0, 100) + '...')
           
-          setPerformanceMetrics({
-            averageResponseTime: Math.round(avgResponseTime),
-            successRate: Math.round((successCount / totalTests) * 100),
-            totalTests,
-            errorCount,
-            averageFileSize: Math.round(avgFileSize * 10) / 10
-          })
+          // Open in new tab (browser testing requirement)
+          window.open(saveUrl, '_blank', 'noopener,noreferrer')
         }
       }
-    } catch (error) {
-      console.error('Error fetching test results:', error)
-    }
-  }, [])
-
-  // Test Google Wallet link generation
-  const testGoogleWalletLink = async (cardId: string) => {
-    const startTime = Date.now()
-    
-    try {
-      setIsLoading(true)
-      const response = await fetch(`/api/wallet/google/${cardId}`)
-      const endTime = Date.now()
-      const duration = endTime - startTime
       
-      let responseSize = 0
-      let responseData = null
-      
-      if (response.ok) {
-        try {
-          const text = await response.text()
-          responseSize = new Blob([text]).size / 1024 // KB
-          responseData = text
-        } catch {
-          // Not JSON, that's fine
-        }
-        
-        // Log successful test result
-        await logTestResult(cardId, 'google_wallet', 'success', duration, responseSize)
-        
-        // Extract saveUrl from response for opening
-        if (responseData && typeof responseData === 'string') {
-          // Look for saveUrl in the response
-          const saveUrlMatch = responseData.match(/https:\/\/pay\.google\.com\/gp\/v\/save\/[^"'\s<>]+/)
-          if (saveUrlMatch) {
-            const saveUrl = saveUrlMatch[0]
-            window.open(saveUrl, '_blank')
-          } else {
-            // Fallback: try to open the API response directly if it's a redirect
-            window.open(`/api/wallet/google/${cardId}`, '_blank')
-          }
-        }
-      } else {
-        const errorText = await response.text()
-        await logTestResult(cardId, 'google_wallet', 'failed', duration, responseSize, errorText)
-        throw new Error(`Google Wallet API error: ${response.status} - ${errorText}`)
+      // Record successful test result
+      const finalTestData = {
+        ...testData,
+        status: 'success' as const,
+        duration_ms: duration,
+        response_size_kb: responseSize
       }
-    } catch (error) {
-      const endTime = Date.now()
-      const duration = endTime - startTime
-      await logTestResult(cardId, 'google_wallet', 'failed', duration, 0, (error as Error).message)
-      console.error('Google Wallet test failed:', error)
-      alert(`Google Wallet test failed: ${(error as Error).message}`)
-    } finally {
-      setIsLoading(false)
-      await fetchTestResults()
-    }
-  }
-
-  // Test Apple Wallet link generation
-  const testAppleWalletLink = async (cardId: string) => {
-    const startTime = Date.now()
-    
-    try {
-      setIsLoading(true)
-      const response = await fetch(`/api/wallet/apple/${cardId}`)
-      const endTime = Date.now()
-      const duration = endTime - startTime
       
-      if (response.ok) {
-        const blob = await response.blob()
-        const responseSize = blob.size / 1024 // KB
-        
-        await logTestResult(cardId, 'apple_wallet', 'success', duration, responseSize)
-        
-        // Create download link for PKPass
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `loyalty-card-${cardId}.pkpass`
-        document.body.appendChild(a)
-        a.click()
-        window.URL.revokeObjectURL(url)
-        document.body.removeChild(a)
-      } else {
-        const errorText = await response.text()
-        await logTestResult(cardId, 'apple_wallet', 'failed', duration, 0, errorText)
-        throw new Error(`Apple Wallet API error: ${response.status} - ${errorText}`)
-      }
-    } catch (error) {
-      const endTime = Date.now()
-      const duration = endTime - startTime
-      await logTestResult(cardId, 'apple_wallet', 'failed', duration, 0, (error as Error).message)
-      console.error('Apple Wallet test failed:', error)
-      alert(`Apple Wallet test failed: ${(error as Error).message}`)
-    } finally {
-      setIsLoading(false)
-      await fetchTestResults()
-    }
-  }
-
-  // Test PWA Wallet link
-  const testPWAWalletLink = async (cardId: string) => {
-    const startTime = Date.now()
-    
-    try {
-      setIsLoading(true)
-      const response = await fetch(`/api/wallet/pwa/${cardId}`)
-      const endTime = Date.now()
-      const duration = endTime - startTime
-      
-      if (response.ok) {
-        const text = await response.text()
-        const responseSize = new Blob([text]).size / 1024 // KB
-        
-        await logTestResult(cardId, 'pwa_wallet', 'success', duration, responseSize)
-        window.open(`/api/wallet/pwa/${cardId}`, '_blank')
-      } else {
-        const errorText = await response.text()
-        await logTestResult(cardId, 'pwa_wallet', 'failed', duration, 0, errorText)
-        throw new Error(`PWA Wallet API error: ${response.status} - ${errorText}`)
-      }
-    } catch (error) {
-      const endTime = Date.now()
-      const duration = endTime - startTime
-      await logTestResult(cardId, 'pwa_wallet', 'failed', duration, 0, (error as Error).message)
-      console.error('PWA Wallet test failed:', error)
-      alert(`PWA Wallet test failed: ${(error as Error).message}`)
-    } finally {
-      setIsLoading(false)
-      await fetchTestResults()
-    }
-  }
-
-  // Log test result
-  const logTestResult = async (
-    cardId: string, 
-    testType: string, 
-    status: 'success' | 'failed', 
-    duration: number, 
-    responseSize: number, 
-    errorMessage?: string
-  ) => {
-    try {
-      await fetch('/api/test/results', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          card_id: cardId,
-          test_type: testType,
-          status,
-          duration_ms: duration,
-          response_size_kb: responseSize,
-          error_message: errorMessage
+      // Log to test results if available
+      try {
+        await fetch('/api/test/results', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(finalTestData)
         })
-      })
+      } catch {
+        // Silent fail for test logging
+      }
+      
+      // Refresh results
+      await fetchTestResults()
+      
+      console.log('✅ Google Wallet test completed successfully')
+      
     } catch (error) {
-      console.error('Error logging test result:', error)
-    }
-  }
-
-  // Clear all test results
-  const clearTestResults = async () => {
-    try {
-      const response = await fetch('/api/test/results', {
-        method: 'DELETE'
-      })
-      if (response.ok) {
-        setTestResults([])
-        setPerformanceMetrics({
-          averageResponseTime: 0,
-          successRate: 0,
-          totalTests: 0,
-          errorCount: 0,
-          averageFileSize: 0
+      const endTime = Date.now()
+      const duration = endTime - startTime
+      
+      console.error('❌ Google Wallet test failed:', error)
+      logWalletError('google_wallet_test', error, { card_id: card.id, duration })
+      
+      // Record failed test result
+      const failedTestData = {
+        ...testData,
+        status: 'error' as const,
+        duration_ms: duration,
+        error_message: error instanceof Error ? error.message : String(error)
+      }
+      
+      try {
+        await fetch('/api/test/results', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(failedTestData)
         })
+      } catch {
+        // Silent fail for test logging
       }
-    } catch (error) {
-      console.error('Error clearing test results:', error)
+      
+      setError(`Google Wallet test failed: ${error instanceof Error ? error.message : String(error)}`)
+    } finally {
+      setLoading(false)
     }
-  }
+  }, [logWalletError, fetchTestResults])
 
-  // Toggle auto-refresh
-  const toggleAutoRefresh = () => {
-    if (isAutoRefresh) {
-      if (refreshInterval) {
-        clearInterval(refreshInterval)
-        setRefreshInterval(null)
-      }
+  // Handle card selection
+  const handleCardSelection = useCallback((card: TestCard) => {
+    setSelectedCard(card)
+    generateQrCode(card.id)
+    setError(null)
+  }, [generateQrCode])
+
+  // Auto-refresh functionality
+  const toggleAutoRefresh = useCallback(() => {
+    if (isAutoRefresh && refreshInterval) {
+      clearInterval(refreshInterval)
+      setRefreshInterval(null)
       setIsAutoRefresh(false)
     } else {
       const interval = setInterval(() => {
@@ -378,373 +350,327 @@ export default function WalletPreviewPage() {
       setRefreshInterval(interval)
       setIsAutoRefresh(true)
     }
-  }
+  }, [isAutoRefresh, refreshInterval, fetchTestCards, fetchTestResults, checkEnvironmentStatus])
 
-  // Copy to clipboard
-  const copyToClipboard = async (text: string) => {
-    if (typeof window !== 'undefined' && navigator?.clipboard) {
-      try {
-        await navigator.clipboard.writeText(text)
-        alert('Copied to clipboard!')
-      } catch {
-        fallbackCopyToClipboard(text)
-      }
-    } else {
-      fallbackCopyToClipboard(text)
-    }
-  }
-
-  // Fallback copy method
-  const fallbackCopyToClipboard = (text: string) => {
-    const textArea = document.createElement('textarea')
-    textArea.value = text
-    document.body.appendChild(textArea)
-    textArea.focus()
-    textArea.select()
-    try {
-      document.execCommand('copy')
-      alert('Copied to clipboard!')
-    } catch {
-      alert('Copy to clipboard failed. Please copy manually.')
-    }
-    document.body.removeChild(textArea)
-  }
-
-  // Initial data load
+  // Initial data loading
   useEffect(() => {
     fetchTestCards()
     fetchTestResults()
     checkEnvironmentStatus()
-  }, [fetchTestCards, fetchTestResults, checkEnvironmentStatus])
-
-  // Cleanup on unmount
-  useEffect(() => {
+    
+    // Cleanup interval on unmount
     return () => {
       if (refreshInterval) {
         clearInterval(refreshInterval)
       }
     }
-  }, [refreshInterval])
+  }, []) // Remove dependencies to avoid infinite loops
 
-  // Generate QR code URL for production domain
-  const generateQRCodeUrl = (cardId: string) => {
-    const joinUrl = `https://www.rewardjar.xyz/join/${cardId}`
-    return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(joinUrl)}`
+  // Performance status indicator
+  const getPerformanceStatus = () => {
+    if (performanceMetrics.totalRequests === 0) return 'unknown'
+    if (performanceMetrics.successRate >= 95 && performanceMetrics.averageResponseTime < 2000) return 'excellent'
+    if (performanceMetrics.successRate >= 85 && performanceMetrics.averageResponseTime < 5000) return 'good'
+    return 'needs_improvement'
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 p-4">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="text-center space-y-4">
-          <h1 className="text-4xl font-bold text-gray-900">
+        <div className="text-center py-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">
             🧪 Google Wallet Testing Interface
           </h1>
-          <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-            Comprehensive testing environment for Google Wallet integration with performance 
-            metrics, QR code generation, and real-time error tracking. Based on the latest 
-            Google Wallet testing best practices for 2025.
+          <p className="text-lg text-gray-600 mb-4">
+            Comprehensive testing platform based on Google Wallet 2025 best practices
           </p>
+          <div className="flex justify-center gap-4">
+            <Button 
+              onClick={() => { fetchTestCards(); fetchTestResults(); checkEnvironmentStatus(); }}
+              disabled={loading}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Refresh Data
+            </Button>
+            <Button 
+              onClick={toggleAutoRefresh}
+              variant={isAutoRefresh ? "destructive" : "outline"}
+            >
+              <Activity className="w-4 h-4 mr-2" />
+              {isAutoRefresh ? 'Stop' : 'Start'} Auto-Refresh
+            </Button>
+          </div>
         </div>
 
-        {/* Environment Status Card */}
+        {/* Environment Status */}
         {environmentStatus && (
           <Card className="border-l-4 border-l-blue-500">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Activity className="h-5 w-5 text-blue-600" />
+                <Activity className="w-5 h-5" />
                 Environment Status
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <h4 className="font-semibold text-green-600">🤖 Google Wallet</h4>
-                  <div className="space-y-1 text-sm">
-                    <div className="flex items-center gap-2">
-                      {environmentStatus.googleWallet?.configured ? 
-                        <CheckCircle className="h-4 w-4 text-green-500" /> : 
-                        <XCircle className="h-4 w-4 text-red-500" />
-                      }
-                      <span>Service Account</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {environmentStatus.googleWallet?.privateKeyValid ? 
-                        <CheckCircle className="h-4 w-4 text-green-500" /> : 
-                        <XCircle className="h-4 w-4 text-red-500" />
-                      }
-                      <span>Private Key Format</span>
-                    </div>
-                  </div>
+                <div className="text-center">
+                  <div className={`w-4 h-4 rounded-full mx-auto mb-2 ${
+                    environmentStatus.googleWallet.configured && 
+                    environmentStatus.googleWallet.privateKeyValid ? 
+                    'bg-green-500' : 'bg-red-500'
+                  }`}></div>
+                  <h4 className="font-semibold">Google Wallet</h4>
+                  <p className="text-sm text-gray-600">
+                    {environmentStatus.googleWallet.configured ? 'Configured' : 'Not Configured'}
+                  </p>
                 </div>
-                
-                <div className="space-y-2">
-                  <h4 className="font-semibold text-gray-600">🍎 Apple Wallet</h4>
-                  <div className="space-y-1 text-sm">
-                    <div className="flex items-center gap-2">
-                      {environmentStatus.appleWallet?.configured ? 
-                        <CheckCircle className="h-4 w-4 text-green-500" /> : 
-                        <XCircle className="h-4 w-4 text-red-500" />
-                      }
-                      <span>Certificates</span>
-                    </div>
-                  </div>
+                <div className="text-center">
+                  <div className={`w-4 h-4 rounded-full mx-auto mb-2 ${
+                    environmentStatus.appleWallet.configured ? 'bg-green-500' : 'bg-yellow-500'
+                  }`}></div>
+                  <h4 className="font-semibold">Apple Wallet</h4>
+                  <p className="text-sm text-gray-600">
+                    {environmentStatus.appleWallet.configured ? 'Configured' : 'Needs Certificates'}
+                  </p>
                 </div>
-                
-                <div className="space-y-2">
-                  <h4 className="font-semibold text-purple-600">📱 PWA Wallet</h4>
-                  <div className="space-y-1 text-sm">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                      <span>Always Available</span>
-                    </div>
-                  </div>
+                <div className="text-center">
+                  <div className="w-4 h-4 rounded-full mx-auto mb-2 bg-green-500"></div>
+                  <h4 className="font-semibold">PWA Wallet</h4>
+                  <p className="text-sm text-gray-600">Always Available</p>
                 </div>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Performance Metrics */}
-        {testResults.length > 0 && (
+        {/* Performance Metrics Dashboard */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-blue-600" />
-                Performance Metrics
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">
-                    {performanceMetrics.averageResponseTime}ms
-                  </div>
-                  <div className="text-sm text-gray-600">Avg Response Time</div>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Avg Response Time</p>
+                  <p className="text-2xl font-bold">{performanceMetrics.averageResponseTime}ms</p>
                 </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">
-                    {performanceMetrics.successRate}%
-                  </div>
-                  <div className="text-sm text-gray-600">Success Rate</div>
+                <Clock className="w-8 h-8 text-blue-500" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Success Rate</p>
+                  <p className="text-2xl font-bold">{performanceMetrics.successRate}%</p>
                 </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-purple-600">
-                    {performanceMetrics.totalTests}
-                  </div>
-                  <div className="text-sm text-gray-600">Total Tests</div>
+                <TrendingUp className="w-8 h-8 text-green-500" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Total Tests</p>
+                  <p className="text-2xl font-bold">{performanceMetrics.totalRequests}</p>
                 </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-red-600">
-                    {performanceMetrics.errorCount}
-                  </div>
-                  <div className="text-sm text-gray-600">Errors</div>
+                <Activity className="w-8 h-8 text-purple-500" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Performance</p>
+                  <Badge variant={getPerformanceStatus() === 'excellent' ? 'default' : 
+                               getPerformanceStatus() === 'good' ? 'secondary' : 'destructive'}>
+                    {getPerformanceStatus()}
+                  </Badge>
                 </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-orange-600">
-                    {performanceMetrics.averageFileSize}KB
-                  </div>
-                  <div className="text-sm text-gray-600">Avg File Size</div>
+                <CheckCircle className="w-8 h-8 text-green-500" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Error Display */}
+        {error && (
+          <Card className="border-l-4 border-l-red-500 bg-red-50">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5" />
+                <div>
+                  <h4 className="font-semibold text-red-900">Error</h4>
+                  <p className="text-red-800">{error}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Control Panel */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5 text-green-600" />
-              Test Controls
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-4">
-              <Button onClick={generateTestData} disabled={isLoading}>
-                {isLoading ? (
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Plus className="h-4 w-4 mr-2" />
-                )}
-                Generate Test Data
-              </Button>
-              
-              <Button variant="outline" onClick={fetchTestCards} disabled={isLoading}>
-                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                Refresh Cards
-              </Button>
-              
-              <Button 
-                variant={isAutoRefresh ? "destructive" : "outline"} 
-                onClick={toggleAutoRefresh}
-              >
-                <Clock className="h-4 w-4 mr-2" />
-                {isAutoRefresh ? 'Stop Auto-Refresh' : 'Start Auto-Refresh'}
-              </Button>
-              
-              {testResults.length > 0 && (
-                <Button variant="outline" onClick={clearTestResults}>
-                  <XCircle className="h-4 w-4 mr-2" />
-                  Clear Results
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Test Cards Grid */}
+        {/* Main Testing Interface */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Available Test Cards */}
+          {/* Test Card Selection */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Smartphone className="h-5 w-5 text-blue-600" />
-                Available Test Cards ({testCards.length})
+                <CreditCard className="w-5 h-5" />
+                Test Cards ({testCards.length} available)
               </CardTitle>
               <CardDescription>
                 Select a test card to generate Google Wallet links and QR codes
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               {testCards.length === 0 ? (
-                <div className="text-center py-8 space-y-4">
-                  <AlertTriangle className="h-12 w-12 text-yellow-500 mx-auto" />
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">No Test Cards Available</h3>
-                    <p className="text-gray-600 mt-2">
-                      Click &quot;Generate Test Data&quot; to create sample loyalty cards for testing.
-                    </p>
-                    
-                    {process.env.NODE_ENV === 'production' && (
-                      <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <h4 className="font-semibold text-blue-800">Vercel Deployment Detected</h4>
-                        <p className="text-blue-700 text-sm mt-1">
-                          If you&apos;re seeing this on Vercel, make sure you&apos;ve set up the required environment variables:
-                        </p>
-                        <ul className="text-blue-700 text-sm mt-2 list-disc list-inside">
-                          <li>NEXT_PUBLIC_SUPABASE_URL</li>
-                          <li>NEXT_PUBLIC_SUPABASE_ANON_KEY</li>
-                          <li>SUPABASE_SERVICE_ROLE_KEY</li>
-                          <li>GOOGLE_SERVICE_ACCOUNT_EMAIL</li>
-                          <li>GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY</li>
-                          <li>DEV_SEED_API_KEY (for test data generation)</li>
-                        </ul>
-                      </div>
-                    )}
-                  </div>
+                <div className="text-center py-8">
+                  {loading ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <RefreshCw className="w-5 h-5 animate-spin" />
+                      <p>Loading test cards...</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <p className="text-gray-500">No test cards available</p>
+                      <Button 
+                        onClick={async () => {
+                          try {
+                            setLoading(true)
+                            const response = await fetch('/api/dev-seed', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ createAll: true })
+                            })
+                            if (response.ok) {
+                              await fetchTestCards()
+                            }
+                          } catch (error) {
+                            console.error('Error generating test data:', error)
+                            setError('Failed to generate test data')
+                          } finally {
+                            setLoading(false)
+                          }
+                        }}
+                        disabled={loading}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Generate Test Cards
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ) : (
-                <div className="space-y-3 max-h-96 overflow-y-auto">
+                <div className="space-y-2 max-h-96 overflow-y-auto">
                   {testCards.map((card) => (
-                    <WalletCard
+                    <div
                       key={card.id}
-                      card={card}
-                      onSelect={setSelectedCard}
-                      isSelected={selectedCard === card.id}
-                    />
+                      className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                        selectedCard?.id === card.id
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                      onClick={() => handleCardSelection(card)}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="font-semibold">{card.name}</h4>
+                          <p className="text-sm text-gray-600">{card.business_name}</p>
+                          <p className="text-sm">
+                            {card.current_stamps}/{card.total_stamps} stamps
+                          </p>
+                        </div>
+                        <Badge variant="outline">
+                          {card.scenario}
+                        </Badge>
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}
             </CardContent>
           </Card>
 
-          {/* Selected Card Actions */}
+          {/* Google Wallet Testing */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Eye className="h-5 w-5 text-green-600" />
-                Wallet Testing Actions
+                <Smartphone className="w-5 h-5" />
+                Google Wallet Testing
               </CardTitle>
               <CardDescription>
-                Test Google Wallet link generation and other wallet integrations
+                Test Google Wallet link generation and button functionality
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               {selectedCard ? (
-                <div className="space-y-6">
-                  {/* Google Wallet - Primary Focus */}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-green-600 flex items-center gap-2">
-                      🤖 Google Wallet Testing (Primary)
-                    </h3>
-                    <Button 
-                      onClick={() => testGoogleWalletLink(selectedCard)}
-                      disabled={isLoading}
-                      className="w-full bg-green-600 hover:bg-green-700 text-white h-12"
-                    >
-                      <Image
-                        src="https://developers.google.com/static/wallet/images/branding/temp-wallet-primary.png"
-                        alt="Add to Google Wallet"
-                        width={120}
-                        height={40}
-                        className="mr-2"
-                      />
-                    </Button>
-                    <p className="text-sm text-gray-600">
-                      Tests JWT generation, saveUrl creation, and Google Wallet integration according to 
-                      Google&apos;s latest 2025 testing guidelines.
+                <div className="space-y-4">
+                  <div className="p-4 bg-gray-50 rounded-lg">
+                    <h4 className="font-semibold mb-2">Selected Card</h4>
+                    <p className="text-sm">
+                      <strong>Name:</strong> {selectedCard.name}
+                    </p>
+                    <p className="text-sm">
+                      <strong>Business:</strong> {selectedCard.business_name}
+                    </p>
+                    <p className="text-sm">
+                      <strong>Progress:</strong> {selectedCard.current_stamps}/{selectedCard.total_stamps} stamps
+                    </p>
+                    <p className="text-sm">
+                      <strong>Reward:</strong> {selectedCard.reward_description}
                     </p>
                   </div>
 
-                  {/* QR Code Preview */}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-blue-600 flex items-center gap-2">
-                      📱 QR Code Preview
-                    </h3>
-                    <div className="flex flex-col items-center space-y-2">
+                  {/* Google Wallet Button - Following Google's brand guidelines */}
+                  <div className="text-center">
+                    <Button
+                      onClick={() => testGoogleWalletLink(selectedCard)}
+                      disabled={loading}
+                      className="bg-black hover:bg-gray-800 text-white px-6 py-3 rounded-lg flex items-center gap-2 mx-auto"
+                    >
                       <Image
-                        src={generateQRCodeUrl(selectedCard)}
-                        alt="QR Code for card join URL"
-                        width={200}
-                        height={200}
-                        className="border rounded-lg"
+                        src="https://developers.google.com/static/wallet/images/add_to_google_wallet_badge.svg"
+                        alt="Add to Google Wallet"
+                        width={20}
+                        height={20}
+                        className="invert"
                       />
-                      <p className="text-sm text-gray-600 text-center">
-                        Scan to join: https://www.rewardjar.xyz/join/{selectedCard}
-                      </p>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => copyToClipboard(`https://www.rewardjar.xyz/join/${selectedCard}`)}
-                      >
-                        Copy Join URL
-                      </Button>
-                    </div>
+                      {loading ? 'Testing...' : 'Add to Google Wallet'}
+                    </Button>
+                    <p className="text-xs text-gray-500 mt-2">
+                      Follows Google Wallet brand guidelines 2025
+                    </p>
                   </div>
 
-                  {/* Secondary Wallet Options */}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-600">
-                      Secondary Wallet Options
-                    </h3>
-                    <div className="grid grid-cols-1 gap-3">
-                      <Button 
-                        variant="outline" 
-                        onClick={() => testAppleWalletLink(selectedCard)}
-                        disabled={isLoading}
-                        className="h-10"
-                      >
-                        🍎 Test Apple Wallet PKPass
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        onClick={() => testPWAWalletLink(selectedCard)}
-                        disabled={isLoading}
-                        className="h-10"
-                      >
-                        📱 Test PWA Wallet
-                      </Button>
+                  {/* QR Code */}
+                  {qrCodeUrl && (
+                    <div className="text-center">
+                      <h4 className="font-semibold mb-2">QR Code</h4>
+                      <div className="inline-block p-4 bg-white rounded-lg border">
+                        <Image
+                          src={qrCodeUrl}
+                          alt="QR Code"
+                          width={200}
+                          height={200}
+                          className="rounded"
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2">
+                        Scan to join: https://www.rewardjar.xyz/join/{selectedCard.id}
+                      </p>
                     </div>
-                  </div>
+                  )}
                 </div>
               ) : (
-                <div className="text-center py-8">
-                  <CreditCard className="h-12 w-12 text-gray-400 mx-auto" />
-                  <h3 className="text-lg font-semibold text-gray-900 mt-4">Select a Test Card</h3>
-                  <p className="text-gray-600 mt-2">
-                    Choose a test card from the left panel to begin wallet testing.
-                  </p>
+                <div className="text-center py-8 text-gray-500">
+                  <Eye className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>Select a test card to begin testing</p>
                 </div>
               )}
             </CardContent>
@@ -756,12 +682,15 @@ export default function WalletPreviewPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Activity className="h-5 w-5 text-purple-600" />
-                Recent Test Results ({testResults.length})
+                <Activity className="w-5 h-5" />
+                Recent Test Results
               </CardTitle>
+              <CardDescription>
+                Latest wallet integration test results and performance data
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3 max-h-96 overflow-y-auto">
+              <div className="space-y-2 max-h-64 overflow-y-auto">
                 {testResults.slice(0, 10).map((result) => (
                   <div
                     key={result.id}
@@ -769,26 +698,22 @@ export default function WalletPreviewPage() {
                   >
                     <div className="flex items-center gap-3">
                       {result.status === 'success' ? (
-                        <CheckCircle className="h-5 w-5 text-green-500" />
+                        <CheckCircle className="w-5 h-5 text-green-500" />
                       ) : (
-                        <XCircle className="h-5 w-5 text-red-500" />
+                        <XCircle className="w-5 h-5 text-red-500" />
                       )}
                       <div>
-                        <div className="font-semibold">
-                          {result.test_type.replace('_', ' ').toUpperCase()}
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          Card: {result.card_id.substring(0, 8)}...
-                        </div>
+                        <p className="font-medium">{result.test_type}</p>
+                        <p className="text-sm text-gray-600">
+                          {new Date(result.created_at).toLocaleTimeString()}
+                        </p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <Badge variant={result.status === 'success' ? 'default' : 'destructive'}>
-                        {result.status}
-                      </Badge>
-                      <div className="text-sm text-gray-600 mt-1">
-                        {result.duration_ms}ms • {result.response_size_kb}KB
-                      </div>
+                      <p className="text-sm font-medium">{result.duration_ms}ms</p>
+                      {result.response_size_kb && (
+                        <p className="text-xs text-gray-600">{result.response_size_kb}KB</p>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -797,61 +722,39 @@ export default function WalletPreviewPage() {
           </Card>
         )}
 
-        {/* Footer */}
-        <div className="text-center text-sm text-gray-500 py-4 border-t">
-          <p>
-            🚀 RewardJar 4.0 • Google Wallet Testing Interface • 
-            Based on 2025 Google Wallet Best Practices • 
-            <a href="/api/health/env" target="_blank" className="text-blue-600 hover:underline ml-1">
-              <ExternalLink className="h-4 w-4 inline" />
-              Check Environment Status
-            </a>
-          </p>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// Wallet Card Component
-function WalletCard({ card, onSelect, isSelected }: WalletCardProps) {
-  const progress = card.total_stamps > 0 ? (card.current_stamps / card.total_stamps) * 100 : 0
-  const isCompleted = card.current_stamps >= card.total_stamps
-
-  return (
-    <div
-      className={`p-4 border rounded-lg cursor-pointer transition-all hover:shadow-md ${
-        isSelected ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-gray-300'
-      }`}
-      onClick={() => onSelect(card.id)}
-    >
-      <div className="flex items-center justify-between">
-        <div className="flex-1">
-          <h3 className="font-semibold text-gray-900">{card.name}</h3>
-          <p className="text-sm text-gray-600">{card.business_name}</p>
-          <div className="mt-2 space-y-1">
-            <div className="flex items-center justify-between text-sm">
-              <span>Progress: {card.current_stamps}/{card.total_stamps}</span>
-              <Badge variant={isCompleted ? 'default' : 'outline'}>
-                {Math.round(progress)}%
-              </Badge>
+        {/* Testing Guidelines */}
+        <Card className="border-l-4 border-l-green-500">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle className="w-5 h-5" />
+              Google Wallet Testing Guidelines 2025
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h4 className="font-semibold mb-2">Browser Testing Requirements</h4>
+                <ul className="text-sm space-y-1 text-gray-600">
+                  <li>✅ Chrome browser compatibility</li>
+                  <li>✅ Firefox browser compatibility</li>
+                  <li>✅ Safari browser compatibility</li>
+                  <li>✅ Button rendering at different zoom levels</li>
+                  <li>✅ Single button renders in &lt;1 second</li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-semibold mb-2">Performance Benchmarks</h4>
+                <ul className="text-sm space-y-1 text-gray-600">
+                  <li>✅ Response time &lt;2 seconds target</li>
+                  <li>✅ Success rate &gt;95% target</li>
+                  <li>✅ JWT validation and encryption</li>
+                  <li>✅ Brand guidelines compliance</li>
+                  <li>✅ Real-time error tracking</li>
+                </ul>
+              </div>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div
-                className={`h-2 rounded-full transition-all ${
-                  isCompleted ? 'bg-green-500' : 'bg-blue-500'
-                }`}
-                style={{ width: `${Math.min(progress, 100)}%` }}
-              />
-            </div>
-          </div>
-        </div>
-        
-        {isSelected && (
-          <div className="ml-4">
-            <CheckCircle className="h-6 w-6 text-green-500" />
-          </div>
-        )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   )

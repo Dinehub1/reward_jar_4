@@ -1,0 +1,2 @@
+{"card_id":"test-card","code":"22P02","details":null,"duration_ms":1234,"error":"invalid input syntax for type uuid: \"test-card\"","hint":null,"level":"error","message":"Failed to create test result","test_type":"google_wallet","timestamp":"2025-07-18T20:25:53.313Z"}
+{"duration_ms":1234,"level":"info","message":"Test result created successfully","response_size_kb":12,"status":"success","test_type":"google_wallet","timestamp":"2025-07-18T20:26:01.928Z"}
