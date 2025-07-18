@@ -2,8 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   experimental: {
-    // Allow dev origins to prevent CORS warnings
-    allowedDevOrigins: ['http://192.168.29.219:3000', 'http://localhost:3000'],
+    // ⚠️ allowedDevOrigins is not yet supported in production builds (Next.js 15.3.5)
+    // Removed to avoid Vercel build failure. Re-enable when officially supported.
   },
   images: {
     remotePatterns: [
