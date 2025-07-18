@@ -443,3 +443,38 @@ const walletErrors = {
 **Status**: ✅ **COMPREHENSIVE TEST SUITE READY & STABILIZED**  
 **Next Steps**: Full production deployment with confidence  
 **Maintenance**: Review and update quarterly, certificate renewal in 2026 
+
+## ✅ Final Fix Complete - Correct Domain Applied
+
+I have successfully updated the Apple Wallet webServiceURL to use the correct production domain. Here's what was fixed:
+
+### 🔧 **Domain Fix Applied:**
+
+1. **✅ Updated `getValidWebServiceURL()` Helper Function**
+   - Changed from: `'https://rewardjar.com'`
+   - Changed to: `'https://www.rewardjar.xyz'`
+   - Added `PRODUCTION_DOMAIN` constant for consistency
+
+2. **✅ Updated Dev-Seed API Test URLs**
+   - All test URLs now use the correct domain
+   - Apple, Google, PWA, and debug URLs all updated
+
+3. **✅ Updated Documentation**
+   - Updated `doc/test-wallet-preview.md` with correct domain references
+   - Fixed all code examples and configuration snippets
+
+### 🧪 **Verification:**
+
+I tested the fix and confirmed that the Apple Wallet API now returns:
+```json
+<code_block_to_apply_from>
+```
+
+### 📱 **Impact:**
+
+- **Apple Wallet Passes**: Now use the correct production domain
+- **iOS Compatibility**: Proper webServiceURL for production deployment
+- **Test Suite**: All test URLs updated to use correct domain
+- **Documentation**: Consistent domain references throughout
+
+The Apple Wallet integration is now properly configured with the correct production domain `https://www.rewardjar.xyz` and ready for production deployment. 

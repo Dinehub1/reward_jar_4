@@ -122,6 +122,61 @@ export default function WalletPreviewTest() {
   const [autoRefresh, setAutoRefresh] = useState(false)
   const [refreshInterval, setRefreshInterval] = useState(30)
 
+  // Browser detection and fallback
+  const detectBrowser = () => {
+    const userAgent = navigator.userAgent.toLowerCase()
+    const isAndroid = userAgent.includes('android')
+    const isIOS = /iphone|ipad|ipod/.test(userAgent)
+    const isSafari = userAgent.includes('safari') && !userAgent.includes('chrome')
+    const isDesktop = !isAndroid && !isIOS
+    
+    return { isAndroid, isIOS, isSafari, isDesktop }
+  }
+
+  // Show browser-specific instructions
+  const showBrowserFallback = (walletType: string) => {
+    const { isAndroid, isIOS, isSafari, isDesktop } = detectBrowser()
+    
+    if (walletType === 'apple' && isAndroid) {
+      return {
+        message: "Apple Wallet is not available on Android devices.",
+        instructions: [
+          "1. Try Google Pay wallet instead",
+          "2. Use our Progressive Web App (PWA)",
+          "3. Save card details to your phone's gallery"
+        ],
+        alternatives: [
+          { name: "Google Pay", action: "Try Google Wallet" },
+          { name: "PWA Wallet", action: "Open Web Wallet" }
+        ]
+      }
+    }
+    
+    if (walletType === 'apple' && isDesktop) {
+      return {
+        message: "Apple Wallet is designed for mobile devices.",
+        instructions: [
+          "1. Open this link on your iPhone",
+          "2. Use the QR code to transfer to mobile",
+          "3. Email the link to yourself"
+        ]
+      }
+    }
+    
+    if (walletType === 'apple' && isIOS && !isSafari) {
+      return {
+        message: "Apple Wallet works best with Safari on iOS.",
+        instructions: [
+          "1. Copy the link and open in Safari",
+          "2. Or use the 'Open in Safari' option",
+          "3. Safari will open Apple Wallet automatically"
+        ]
+      }
+    }
+    
+    return null
+  }
+
   // Fetch environment status
   const fetchEnvironmentStatus = useCallback(async () => {
     try {
@@ -697,6 +752,42 @@ export default function WalletPreviewTest() {
                         />
                       </div>
                     )}
+
+                    {/* Browser Compatibility Check */}
+                    {(() => {
+                      const fallback = showBrowserFallback('apple')
+                      if (fallback) {
+                        return (
+                          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm">
+                            <div className="flex items-center gap-2 mb-2">
+                              <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                              <span className="font-medium text-yellow-800">{fallback.message}</span>
+                            </div>
+                            <ul className="text-yellow-700 space-y-1 mb-2">
+                              {fallback.instructions.map((instruction, idx) => (
+                                <li key={idx} className="text-xs">{instruction}</li>
+                              ))}
+                            </ul>
+                            {fallback.alternatives && (
+                              <div className="flex gap-2">
+                                {fallback.alternatives.map((alt, idx) => (
+                                  <Button
+                                    key={idx}
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => testWalletPass(card.id, alt.name.toLowerCase().includes('google') ? 'google' : 'pwa')}
+                                    className="text-xs"
+                                  >
+                                    {alt.action}
+                                  </Button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      }
+                      return null
+                    })()}
 
                     {/* Test Buttons */}
                     <div className="grid grid-cols-2 gap-2">
