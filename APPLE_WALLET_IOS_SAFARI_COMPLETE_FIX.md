@@ -254,3 +254,7 @@ curl -o test.pkpass http://192.168.29.135:3000/api/test/wallet-ios
 - Provides dedicated testing endpoints for iOS Safari validation
 
 **Ready for production deployment and iOS device testing.** 
+
+
+
+new
