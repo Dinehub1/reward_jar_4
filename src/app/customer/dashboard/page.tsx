@@ -71,8 +71,8 @@ export default function CustomerDashboard() {
         if (cards) {
           const formattedCards = cards.map(card => {
             // Handle the nested structure correctly - stamp_cards and businesses are objects, not arrays
-            const stampCard = (card.stamp_cards as unknown) as any
-            const business = (stampCard.businesses as unknown) as any
+            const stampCard = (card.stamp_cards as unknown) as { id: string; name: string; total_stamps: number; reward_description: string; businesses: unknown }
+            const business = (stampCard.businesses as unknown) as { name: string; description: string }
             
             return {
             ...card,

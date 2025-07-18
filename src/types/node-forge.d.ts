@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 declare module 'node-forge' {
   export const pki: any;
   export const md: any;

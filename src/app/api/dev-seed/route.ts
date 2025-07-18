@@ -1,5 +1,34 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
+
+// Type definitions for Supabase data
+interface Business {
+  name: string
+  description: string
+}
+
+interface StampCard {
+  id: string
+  name: string
+  total_stamps: number
+  reward_description: string
+  businesses: Business
+}
+
+interface Customer {
+  name: string
+  email: string
+}
+
+// interface CustomerCard {
+//   id: string
+//   current_stamps: number
+//   created_at: string
+//   updated_at: string
+//   stamp_cards: StampCard
+//   customers: Customer
+// }
 
 // Development Seed API - Generate test data for wallet testing
 // Available in production for testing purposes with optional API key protection
@@ -169,9 +198,9 @@ export async function GET(request: NextRequest) {
 
     // Format response for test interface
     const formattedCards = testCards?.map(card => {
-      const stampCard = (card.stamp_cards as unknown) as any
-      const business = (stampCard?.businesses as unknown) as any
-      const customer = (card.customers as unknown) as any
+      const stampCard = (card.stamp_cards as unknown) as StampCard
+      const business = (stampCard?.businesses as unknown) as Business
+      const customer = (card.customers as unknown) as Customer
       
       const totalStamps = stampCard?.total_stamps || 10
       const currentStamps = card.current_stamps || 0
@@ -285,7 +314,7 @@ async function createTestCard(supabase: any, scenario: string, index: number) {
     }
 
     // Create business
-    const { data: business, error: businessError } = await supabase
+    const { error: businessError } = await supabase
       .from('businesses')
       .insert({
         id: businessId,
@@ -304,7 +333,7 @@ async function createTestCard(supabase: any, scenario: string, index: number) {
     }
 
     // Create stamp card
-    const { data: stampCard, error: stampCardError } = await supabase
+    const { error: stampCardError } = await supabase
       .from('stamp_cards')
       .insert({
         id: stampCardId,
@@ -325,7 +354,7 @@ async function createTestCard(supabase: any, scenario: string, index: number) {
     }
 
     // Create customer
-    const { data: customer, error: customerError } = await supabase
+    const { error: customerError } = await supabase
       .from('customers')
       .insert({
         id: customerId,
@@ -344,7 +373,7 @@ async function createTestCard(supabase: any, scenario: string, index: number) {
     }
 
     // Create customer card
-    const { data: customerCard, error: customerCardError } = await supabase
+    const { error: customerCardError } = await supabase
       .from('customer_cards')
       .insert({
         id: customerCardId,

@@ -408,7 +408,7 @@ async function generatePKPass(passData: Record<string, unknown>): Promise<Buffer
       })
       
       // Generate required icons
-      const icons = await generatePassIcons(null, null)
+      const icons = await generatePassIcons({}, {})
       
       // Create pass.json
       const passJson = JSON.stringify(passData, null, 2)
@@ -452,7 +452,7 @@ async function generatePKPass(passData: Record<string, unknown>): Promise<Buffer
 }
 
 // Generate required pass icons
-async function generatePassIcons(_stampCard: any, _business: any): Promise<Record<string, Buffer>> {
+async function generatePassIcons(_stampCard: Record<string, unknown>, _business: Record<string, unknown>): Promise<Record<string, Buffer>> {
   const icons: Record<string, Buffer> = {}
   
   try {
@@ -594,7 +594,7 @@ async function createPKCS7Signature(manifestBuffer: Buffer): Promise<Buffer> {
           if (fs.existsSync(file)) {
             fs.unlinkSync(file)
           }
-        } catch (_e) {
+        } catch {
           console.warn('Could not cleanup temp file:', file)
         }
       })
@@ -690,7 +690,7 @@ function validatePKPassStructure(passData: Record<string, unknown>): string[] {
     const validFormats = ['PKBarcodeFormatQR', 'PKBarcodeFormatPDF417', 'PKBarcodeFormatAztec', 'PKBarcodeFormatCode128']
     for (const barcode of passData.barcodes) {
       if (typeof barcode === 'object' && barcode !== null) {
-        const bc = barcode as any
+        const bc = barcode as { format: string }
         if (!validFormats.includes(bc.format)) {
           errors.push(`Invalid barcode format: ${bc.format}`)
         }

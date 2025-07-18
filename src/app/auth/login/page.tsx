@@ -51,8 +51,12 @@ function LoginContent() {
     }
   })
 
-  const createFallbackProfile = async (user: any, role: 'business' | 'customer' = 'business') => {
+  const createFallbackProfile = async (user: { id: string; email?: string }, role: 'business' | 'customer' = 'business') => {
     try {
+      if (!user.email) {
+        throw new Error('User email is required for profile creation')
+      }
+      
       // Create user record in users table
       const { error: userError } = await supabase
         .from('users')
@@ -88,7 +92,7 @@ function LoginContent() {
       }
 
       // For customer users, create a basic customer profile
-      if (role === 'customer') {
+      if (role === 'customer' && user.email) {
         const { error: customerError } = await supabase
           .from('customers')
           .insert({

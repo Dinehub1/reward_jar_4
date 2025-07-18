@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     console.log('📊 Fetching test results:', { limit, testType })
 
     // Check if test_results table exists
-    const { data: tableExists, error: tableCheckError } = await supabase
+    const { error: tableCheckError } = await supabase
       .from('test_results')
       .select('id')
       .limit(1)
@@ -178,7 +178,7 @@ export async function POST(request: NextRequest) {
     console.log('📝 Creating test result:', { test_type, status, duration_ms })
 
     // Check if test_results table exists
-    const { data: tableExists, error: tableCheckError } = await supabase
+    const { error: tableCheckError } = await supabase
       .from('test_results')
       .select('id')
       .limit(1)
@@ -241,7 +241,7 @@ export async function DELETE(request: NextRequest) {
     console.log('🧹 Cleaning up test results older than', days, 'days')
 
     // Check if test_results table exists
-    const { data: tableExists, error: tableCheckError } = await supabase
+    const { error: tableCheckError } = await supabase
       .from('test_results')
       .select('id')
       .limit(1)

@@ -82,7 +82,7 @@ interface TestResult {
   contentType: string
   errorMessage?: string
   timestamp: string
-  passData?: any
+  passData?: Record<string, unknown>
 }
 
 interface PerformanceMetrics {
@@ -445,7 +445,7 @@ export default function WalletPreviewTest() {
       if (debug || contentType.includes('application/json')) {
         try {
           passData = await response.json()
-        } catch (_e) {
+        } catch {
           // Not JSON, that's fine
         }
       }
@@ -937,7 +937,7 @@ export default function WalletPreviewTest() {
                   <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg text-left max-w-md mx-auto">
                     <h4 className="font-medium text-blue-800 mb-2">🚀 Vercel Deployment Detected</h4>
                     <p className="text-sm text-blue-700 mb-2">
-                      If you're seeing this on Vercel, make sure you've set up the required environment variables:
+                      If you&apos;re seeing this on Vercel, make sure you&apos;ve set up the required environment variables:
                     </p>
                     <ul className="text-xs text-blue-600 space-y-1">
                       <li>• NEXT_PUBLIC_SUPABASE_URL</li>

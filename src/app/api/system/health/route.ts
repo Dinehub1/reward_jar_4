@@ -20,7 +20,7 @@ export async function GET() {
       const supabase = await createClient()
       
       // Test basic connection
-      const { data: connectionTest, error: connectionError } = await supabase
+      const { error: connectionError } = await supabase
         .from('businesses')
         .select('count')
         .limit(1)
@@ -317,7 +317,7 @@ function validateGoogleVar(varName: string): boolean {
   }
 }
 
-function generateRecommendations(checks: any): string[] {
+function generateRecommendations(checks: Record<string, { status: string }>): string[] {
   const recommendations = []
 
   if (checks.supabase.status !== 'healthy') {

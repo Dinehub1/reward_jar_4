@@ -10,7 +10,7 @@ export async function GET(_request: NextRequest) {
     let pkpassBuffer: Buffer
     try {
       pkpassBuffer = readFileSync(pkpassPath)
-    } catch (_error) {
+    } catch {
       return NextResponse.json(
         { error: 'Production PKPass file not found. Run generate-production-pkpass.sh first.' },
         { status: 404 }
