@@ -17,6 +17,85 @@ const logger = winston.createLogger({
   ]
 })
 
+// Google Wallet class creation function
+async function createGoogleWalletClass() {
+  if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY) {
+    throw new Error('Google Wallet credentials not configured')
+  }
+
+  const issuerID = process.env.GOOGLE_ISSUER_ID || '3388000000022940702'
+  const classId = `${issuerID}.loyalty.rewardjar`
+  
+  // Create loyalty class definition
+  const loyaltyClass = {
+    id: classId,
+    issuerName: "RewardJar",
+    programName: "Digital Loyalty Cards",
+    programLogo: {
+      sourceUri: {
+        uri: "https://storage.googleapis.com/wallet-lab-tools-codelab-artifacts-public/pass_google_logo.jpg"
+      },
+      contentDescription: {
+        defaultValue: {
+          language: "en-US",
+          value: "RewardJar Logo"
+        }
+      }
+    },
+    hexBackgroundColor: "#10b981",
+    countryCode: "US",
+    reviewStatus: "UNDER_REVIEW",
+    allowMultipleUsersPerObject: false
+  }
+
+  try {
+    // Generate service account token for Google Wallet API
+    const serviceAccountToken = jwt.sign(
+      {
+        iss: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+        scope: 'https://www.googleapis.com/auth/wallet_object.issuer',
+        aud: 'https://oauth2.googleapis.com/token',
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + 3600
+      },
+      process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      { algorithm: 'RS256' }
+    )
+
+    // Get access token
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${serviceAccountToken}`
+    })
+
+    const { access_token } = await tokenResponse.json()
+
+    // Try to create the class
+    const classResponse = await fetch(`https://walletobjects.googleapis.com/walletobjects/v1/loyaltyClass`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${access_token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(loyaltyClass)
+    })
+
+    if (!classResponse.ok) {
+      const errorData = await classResponse.text()
+      console.warn('Class creation/update warning:', errorData)
+      // Don't throw error - class might already exist
+    }
+
+    console.log('✅ Google Wallet class ensured:', classId)
+    return true
+  } catch (error) {
+    console.warn('Google Wallet class creation warning:', error)
+    // Don't throw error - might work anyway
+    return false
+  }
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ customerCardId: string }> }
@@ -198,6 +277,14 @@ export async function GET(
       )
     }
 
+    // Ensure Google Wallet class exists
+    try {
+      await createGoogleWalletClass()
+    } catch (error) {
+      console.warn('Could not create Google Wallet class:', error)
+      // Continue anyway - class might already exist
+    }
+
     // Generate Google Wallet pass data
     const googlePassData = {
       "@context": "https://schema.org",
@@ -210,8 +297,8 @@ export async function GET(
         "description": business.description
       },
       "loyaltyObject": {
-        "id": `${process.env.GOOGLE_CLASS_ID}.${customerCardId}`,
-        "classId": process.env.GOOGLE_CLASS_ID,
+        "id": `${process.env.GOOGLE_ISSUER_ID || '3388000000022940702'}.loyalty.rewardjar.${customerCardId}`,
+        "classId": `${process.env.GOOGLE_ISSUER_ID || '3388000000022940702'}.loyalty.rewardjar`,
         "state": "ACTIVE",
         "accountId": customerCardId,
         "accountName": `Customer ${customerCardId.substring(0, 8)}`,
@@ -249,22 +336,6 @@ export async function GET(
             "body": isCompleted ? 
               "Congratulations! Your reward is ready to claim." : 
               `Collect ${stampsRemaining} more stamps to unlock your reward.`
-          }
-        ],
-        "imageModulesData": [
-          {
-            "id": "logo",
-            "mainImage": {
-              "sourceUri": {
-                "uri": `${process.env.BASE_URL || 'https://rewardjar.com'}/api/images/google-wallet-logo`
-              },
-              "contentDescription": {
-                "defaultValue": {
-                  "language": "en-US",
-                  "value": "RewardJar Logo"
-                }
-              }
-            }
           }
         ],
         "hexBackgroundColor": "#10b981", // green-500

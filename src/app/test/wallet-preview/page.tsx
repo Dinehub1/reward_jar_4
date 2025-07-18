@@ -106,9 +106,14 @@ export default function WalletPreviewPage() {
 
   // Production domain constants
   const PRODUCTION_DOMAIN = 'https://www.rewardjar.xyz'
-  const baseUrl = typeof window !== 'undefined' 
-    ? window.location.origin 
-    : process.env.NEXT_PUBLIC_BASE_URL || PRODUCTION_DOMAIN
+  const [baseUrl, setBaseUrl] = useState(PRODUCTION_DOMAIN)
+  
+  useEffect(() => {
+    // Set baseUrl on client side to avoid hydration mismatch
+    if (typeof window !== 'undefined') {
+      setBaseUrl(window.location.origin)
+    }
+  }, [])
 
   // Log test results to API
   const logTestResult = useCallback(async (
@@ -375,8 +380,8 @@ export default function WalletPreviewPage() {
     checkEnvironmentStatus()
     loadPerformanceMetrics()
   }, [loadTestCards, checkEnvironmentStatus, loadPerformanceMetrics])
-  
-  // Cleanup interval on unmount
+    
+    // Cleanup interval on unmount
   useEffect(() => {
     return () => {
       if (refreshInterval) {
