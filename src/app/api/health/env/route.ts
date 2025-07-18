@@ -30,6 +30,8 @@ interface GoogleWalletCheck extends EnvironmentCheck {
 interface AppleWalletCheck extends EnvironmentCheck {
   configured: boolean
   certificatesValid: boolean
+  required_for_production: boolean
+  description: string
 }
 
 interface PWAWalletCheck extends EnvironmentCheck {
@@ -127,8 +129,8 @@ export async function GET() {
       NEXT_PUBLIC_POSTHOG_HOST: process.env.NEXT_PUBLIC_POSTHOG_HOST,
     }
 
-    let criticalIssues: string[] = []
-    let recommendations: string[] = []
+    const criticalIssues: string[] = []
+    const recommendations: string[] = []
 
     // Validate Core Application
     const coreConfigured = Object.values(coreVars).filter(Boolean).length
@@ -180,29 +182,40 @@ export async function GET() {
       ? 'needs_configuration'
       : 'not_configured'
 
-    // Validate Apple Wallet
+    // Validate Apple Wallet - optional for Google Wallet deployment
     const appleConfigured = Object.values(appleWalletVars).filter(Boolean).length
     const appleCertificatesValid = validateBase64Certificate(appleWalletVars.APPLE_CERT_BASE64 || '') &&
                                   validateBase64Certificate(appleWalletVars.APPLE_KEY_BASE64 || '') &&
                                   validateBase64Certificate(appleWalletVars.APPLE_WWDR_BASE64 || '')
     
-    const appleWalletStatus = appleConfigured === 6 && appleCertificatesValid
-      ? 'ready_for_production'
-      : appleConfigured > 0
-      ? 'needs_certificates'
-      : 'not_configured'
+    let appleWalletStatus: string
+    if (appleConfigured === 6 && appleCertificatesValid) {
+      appleWalletStatus = 'ready_for_production'
+    } else if (appleConfigured > 0) {
+      appleWalletStatus = 'needs_certificates'
+    } else {
+      appleWalletStatus = 'optional'
+    }
 
     if (appleConfigured > 0 && !appleCertificatesValid) {
       criticalIssues.push('Apple Wallet certificates have invalid Base64 format')
+      logger.error('Apple Wallet certificate validation failed', {
+        cert_present: !!appleWalletVars.APPLE_CERT_BASE64,
+        key_present: !!appleWalletVars.APPLE_KEY_BASE64,
+        wwdr_present: !!appleWalletVars.APPLE_WWDR_BASE64,
+        team_id_present: !!appleWalletVars.APPLE_TEAM_IDENTIFIER,
+        pass_type_present: !!appleWalletVars.APPLE_PASS_TYPE_IDENTIFIER,
+        cert_password_present: !!appleWalletVars.APPLE_CERT_PASSWORD
+      })
     }
 
     // Validate Security & Analytics
     const securityConfigured = Object.values(securityVars).filter(Boolean).length
     const securityStatus = securityConfigured > 0 ? 'partial' : 'optional'
 
-    // Calculate overall metrics
-    const totalVariables = 17 // As per documentation
-    const configuredVariables = coreConfigured + googleWalletConfigured + appleConfigured + securityConfigured
+    // Calculate overall metrics (excluding optional Apple Wallet)
+    const totalVariables = 13 // 6 core + 3 google + 4 security (Apple Wallet optional)
+    const configuredVariables = coreConfigured + googleWalletConfigured + securityConfigured
     const completionPercentage = Math.round((configuredVariables / totalVariables) * 100)
 
     // Generate recommendations
@@ -210,7 +223,10 @@ export async function GET() {
       recommendations.push('Complete Google Wallet configuration for production deployment')
     }
     if (appleWalletStatus === 'needs_certificates') {
-      recommendations.push('Upload valid Apple Wallet certificates from Apple Developer Portal')
+      recommendations.push('Upload valid Apple Wallet certificates from Apple Developer Portal (optional)')
+      recommendations.push('Apple Wallet provides iOS native integration alongside Google Wallet + PWA')
+    } else if (appleWalletStatus === 'optional') {
+      recommendations.push('Apple Wallet is optional - Google Wallet + PWA provide full coverage')
     }
     if (securityConfigured === 0) {
       recommendations.push('Consider adding API_KEY for enhanced security')
@@ -253,9 +269,23 @@ export async function GET() {
         status: appleWalletStatus,
         configured: appleConfigured === 6,
         certificatesValid: appleCertificatesValid,
+        required_for_production: false,
+        description: appleWalletStatus === 'optional' 
+          ? 'Apple Wallet is optional - Google Wallet + PWA provide complete coverage. Configure only if iOS native wallet integration is specifically required.'
+          : appleWalletStatus === 'needs_certificates'
+          ? 'Apple Wallet requires production certificates from Apple Developer Portal. Contact Apple Developer Program for certificate generation.'
+          : 'Apple Wallet fully configured and ready for production iOS deployment',
         variables: {
           configured: `${appleConfigured}/6`,
-          certificates: appleCertificatesValid ? 'valid' : 'invalid_or_missing'
+          certificates: appleCertificatesValid ? 'valid' : 'invalid_or_missing',
+          optional_certificates: [
+            'APPLE_CERT_BASE64 (Pass Type ID Certificate)',
+            'APPLE_KEY_BASE64 (Private Key)', 
+            'APPLE_WWDR_BASE64 (WWDR Certificate)',
+            'APPLE_TEAM_IDENTIFIER (10-character Team ID)',
+            'APPLE_PASS_TYPE_IDENTIFIER (Pass Type from Developer Portal)',
+            'APPLE_CERT_PASSWORD (Certificate password - can be empty string)'
+          ]
         }
       },
       pwaWallet: {

@@ -51,9 +51,11 @@ interface EnvironmentDebugResult {
     }
   }
   testJWT: {
-    generated: boolean
-    payload?: Record<string, unknown>
-    error?: string
+    generated: true
+    payload: Record<string, unknown>
+  } | {
+    generated: false
+    error: string
   }
   recommendations: string[]
 }
@@ -199,7 +201,10 @@ export async function GET() {
     const classIdValid = validateGoogleClassId(classId)
     
     // Generate test JWT if possible
-    let testJWT = { generated: false, error: 'Private key validation failed' }
+    let testJWT: { generated: true; payload: Record<string, unknown> } | { generated: false; error: string } = { 
+    generated: false as const, 
+    error: 'Private key validation failed' 
+  }
     if (privateKeyValidation.runtime.canSign) {
       try {
         const testPayload = {
@@ -223,22 +228,28 @@ export async function GET() {
         }
         processedKey = processedKey.replace(/^["']|["']$/g, '')
         
-        const token = jwt.sign(testPayload, processedKey, { algorithm: 'RS256' })
+        jwt.sign(testPayload, processedKey, { algorithm: 'RS256' }) // Test JWT generation
         testJWT = { 
-          generated: true, 
-          payload: testPayload 
+          generated: true as const, 
+          payload: testPayload as Record<string, unknown>
         }
         
         console.log('✅ Test JWT generated successfully')
         
       } catch (error) {
         testJWT = { 
-          generated: false, 
+          generated: false as const, 
           error: error instanceof Error ? error.message : String(error) 
         }
         logger.error('Test JWT generation failed', {
-          error: error instanceof Error ? error.message : String(error)
+          error: error instanceof Error ? error.message : String(error),
+          timestamp: new Date().toISOString()
         })
+      }
+    } else {
+      testJWT = { 
+        generated: false as const, 
+        error: 'Google Wallet private key not configured' 
       }
     }
     

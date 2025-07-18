@@ -83,8 +83,8 @@ export async function POST(request: NextRequest) {
       
       for (const scenarioType of allScenarios) {
         try {
-          const result = await generateTestData(supabase, scenarioType, 1)
-          results.push(...result)
+        const result = await generateTestData(supabase, scenarioType, 1)
+        results.push(...result)
           console.log(`✅ Generated scenario: ${scenarioType}`)
         } catch (error) {
           console.error(`❌ Failed to generate scenario ${scenarioType}:`, error)
@@ -207,7 +207,7 @@ export async function GET(request: NextRequest) {
       const completionPercentage = Math.round((currentStamps / totalStamps) * 100)
       
       return {
-        id: card.id,
+      id: card.id,
         current_stamps: currentStamps,
         total_stamps: totalStamps,
         completion_percentage: completionPercentage,
@@ -215,14 +215,14 @@ export async function GET(request: NextRequest) {
         business_name: business?.name || 'Unknown Business',
         customer_name: customer?.name || 'Unknown Customer',
         customer_email: customer?.email || 'unknown@example.com',
-        created_at: card.created_at,
-        updated_at: card.updated_at,
-        test_urls: {
-          apple: `/api/wallet/apple/${card.id}`,
-          google: `/api/wallet/google/${card.id}`,
-          pwa: `/api/wallet/pwa/${card.id}`,
-          debug: `/api/wallet/apple/${card.id}?debug=true`
-        }
+      created_at: card.created_at,
+      updated_at: card.updated_at,
+      test_urls: {
+        apple: `/api/wallet/apple/${card.id}`,
+        google: `/api/wallet/google/${card.id}`,
+        pwa: `/api/wallet/pwa/${card.id}`,
+        debug: `/api/wallet/apple/${card.id}?debug=true`
+      }
       }
     }) || []
 
@@ -264,8 +264,8 @@ async function generateTestData(supabase: any, scenario: string, count: number) 
   
   for (let i = 0; i < count; i++) {
     try {
-      const testData = await createTestCard(supabase, scenario, i + 1)
-      results.push(testData)
+    const testData = await createTestCard(supabase, scenario, i + 1)
+    results.push(testData)
     } catch (error) {
       console.error(`❌ Failed to create test card ${i + 1} for scenario ${scenario}:`, error)
       // Continue with other cards
@@ -294,7 +294,7 @@ async function createTestCard(supabase: any, scenario: string, index: number) {
     
     // Try to get existing test users
     const { data: existingUsers } = await supabase
-      .from('users')
+    .from('users')
       .select('id, role_id, email')
       .or('email.like.*test*,email.like.*example*')
       .limit(10)
@@ -311,82 +311,82 @@ async function createTestCard(supabase: any, scenario: string, index: number) {
         customerUserId = customerUser.id
         console.log('📋 Using existing customer user:', customerUser.email)
       }
-    }
+  }
 
-    // Create business
-    const { error: businessError } = await supabase
-      .from('businesses')
-      .insert({
-        id: businessId,
-        owner_id: businessOwnerId,
-        name: scenarioConfig.businessName,
+  // Create business
+  const { error: businessError } = await supabase
+    .from('businesses')
+    .insert({
+      id: businessId,
+      owner_id: businessOwnerId,
+      name: scenarioConfig.businessName,
         description: scenarioConfig.businessDescription,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
-      })
+    })
       .select()
       .single()
-    
+  
     if (businessError) {
       console.error('❌ Error creating business:', businessError)
       throw businessError
     }
 
-    // Create stamp card
-    const { error: stampCardError } = await supabase
-      .from('stamp_cards')
-      .insert({
-        id: stampCardId,
-        business_id: businessId,
-        name: scenarioConfig.stampCardName,
-        total_stamps: scenarioConfig.totalStamps,
-        reward_description: scenarioConfig.rewardDescription,
+  // Create stamp card
+  const { error: stampCardError } = await supabase
+    .from('stamp_cards')
+    .insert({
+      id: stampCardId,
+      business_id: businessId,
+      name: scenarioConfig.stampCardName,
+      total_stamps: scenarioConfig.totalStamps,
+      reward_description: scenarioConfig.rewardDescription,
         status: 'active',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
-      })
+    })
       .select()
       .single()
-    
+  
     if (stampCardError) {
       console.error('❌ Error creating stamp card:', stampCardError)
       throw stampCardError
     }
 
-    // Create customer
-    const { error: customerError } = await supabase
-      .from('customers')
-      .insert({
-        id: customerId,
-        user_id: customerUserId,
-        name: scenarioConfig.customerName,
+  // Create customer
+  const { error: customerError } = await supabase
+    .from('customers')
+    .insert({
+      id: customerId,
+      user_id: customerUserId,
+      name: scenarioConfig.customerName,
         email: `test-customer-${scenario}-${index}@example.com`,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
-      })
+    })
       .select()
       .single()
-    
+  
     if (customerError) {
       console.error('❌ Error creating customer:', customerError)
       throw customerError
     }
 
-    // Create customer card
-    const { error: customerCardError } = await supabase
-      .from('customer_cards')
-      .insert({
-        id: customerCardId,
-        customer_id: customerId,
-        stamp_card_id: stampCardId,
-        current_stamps: scenarioConfig.currentStamps,
+  // Create customer card
+  const { error: customerCardError } = await supabase
+    .from('customer_cards')
+    .insert({
+      id: customerCardId,
+      customer_id: customerId,
+      stamp_card_id: stampCardId,
+      current_stamps: scenarioConfig.currentStamps,
         wallet_pass_id: null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
       .select()
       .single()
-    
+  
     if (customerCardError) {
       console.error('❌ Error creating customer card:', customerCardError)
       throw customerCardError
@@ -394,9 +394,9 @@ async function createTestCard(supabase: any, scenario: string, index: number) {
 
     console.log(`✅ Successfully created test scenario: ${scenario} #${index}`)
 
-    return {
+  return {
       customerCardId: customerCardId,
-      scenario: scenario,
+    scenario: scenario,
       businessName: scenarioConfig.businessName,
       stampCardName: scenarioConfig.stampCardName,
       customerName: scenarioConfig.customerName,
@@ -404,11 +404,11 @@ async function createTestCard(supabase: any, scenario: string, index: number) {
       totalStamps: scenarioConfig.totalStamps,
       completionPercentage: Math.round((scenarioConfig.currentStamps / scenarioConfig.totalStamps) * 100),
       testUrls: {
-        apple: `/api/wallet/apple/${customerCardId}`,
-        google: `/api/wallet/google/${customerCardId}`,
-        pwa: `/api/wallet/pwa/${customerCardId}`,
-        debug: `/api/wallet/apple/${customerCardId}?debug=true`
-      }
+      apple: `/api/wallet/apple/${customerCardId}`,
+      google: `/api/wallet/google/${customerCardId}`,
+      pwa: `/api/wallet/pwa/${customerCardId}`,
+      debug: `/api/wallet/apple/${customerCardId}?debug=true`
+    }
     }
 
   } catch (error) {
@@ -512,17 +512,17 @@ async function cleanupTestData(supabase: any) {
   try {
     console.log('🧹 Starting cleanup of test data...')
     
-    // Delete test data in reverse order of dependencies
-    
+  // Delete test data in reverse order of dependencies
+  
     // Delete customer cards first
     const { error: customerCardsError } = await supabase
       .from('customer_cards')
       .delete()
       .in('customer_id', 
         supabase
-          .from('customers')
-          .select('id')
-          .like('email', '%test-%')
+        .from('customers')
+        .select('id')
+        .like('email', '%test-%')
       )
     
     if (customerCardsError) console.warn('⚠️  Error cleaning customer cards:', customerCardsError)
@@ -535,25 +535,25 @@ async function cleanupTestData(supabase: any) {
     
     if (customersError) console.warn('⚠️  Error cleaning customers:', customersError)
 
-    // Delete stamp cards
+  // Delete stamp cards
     const { error: stampCardsError } = await supabase
-      .from('stamp_cards')
-      .delete()
+    .from('stamp_cards')
+    .delete()
       .in('business_id', 
         supabase
-          .from('businesses')
-          .select('id')
-          .like('name', '%Test%')
-      )
+      .from('businesses')
+      .select('id')
+      .like('name', '%Test%')
+    )
     
     if (stampCardsError) console.warn('⚠️  Error cleaning stamp cards:', stampCardsError)
 
-    // Delete businesses
+  // Delete businesses
     const { error: businessesError } = await supabase
-      .from('businesses')
-      .delete()
-      .like('name', '%Test%')
-    
+    .from('businesses')
+    .delete()
+    .like('name', '%Test%')
+
     if (businessesError) console.warn('⚠️  Error cleaning businesses:', businessesError)
 
     console.log('✅ Test data cleanup completed')

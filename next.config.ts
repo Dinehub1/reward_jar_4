@@ -2,8 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   experimental: {
-    // ⚠️ allowedDevOrigins is not yet supported in production builds (Next.js 15.3.5)
-    // Removed to avoid Vercel build failure. Re-enable when officially supported.
+    // No experimental features enabled
   },
   images: {
     remotePatterns: [

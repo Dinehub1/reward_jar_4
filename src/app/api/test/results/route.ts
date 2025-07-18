@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import validateUUID from 'uuid-validate'
 
 // Winston logger for wallet errors
 import winston from 'winston'
@@ -15,6 +16,13 @@ const logger = winston.createLogger({
     new winston.transports.File({ filename: 'wallet-combined.log' })
   ]
 })
+
+function isValidUUID(uuid: string): boolean {
+  if (!uuid || typeof uuid !== 'string') {
+    return false
+  }
+  return validateUUID(uuid)
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -42,11 +50,48 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { card_id, test_type, status, duration_ms, response_size_kb } = body
+    const { card_id, test_type, status, duration_ms, response_size_kb, error_message } = body
 
-    console.log('📝 Creating test result:', { test_type, status, duration_ms })
+    // Validate required fields
+    if (!card_id || !test_type || !status) {
+      const errorMsg = 'Missing required fields: card_id, test_type, and status are required'
+      logger.error('Validation failed: missing required fields', {
+        provided: { card_id: !!card_id, test_type: !!test_type, status: !!status },
+        timestamp: new Date().toISOString()
+      })
+      
+      return NextResponse.json({
+        success: false,
+        error: 'validation_error',
+        message: errorMsg,
+        details: 'Ensure all required fields are provided in the request body'
+      }, { status: 400 })
+    }
 
-    // Fix: Cast duration_ms to integer using Math.floor() to prevent type mismatch
+    // Validate UUID format for card_id using uuid-validate library
+    if (!isValidUUID(card_id)) {
+      const errorMsg = 'Invalid UUID format for card_id'
+      console.error('❌ UUID validation failed:', { card_id, test_type })
+      logger.error('UUID validation failed', {
+        card_id,
+        test_type,
+        error: errorMsg,
+        expected_format: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+        timestamp: new Date().toISOString()
+      })
+      
+      return NextResponse.json({
+        success: false,
+        error: 'invalid_uuid',
+        message: errorMsg,
+        details: 'card_id must be a valid UUID in the format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+        provided: card_id
+      }, { status: 400 })
+    }
+
+    console.log('📝 Creating test result:', { test_type, status, duration_ms, card_id: card_id.substring(0, 8) + '...' })
+
+    // Cast duration_ms and response_size_kb to integers to prevent type mismatch
     const durationInteger = Math.floor(parseFloat(duration_ms) || 0)
     const responseSizeInteger = Math.floor(parseFloat(response_size_kb) || 0)
 
@@ -56,8 +101,10 @@ export async function POST(request: NextRequest) {
         card_id,
         test_type,
         status,
-        duration_ms: durationInteger, // Now properly cast to integer
-        response_size_kb: responseSizeInteger, // Also cast response size
+        duration_ms: durationInteger,
+        response_size_kb: responseSizeInteger,
+        error_message: error_message || null,
+        test_url: null,
         created_at: new Date().toISOString()
       })
       .select()
@@ -70,8 +117,9 @@ export async function POST(request: NextRequest) {
         details: error.details,
         hint: error.hint,
         test_type,
-        card_id,
-        duration_ms: durationInteger
+        card_id: card_id.substring(0, 8) + '...',
+        duration_ms: durationInteger,
+        timestamp: new Date().toISOString()
       })
       
       return NextResponse.json({
@@ -83,12 +131,15 @@ export async function POST(request: NextRequest) {
       }, { status: 500 })
     }
 
-    console.log('✅ Test result created successfully:', data)
+    console.log('✅ Test result created successfully:', data?.[0]?.id)
     logger.info('Test result created successfully', {
       test_type,
       status,
       duration_ms: durationInteger,
-      response_size_kb: responseSizeInteger
+      response_size_kb: responseSizeInteger,
+      card_id: card_id.substring(0, 8) + '...',
+      result_id: data?.[0]?.id,
+      timestamp: new Date().toISOString()
     })
 
     return NextResponse.json({
@@ -100,7 +151,8 @@ export async function POST(request: NextRequest) {
     console.error('❌ Unexpected error in test results API:', error)
     logger.error('Unexpected error in test results API', {
       error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined
+      stack: error instanceof Error ? error.stack : undefined,
+      timestamp: new Date().toISOString()
     })
     
     return NextResponse.json({
@@ -132,7 +184,10 @@ export async function GET(request: NextRequest) {
 
     if (tableCheckError) {
       console.warn('⚠️ test_results table not found, returning empty results')
-      logger.warn('test_results table not found for GET request', { error: tableCheckError.message })
+      logger.warn('test_results table not found for GET request', { 
+        error: tableCheckError.message,
+        timestamp: new Date().toISOString()
+      })
       
       return NextResponse.json({
         success: true,
@@ -161,7 +216,8 @@ export async function GET(request: NextRequest) {
         error: error.message,
         code: error.code,
         testType,
-        limit
+        limit,
+        timestamp: new Date().toISOString()
       })
       
       return NextResponse.json({
@@ -187,7 +243,8 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('❌ Unexpected error fetching test results:', error)
     logger.error('Unexpected error fetching test results', {
-      error: error instanceof Error ? error.message : String(error)
+      error: error instanceof Error ? error.message : String(error),
+      timestamp: new Date().toISOString()
     })
     
     return NextResponse.json({
@@ -198,7 +255,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function DELETE(request: NextRequest) {
+export async function DELETE(_request: NextRequest) {
   try {
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -213,7 +270,10 @@ export async function DELETE(request: NextRequest) {
 
     if (tableCheckError) {
       console.warn('⚠️ test_results table not found for DELETE')
-      logger.warn('test_results table not found for DELETE request', { error: tableCheckError.message })
+      logger.warn('test_results table not found for DELETE request', { 
+        error: tableCheckError.message,
+        timestamp: new Date().toISOString()
+      })
       
       return NextResponse.json({
         success: true,
@@ -231,7 +291,8 @@ export async function DELETE(request: NextRequest) {
       console.error('❌ Error clearing test results:', error)
       logger.error('Failed to clear test results', {
         error: error.message,
-        code: error.code
+        code: error.code,
+        timestamp: new Date().toISOString()
       })
       
       return NextResponse.json({
@@ -241,7 +302,9 @@ export async function DELETE(request: NextRequest) {
     }
 
     console.log('🗑️ Test results cleared successfully')
-    logger.info('Test results cleared successfully')
+    logger.info('Test results cleared successfully', {
+      timestamp: new Date().toISOString()
+    })
 
     return NextResponse.json({
       success: true,
@@ -252,7 +315,8 @@ export async function DELETE(request: NextRequest) {
   } catch (error) {
     console.error('❌ Unexpected error clearing test results:', error)
     logger.error('Unexpected error clearing test results', {
-      error: error instanceof Error ? error.message : String(error)
+      error: error instanceof Error ? error.message : String(error),
+      timestamp: new Date().toISOString()
     })
     
     return NextResponse.json({

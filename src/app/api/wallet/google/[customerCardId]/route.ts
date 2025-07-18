@@ -1,6 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import jwt from 'jsonwebtoken'
+import * as QRCode from 'qrcode'
+import winston from 'winston'
+
+// Winston logger for wallet errors
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.json()
+  ),
+  transports: [
+    new winston.transports.File({ filename: 'wallet-errors.log', level: 'error' }),
+    new winston.transports.File({ filename: 'wallet-combined.log' })
+  ]
+})
 
 export async function GET(
   request: NextRequest,
@@ -35,7 +50,13 @@ export async function GET(
       .single()
 
     if (error || !customerCard) {
-      console.error('Customer card not found:', error)
+      const errorMsg = `Customer card not found: ${customerCardId}`
+      console.error(errorMsg, error)
+      logger.error('Google Wallet customer card lookup failed', {
+        customerCardId,
+        error: error?.message,
+        timestamp: new Date().toISOString()
+      })
       return NextResponse.json(
         { error: 'Customer card not found' },
         { status: 404 }
@@ -63,7 +84,12 @@ export async function GET(
 
     // Validate required data exists
     if (!stampCardData) {
-      console.error('Stamp card data missing')
+      const errorMsg = 'Stamp card data missing'
+      console.error(errorMsg)
+      logger.error('Google Wallet stamp card data missing', {
+        customerCardId,
+        timestamp: new Date().toISOString()
+      })
       return NextResponse.json(
         { error: 'Stamp card data not found' },
         { status: 404 }
@@ -71,7 +97,13 @@ export async function GET(
     }
 
     if (!businessData) {
-      console.error('Business data missing')
+      const errorMsg = 'Business data missing'
+      console.error(errorMsg)
+      logger.error('Google Wallet business data missing', {
+        customerCardId,
+        stampCardId: stampCardData.id,
+        timestamp: new Date().toISOString()
+      })
       return NextResponse.json(
         { error: 'Business data not found' },
         { status: 404 }
@@ -97,6 +129,63 @@ export async function GET(
     const progress = Math.min((customerCard.current_stamps / stampCard.total_stamps) * 100, 100)
     const isCompleted = customerCard.current_stamps >= stampCard.total_stamps
     const stampsRemaining = Math.max(stampCard.total_stamps - customerCard.current_stamps, 0)
+
+    // Generate QR code for join URL
+    const PRODUCTION_DOMAIN = 'https://www.rewardjar.xyz'
+    let baseUrl = process.env.BASE_URL || process.env.NEXT_PUBLIC_BASE_URL || PRODUCTION_DOMAIN
+    
+    // Fix localhost/IP address issues for production-ready QR codes
+    if (baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1') || 
+        baseUrl.includes('0.0.0.0') || baseUrl.includes('192.168.')) {
+      console.warn('⚠️ Using production domain for QR code instead of localhost/IP')
+      baseUrl = PRODUCTION_DOMAIN
+    }
+    
+    const joinUrl = `${baseUrl}/join/${stampCard.id}`
+    
+    let qrCodeDataUrl = ''
+    const qrGenerationStartTime = Date.now()
+    try {
+      qrCodeDataUrl = await QRCode.toDataURL(joinUrl, {
+        errorCorrectionLevel: 'L', // Level L (7%) - most reliable for scanning per Google Wallet guidelines
+        type: 'image/png',
+        margin: 4, // 4-module padding as per Google Wallet best practices
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        },
+        width: 256 // 256x256px optimal size for wallet display and mobile scanning
+      })
+      
+      const qrGenerationTime = Date.now() - qrGenerationStartTime
+      
+      logger.info('QR code generated successfully', {
+        customerCardId,
+        stampCardId: stampCard.id,
+        joinUrl,
+        qrCodeSize: qrCodeDataUrl.length,
+        qrGenerationTimeMs: qrGenerationTime,
+        dimensions: '256x256px',
+        errorCorrectionLevel: 'L',
+        margin: '4-module',
+        timestamp: new Date().toISOString()
+      })
+      
+      console.log('✅ QR code generated successfully for URL:', joinUrl)
+    } catch (qrError) {
+      const errorMsg = `Failed to generate QR code: ${qrError}`
+      console.error(errorMsg)
+      logger.error('QR code generation failed', {
+        customerCardId,
+        stampCardId: stampCard.id,
+        joinUrl,
+        error: qrError instanceof Error ? qrError.message : String(qrError),
+        timestamp: new Date().toISOString()
+      })
+      
+      // Continue without QR code - will show placeholder
+      qrCodeDataUrl = ''
+    }
 
     // Check if Google Wallet is configured
     if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_CLASS_ID) {
@@ -221,7 +310,9 @@ export async function GET(
           saveUrl, 
           isCompleted, 
           progress, 
-          stampsRemaining
+          stampsRemaining,
+          qrCodeDataUrl, // Pass the QR code data URL
+          joinUrl // Pass the join URL for additional context
         )
         
         return new NextResponse(googleWalletHTML, {
@@ -232,6 +323,11 @@ export async function GET(
         })
       } catch (error) {
         console.error('Error generating Google Wallet JWT:', error)
+        logger.error('Google Wallet JWT generation failed', {
+          customerCardId,
+          error: error instanceof Error ? error.message : String(error),
+          timestamp: new Date().toISOString()
+        })
         return NextResponse.json(
           { 
             error: 'Failed to generate Google Wallet pass',
@@ -320,6 +416,11 @@ export async function GET(
 
   } catch (error) {
     console.error('Error generating Google Wallet pass:', error)
+    logger.error('Google Wallet pass generation failed', {
+      customerCardId: (await params).customerCardId,
+      error: error instanceof Error ? error.message : String(error),
+      timestamp: new Date().toISOString()
+    })
     return NextResponse.json(
       { error: 'Failed to generate Google Wallet pass' },
       { status: 500 }
@@ -393,7 +494,9 @@ function generateGoogleWalletHTML(
   saveUrl: string, 
   isCompleted: boolean, 
   progress: number, 
-  _stampsRemaining: number
+  _stampsRemaining: number,
+  qrCodeDataUrl: string,
+  joinUrl: string
 ): string {
   return `
 <!DOCTYPE html>
@@ -464,15 +567,23 @@ function generateGoogleWalletHTML(
                     }
                 </div>
 
-                <!-- QR Code Section -->
+                                <!-- QR Code Section -->
                 <div class="text-center border-t pt-4">
                     <div class="bg-gray-50 rounded-lg p-4 mb-3">
                         <div class="w-32 h-32 bg-white border-2 border-gray-200 rounded-lg mx-auto flex items-center justify-center mb-2">
-                            <svg class="w-16 h-16 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm2 2V5h1v1H5zM3 13a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3zm2 2v-1h1v1H5zM13 3a1 1 0 00-1 1v3a1 1 0 001 1h3a1 1 0 001-1V4a1 1 0 00-1-1h-3zm1 2v1h1V5h-1z" clip-rule="evenodd"></path>
-                            </svg>
+                            ${qrCodeDataUrl ? 
+                              `<img src="${qrCodeDataUrl}" alt="QR Code linking to ${joinUrl}" class="w-full h-full object-contain rounded-lg">` :
+                              `<svg class="w-16 h-16 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                 <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm2 2V5h1v1H5zM3 13a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3zm2 2v-1h1v1H5zM13 3a1 1 0 00-1 1v3a1 1 0 001 1h3a1 1 0 001-1V4a1 1 0 00-1-1h-3zm1 2v1h1V5h-1z" clip-rule="evenodd"></path>
+                               </svg>
+                               <div class="text-xs text-red-500 mt-1">QR Code failed to load</div>`
+                             }
                         </div>
                         <p class="text-sm text-gray-600">Scan this QR code at ${business.name} to collect stamps</p>
+                        ${qrCodeDataUrl ? 
+                          `<p class="text-xs text-gray-500 mt-2">Links to: ${joinUrl}</p>` :
+                          `<p class="text-xs text-gray-500 mt-2">QR code temporarily unavailable</p>`
+                        }
                     </div>
                     <p class="text-xs text-gray-500">Card ID: ${(customerCard.id as string).substring(0, 8)}</p>
                 </div>

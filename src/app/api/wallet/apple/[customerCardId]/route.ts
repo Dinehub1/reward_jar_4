@@ -317,7 +317,7 @@ export async function GET(
 <body class="bg-gray-100 min-h-screen py-8">
     <div class="max-w-2xl mx-auto px-4 space-y-6">
         <div class="bg-white rounded-lg shadow-md p-6">
-            <div class="text-center mb-6">
+        <div class="text-center mb-6">
                 <h1 class="text-2xl font-bold text-gray-900 mb-2">Apple Wallet Setup Required</h1>
                 <p class="text-gray-600">Apple Wallet certificates need to be configured to generate passes.</p>
             </div>
@@ -335,7 +335,7 @@ export async function GET(
                             To generate Apple Wallet passes, you need to configure your Apple Developer certificates.
                         </p>
                     </div>
-                </div>
+        </div>
             </div>
             
             <div class="space-y-4">
