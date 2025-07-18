@@ -126,7 +126,7 @@ return new NextResponse(passBuffer, {
 3. **🔥 webServiceURL Issue**: CRITICAL - Apple Wallet rejects localhost and IP addresses
 ```json
 {
-  "webServiceURL": "https://rewardjar.com/api/wallet/apple/updates",
+  "webServiceURL": "https://www.rewardjar.xyz/api/wallet/apple/updates",
   "authenticationToken": "customer-card-uuid"
 }
 ```
@@ -146,8 +146,8 @@ function getValidWebServiceURL(): string {
   // Apple Wallet requires HTTPS and rejects localhost/IP addresses
   if (baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1') || 
       baseUrl.includes('192.168.') || baseUrl.includes('10.0.')) {
-    console.warn('⚠️ Apple Wallet webServiceURL cannot use localhost/IP addresses')
-    return 'https://rewardjar.com/api/wallet/apple/updates'
+         console.warn('⚠️ Apple Wallet webServiceURL cannot use localhost/IP addresses')
+     return 'https://www.rewardjar.xyz/api/wallet/apple/updates'
   }
   
   return `${baseUrl}/api/wallet/apple/updates`
@@ -229,7 +229,7 @@ const debugInfo = {
   status: response.status,
   downloadAttempt: true,
   barcodePreview: customerCardId,
-  webServiceURL: 'https://rewardjar.com/api/wallet/apple/updates'
+  webServiceURL: 'https://www.rewardjar.xyz/api/wallet/apple/updates'
 }
 ```
 
@@ -267,7 +267,7 @@ const debugInfo = {
 # NEVER use localhost or IP addresses in webServiceURL
 # ❌ WRONG: http://localhost:3000/api/wallet/apple/updates
 # ❌ WRONG: http://192.168.29.219:3000/api/wallet/apple/updates
-# ✅ CORRECT: https://rewardjar.com/api/wallet/apple/updates
+# ✅ CORRECT: https://www.rewardjar.xyz/api/wallet/apple/updates
 
 # Test with ngrok for local development
 ngrok http 3000
@@ -343,7 +343,7 @@ const debugDisplay = {
   passSize: "12.3 KB",
   filesIncluded: 5,
   lastModified: "2025-01-15T10:30:00Z",
-  webServiceURL: "https://rewardjar.com/api/wallet/apple/updates",
+  webServiceURL: "https://www.rewardjar.xyz/api/wallet/apple/updates",
   foreignKeyConstraints: "RESOLVED"
 }
 ```

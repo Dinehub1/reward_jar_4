@@ -60,10 +60,10 @@ export async function POST(request: NextRequest) {
           id: card.customerCardId,
           scenario: card.scenario,
           progress: `${card.currentStamps}/${card.totalStamps}`,
-          apple: `${process.env.BASE_URL || 'https://rewardjar.com'}/api/wallet/apple/${card.customerCardId}`,
-          google: `${process.env.BASE_URL || 'https://rewardjar.com'}/api/wallet/google/${card.customerCardId}`,
-          pwa: `${process.env.BASE_URL || 'https://rewardjar.com'}/api/wallet/pwa/${card.customerCardId}`,
-          debug: `${process.env.BASE_URL || 'https://rewardjar.com'}/api/wallet/apple/${card.customerCardId}?debug=true`
+          apple: `${process.env.BASE_URL || 'https://www.rewardjar.xyz'}/api/wallet/apple/${card.customerCardId}`,
+          google: `${process.env.BASE_URL || 'https://www.rewardjar.xyz'}/api/wallet/google/${card.customerCardId}`,
+          pwa: `${process.env.BASE_URL || 'https://www.rewardjar.xyz'}/api/wallet/pwa/${card.customerCardId}`,
+          debug: `${process.env.BASE_URL || 'https://www.rewardjar.xyz'}/api/wallet/apple/${card.customerCardId}?debug=true`
         }))
       })
     }
@@ -81,10 +81,10 @@ export async function POST(request: NextRequest) {
         id: card.customerCardId,
         scenario: card.scenario,
         progress: `${card.currentStamps}/${card.totalStamps}`,
-        apple: `${process.env.BASE_URL || 'https://rewardjar.com'}/api/wallet/apple/${card.customerCardId}`,
-        google: `${process.env.BASE_URL || 'https://rewardjar.com'}/api/wallet/google/${card.customerCardId}`,
-        pwa: `${process.env.BASE_URL || 'https://rewardjar.com'}/api/wallet/pwa/${card.customerCardId}`,
-        debug: `${process.env.BASE_URL || 'https://rewardjar.com'}/api/wallet/apple/${card.customerCardId}?debug=true`
+        apple: `${process.env.BASE_URL || 'https://www.rewardjar.xyz'}/api/wallet/apple/${card.customerCardId}`,
+        google: `${process.env.BASE_URL || 'https://www.rewardjar.xyz'}/api/wallet/google/${card.customerCardId}`,
+        pwa: `${process.env.BASE_URL || 'https://www.rewardjar.xyz'}/api/wallet/pwa/${card.customerCardId}`,
+        debug: `${process.env.BASE_URL || 'https://www.rewardjar.xyz'}/api/wallet/apple/${card.customerCardId}?debug=true`
       }))
     })
 

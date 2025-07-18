@@ -7,13 +7,14 @@ import sharp from 'sharp'
 
 // Helper function to get valid webServiceURL for Apple Wallet
 function getValidWebServiceURL(): string {
-  const baseUrl = process.env.BASE_URL || 'https://rewardjar.'
+  const PRODUCTION_DOMAIN = "https://www.rewardjar.xyz"
+  const baseUrl = process.env.BASE_URL || PRODUCTION_DOMAIN
   
   // Apple Wallet requires HTTPS and rejects localhost/IP addresses
   // If we're using localhost or IP, use the production domain instead
   if (baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1') || baseUrl.includes('192.168.') || baseUrl.includes('10.0.')) {
     console.warn('⚠️  Apple Wallet webServiceURL cannot use localhost/IP addresses. Using production domain instead.')
-    return 'https://rewardjar.com/api/wallet/apple/updates'
+    return `${PRODUCTION_DOMAIN}/api/wallet/apple/updates`
   }
   
   // Ensure HTTPS
