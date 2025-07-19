@@ -275,8 +275,8 @@ export default function WalletPreviewPage() {
       const data = await response.json()
       
       setEnvironmentStatus({
-        google_wallet: data.google_wallet?.configured || false,
-        apple_wallet: data.apple_wallet?.configured || false,
+        google_wallet: data.googleWallet?.configured || false,
+        apple_wallet: data.appleWallet?.configured || false,
         pwa_wallet: true, // Always available
         qr_generation: true, // Client-side generation always available
         overall_health: response.ok
