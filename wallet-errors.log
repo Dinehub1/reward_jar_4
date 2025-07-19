@@ -43,3 +43,4 @@
 {"card_id":"test","error":"Invalid UUID format for card_id","expected_format":"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx","level":"error","message":"UUID validation failed","test_type":"qr_code","timestamp":"2025-07-18T23:31:58.903Z"}
 {"card_id":"test","error":"Invalid UUID format for card_id","expected_format":"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx","level":"error","message":"UUID validation failed","test_type":"qr_code","timestamp":"2025-07-18T23:31:59.296Z"}
 {"card_id":"test","error":"Invalid UUID format for card_id","expected_format":"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx","level":"error","message":"UUID validation failed","test_type":"qr_code","timestamp":"2025-07-18T23:37:17.911Z"}
+{"card_id":"test","error":"Invalid UUID format for card_id","expected_format":"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx","level":"error","message":"UUID validation failed","test_type":"qr_code","timestamp":"2025-07-19T07:51:04.247Z"}
