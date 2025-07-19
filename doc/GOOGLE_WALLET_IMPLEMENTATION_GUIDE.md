@@ -10,6 +10,7 @@
 
 RewardJar 4.0 implements a comprehensive Google Wallet integration using JWT-based loyalty objects with automatic class creation, QR code generation, and real-time pass updates. This guide provides complete implementation details for Google Wallet integration alongside Apple Wallet and PWA fallback strategies.
 
+
 ### Key Features ✅
 - **Google Wallet**: JWT-based loyalty object creation with RS256 signing
 - **Automatic Class Creation**: Dynamic class setup with proper issuer configuration
@@ -677,6 +678,45 @@ export const createClient = () => {
 // Add same global timeout configuration to both createClient() and createServiceClient()
 ```
 
+#### 9. RS256 Private Key Issues
+**Problem**: `secretOrPrivateKey must be an asymmetric key` or `Could not find private key`
+**Solution**: Validate and properly format the Google Service Account private key
+```bash
+# Test if private key is valid
+echo "$GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY" | openssl pkey -inform pem -check -noout
+
+# If invalid, extract and reformat from service account JSON
+grep GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY .env.local | cut -d'=' -f2- | tr -d '"' | sed 's/\\n/\n/g' | openssl pkey -inform pem -check -noout
+
+# Ensure proper format in .env.local
+GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEF...\n-----END PRIVATE KEY-----"
+```
+
+**Note**: The key must include proper `-----BEGIN PRIVATE KEY-----` and `-----END PRIVATE KEY-----` markers with actual newlines (`\n`) between lines.
+
+#### 10. Test Results Table Creation
+**Problem**: "relation test_results does not exist" error
+**Solution**: Create the table in Supabase SQL Editor
+```sql
+-- Create test results table
+CREATE TABLE IF NOT EXISTS test_results (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  test_type TEXT NOT NULL,
+  customer_card_id UUID,
+  status TEXT NOT NULL CHECK (status IN ('success', 'failure')),
+  duration_ms INTEGER,
+  file_size_bytes INTEGER,
+  error_message TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Enable RLS
+ALTER TABLE test_results ENABLE ROW LEVEL SECURITY;
+
+-- Allow access for testing
+CREATE POLICY "Allow test results access" ON test_results FOR ALL USING (true);
+```
+
 ---
 
 ## 📊 Performance Optimization
@@ -868,11 +908,30 @@ RewardJar's Google Wallet integration provides robust, production-ready loyalty 
 - Performance monitoring and analytics in place
 
 ### Testing Summary ✅
-- ✅ **Local Environment**: Clean build, 77% environment validation
+- ✅ **Local Environment**: Clean build, 77% environment validation, RS256 working
 - ✅ **Production Environment**: Class creation (409), pass generation working
-- ✅ **Google Wallet**: JWT tokens with correct class ID format
+- ✅ **Google Wallet**: JWT tokens with correct class ID format and RS256 signature
 - ✅ **QR Codes**: Level L, 256x256px, 4-module padding compliance
+- ✅ **Supabase**: 15s timeout configured, test_results table created
 - ✅ **OnePlus Testing**: Production URL ready for mobile testing
+
+### Test Command Results ✅
+```bash
+# Local server startup
+✅ pkill -f "next dev" && rm -rf .next && npm run build && npm run dev
+✅ curl http://localhost:3000/api/health/env → 77% (10/13 variables)
+✅ curl http://localhost:3000/api/wallet/google/881e0196-ed20-4fa2-bbbc-0b7fc022afde → Valid JWT with RS256
+
+# Production validation
+✅ curl -X POST https://www.rewardjar.xyz/api/wallet/google/class → 409 (class exists)
+✅ curl https://www.rewardjar.xyz/api/wallet/google/c7f2fd7d-2de4-4aa3-a5b2-e7495f3d9994 → Valid JWT
+
+# Environment fixes applied
+✅ Supabase timeout: 15s configured in both client and server
+✅ Field mapping: Fixed snake_case vs camelCase in frontend
+✅ test_results table: Created with proper RLS policies
+✅ RS256 validation: Private key format confirmed valid
+```
 
 **Status**: ✅ **PRODUCTION READY** - Deploy with confidence!  
 **Next Steps**: Test on OnePlus device via `https://www.rewardjar.xyz/test/wallet-preview`
