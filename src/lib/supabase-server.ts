@@ -24,6 +24,10 @@ export async function createClient() {
           }
         },
       },
+      db: { schema: 'public' },
+      global: {
+        headers: { 'x-timeout': '15000' }  // 15s timeout per troubleshooting guide
+      }
     }
   )
 }
@@ -42,6 +46,10 @@ export function createServiceClient() {
           // No-op for service role client
         },
       },
+      db: { schema: 'public' },
+      global: {
+        headers: { 'x-timeout': '15000' }  // 15s timeout per troubleshooting guide
+      }
     }
   )
 } 

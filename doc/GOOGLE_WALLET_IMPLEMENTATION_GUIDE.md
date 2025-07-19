@@ -532,7 +532,22 @@ curl https://www.rewardjar.xyz/test/wallet-preview
 
 ### Common Issues & Solutions
 
-#### 1. Supabase Timeouts
+#### 1. Server Startup Issues
+**Problem**: `curl: (7) Failed to connect to localhost port 3000`
+**Solution**: Restart the development server properly
+```bash
+# Kill existing processes
+pkill -f "next dev" || true
+
+# Clean build and restart
+rm -rf .next && npm run build
+npm run dev &
+
+# Wait for server to start
+sleep 5 && curl http://localhost:3000/api/health/env
+```
+
+#### 2. Supabase Timeouts
 **Problem**: Connection timeouts to Supabase
 **Solution**: 
 ```typescript
@@ -617,6 +632,49 @@ useEffect(() => {
 
 // Only render wallet buttons after hydration
 {baseUrl && <GoogleWalletButton jwtToken={token} />}
+```
+
+#### 7. Field Mapping Issues in Frontend
+**Problem**: "Not Configured" red indicator when Google Wallet is actually configured
+**Solution**: Fix API response field mapping in wallet preview
+```typescript
+// Wrong - looking for camelCase fields
+setEnvironmentStatus({
+  google_wallet: data.googleWallet?.configured || false,  // ❌ Wrong
+  apple_wallet: data.appleWallet?.configured || false,    // ❌ Wrong
+})
+
+// Correct - API returns snake_case fields
+setEnvironmentStatus({
+  google_wallet: data.google_wallet?.configured || false, // ✅ Correct
+  apple_wallet: data.apple_wallet?.configured || false,   // ✅ Correct
+})
+```
+
+#### 8. Supabase Client Configuration
+**Problem**: Need to update Supabase clients with 15s timeout
+**Solution**: Update both client and server configurations
+```typescript
+// src/lib/supabase.ts (Client-side)
+export const createClient = () => {
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      db: { schema: 'public' },
+      auth: { 
+        autoRefreshToken: true,
+        persistSession: false 
+      },
+      global: {
+        headers: { 'x-timeout': '15000' }  // 15s timeout
+      }
+    }
+  )
+}
+
+// src/lib/supabase-server.ts (Server-side)
+// Add same global timeout configuration to both createClient() and createServiceClient()
 ```
 
 ---
