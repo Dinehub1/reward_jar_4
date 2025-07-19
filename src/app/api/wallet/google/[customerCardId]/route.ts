@@ -341,7 +341,7 @@ export async function GET(
         "hexBackgroundColor": "#10b981", // green-500
         "validTimeInterval": {
           "start": {
-            "date": new Date().toISOString().split('T')[0]
+            "date": new Date().toISOString()  // Full ISO 8601 format required by Google Wallet
           }
         }
       }
