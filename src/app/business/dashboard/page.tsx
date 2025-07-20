@@ -6,12 +6,17 @@ import { createClient } from '@/lib/supabase'
 import BusinessLayout from '@/components/layouts/BusinessLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Plus, CreditCard, Users, TrendingUp } from 'lucide-react'
+import { Plus, CreditCard, Users, TrendingUp, AlertCircle, RefreshCw } from 'lucide-react'
 
 interface DashboardStats {
   totalStampCards: number
   totalCustomers: number
   activeCards: number
+}
+
+interface DashboardError {
+  message: string
+  details?: string
 }
 
 export default function BusinessDashboard() {
@@ -21,61 +26,184 @@ export default function BusinessDashboard() {
     activeCards: 0
   })
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<DashboardError | null>(null)
   const [businessName, setBusinessName] = useState('')
+  const [retryCount, setRetryCount] = useState(0)
   const supabase = createClient()
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session?.user) return
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true)
+      setError(null)
 
-        // Get business info
-        const { data: business } = await supabase
-          .from('businesses')
-          .select('name')
-          .eq('owner_id', session.user.id)
-          .single()
+      // Get session first
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      if (sessionError) {
+        throw new Error(`Authentication error: ${sessionError.message}`)
+      }
+      
+      if (!session?.user) {
+        throw new Error('No authenticated user found')
+      }
 
-        if (business) {
-          setBusinessName(business.name)
-        }
+      console.log('Dashboard: Authenticated user:', session.user.email)
 
-        // Get stamp cards count
-        const { data: stampCards, count: stampCardsCount } = await supabase
-          .from('stamp_cards')
-          .select('id', { count: 'exact' })
-          .eq('status', 'active')
+      // Get user role to ensure they're a business user
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('role_id')
+        .eq('id', session.user.id)
+        .single()
 
-        // Get total customers (unique customers across all business's cards)
-        const { data: customerCards, count: customersCount } = await supabase
+      if (userError) {
+        throw new Error(`User lookup error: ${userError.message}`)
+      }
+
+      if (!userData || userData.role_id !== 2) {
+        throw new Error('User does not have business permissions')
+      }
+
+      console.log('Dashboard: User has business role')
+
+      // Get business info
+      const { data: business, error: businessError } = await supabase
+        .from('businesses')
+        .select('name')
+        .eq('owner_id', session.user.id)
+        .single()
+
+      if (businessError) {
+        console.warn('Dashboard: Business lookup error:', businessError.message)
+        // Don't throw here - user might not have completed business setup
+        setBusinessName('Your Business')
+      } else if (business) {
+        setBusinessName(business.name)
+        console.log('Dashboard: Business found:', business.name)
+      }
+
+      // Get business ID for stamp cards query
+      const { data: businessData } = await supabase
+        .from('businesses')
+        .select('id')
+        .eq('owner_id', session.user.id)
+        .single()
+
+      if (!businessData) {
+        console.log('Dashboard: No business data found, showing empty state')
+        setStats({
+          totalStampCards: 0,
+          totalCustomers: 0,
+          activeCards: 0
+        })
+        return
+      }
+
+      // Get stamp cards count
+      const { data: stampCards, count: stampCardsCount, error: cardsError } = await supabase
+        .from('stamp_cards')
+        .select('id', { count: 'exact' })
+        .eq('business_id', businessData.id)
+        .eq('status', 'active')
+
+      if (cardsError) {
+        console.warn('Dashboard: Stamp cards error:', cardsError.message)
+      }
+
+      console.log('Dashboard: Found stamp cards:', stampCardsCount)
+
+      // Get total customers (unique customers across all business's cards)
+      let customersCount = 0
+      let activeCardsSet = new Set()
+
+      if (stampCards && stampCards.length > 0) {
+        const { data: customerCards, count: customersTotal, error: customersError } = await supabase
           .from('customer_cards')
           .select('customer_id, stamp_card_id', { count: 'exact' })
-          .in('stamp_card_id', stampCards?.map(card => card.id) || [])
+          .in('stamp_card_id', stampCards.map(card => card.id))
 
-        // Get active cards (cards with at least one customer)
-        const activeCardsSet = new Set(customerCards?.map(cc => cc.stamp_card_id))
-
-        setStats({
-          totalStampCards: stampCardsCount || 0,
-          totalCustomers: customersCount || 0,
-          activeCards: activeCardsSet.size
-        })
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error)
-      } finally {
-        setLoading(false)
+        if (customersError) {
+          console.warn('Dashboard: Customer cards error:', customersError.message)
+        } else {
+          customersCount = customersTotal || 0
+          activeCardsSet = new Set(customerCards?.map(cc => cc.stamp_card_id))
+          console.log('Dashboard: Found customers:', customersCount)
+        }
       }
-    }
 
+      setStats({
+        totalStampCards: stampCardsCount || 0,
+        totalCustomers: customersCount,
+        activeCards: activeCardsSet.size
+      })
+
+      console.log('Dashboard: Stats updated successfully')
+    } catch (error) {
+      console.error('Dashboard: Error fetching data:', error)
+      setError({
+        message: 'Failed to load dashboard data',
+        details: error instanceof Error ? error.message : 'Unknown error occurred'
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
     fetchDashboardData()
-  }, [supabase])
+  }, [retryCount])
+
+  const handleRetry = () => {
+    setRetryCount(prev => prev + 1)
+  }
 
   if (loading) {
     return (
       <BusinessLayout>
         <div className="flex items-center justify-center py-12">
-          <div className="text-lg">Loading dashboard...</div>
+          <div className="text-center">
+            <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
+            <div className="text-lg font-medium">Loading dashboard...</div>
+            <div className="text-sm text-gray-500 mt-1">
+              Fetching your business data
+            </div>
+          </div>
+        </div>
+      </BusinessLayout>
+    )
+  }
+
+  if (error) {
+    return (
+      <BusinessLayout>
+        <div className="flex items-center justify-center py-12">
+          <Card className="max-w-md mx-auto border-red-200">
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  {error.message}
+                </h3>
+                {error.details && (
+                  <p className="text-sm text-gray-600 mb-4">
+                    {error.details}
+                  </p>
+                )}
+                <div className="space-y-2">
+                  <Button onClick={handleRetry} className="w-full">
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Try Again
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => window.location.href = '/auth/login'}
+                    className="w-full"
+                  >
+                    Sign In Again
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </BusinessLayout>
     )
@@ -189,6 +317,22 @@ export default function BusinessDashboard() {
                   Create Your First Stamp Card
                 </Button>
               </Link>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Debug Info (only in development) */}
+        {process.env.NODE_ENV === 'development' && (
+          <Card className="border-gray-200 bg-gray-50">
+            <CardHeader>
+              <CardTitle className="text-sm text-gray-600">Debug Info</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-xs text-gray-500 space-y-1">
+                <div>Retry count: {retryCount}</div>
+                <div>Business name: {businessName || 'Not set'}</div>
+                <div>Stats loaded: {JSON.stringify(stats)}</div>
+              </div>
             </CardContent>
           </Card>
         )}
