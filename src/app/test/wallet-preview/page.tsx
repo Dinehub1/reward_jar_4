@@ -1,833 +1,640 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { QRCodeSVG as QRCode } from 'qrcode.react'
-import { 
-  RefreshCw, 
-  Plus, 
-  CheckCircle, 
-  XCircle, 
-  Clock, 
-  Smartphone,
-  CreditCard,
-  AlertTriangle,
-  TrendingUp,
-  Eye,
-  Activity,
-  QrCode,
-  Wallet
-} from 'lucide-react'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { AlertCircle, CheckCircle, Users, CreditCard, Activity } from 'lucide-react'
 
-// Type definitions based on Google Wallet best practices 2025
 interface TestCard {
   id: string
-  name: string
-  business_name: string
-  current_stamps: number
-  total_stamps: number
-  reward_description: string
+  scenario: string
+  cardType: 'loyalty' | 'gym'
   progress: number
-  status: 'empty' | 'in_progress' | 'almost_complete' | 'completed' | 'over_complete'
-  test_scenario: string
+  isCompleted: boolean
+  isExpired?: boolean
+  details: {
+    membership?: {
+      sessions_used?: number
+      total_sessions?: number
+      cost?: number
+      expiry_date?: string
+      is_expired?: boolean
+    }
+    business?: {
+      name?: string
+    }
+    current_stamps?: number
+    total_stamps?: number
+    reward_description?: string
+    cost?: number
+    sessions_used?: number
+    total_sessions?: number
+    expiry_date?: string
+  }
 }
 
-interface TestResult {
-  card_id: string
-  test_type: 'google_wallet' | 'apple_wallet' | 'pwa_wallet' | 'qr_code'
-  status: 'success' | 'error' | 'pending'
-  duration_ms: number
-  response_size_kb: number
-  error_message?: string
+interface WalletStatus {
+  apple: boolean
+  google: boolean
+  pwa: boolean
+}
+
+interface LastUpdate {
   timestamp: string
-}
-
-interface EnvironmentStatus {
-  google_wallet: boolean
-  apple_wallet: boolean
-  pwa_wallet: boolean
-  qr_generation: boolean
-  overall_health: boolean
-}
-
-interface PerformanceMetrics {
-  google_wallet: {
-    avg_response_time: number
-    success_rate: number
-    total_requests: number
-    avg_file_size: number
-    jwt_generation_time?: number
+  type: 'session' | 'stamp'
+  success: boolean
+  details: {
+    error?: string
+    result?: {
+      sessions_remaining?: number
+      current_stamps?: number
+    }
   }
-  qr_generation: {
-    avg_response_time: number
-    success_rate: number
-    total_generated: number
-    avg_size: number
-  }
-  api_response: {
-    avg_response_time: number
-    success_rate: number
-    total_requests: number
-  }
-}
-
-// Define interface for card data transformation
-interface RawCardData {
-  id: string
-  name?: string
-  business_name?: string
-  current_stamps?: number
-  total_stamps?: number
-  reward_description?: string
-  test_scenario?: string
 }
 
 export default function WalletPreviewPage() {
+  const [selectedTab, setSelectedTab] = useState<'loyalty' | 'membership'>('loyalty')
   const [testCards, setTestCards] = useState<TestCard[]>([])
-  const [selectedCard, setSelectedCard] = useState<string>('')
-  const [testResults, setTestResults] = useState<TestResult[]>([])
-  const [environmentStatus, setEnvironmentStatus] = useState<EnvironmentStatus>({
-    google_wallet: false,
-    apple_wallet: false,
-    pwa_wallet: false,
-    qr_generation: false,
-    overall_health: false
-  })
-  const [performanceMetrics, setPerformanceMetrics] = useState<PerformanceMetrics>({
-    google_wallet: { avg_response_time: 0, success_rate: 0, total_requests: 0, avg_file_size: 0 },
-    qr_generation: { avg_response_time: 0, success_rate: 0, total_generated: 0, avg_size: 0 },
-    api_response: { avg_response_time: 0, success_rate: 0, total_requests: 0 }
-  })
-  const [isLoading, setIsLoading] = useState(false)
-  const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(null)
-  const [isAutoRefresh, setIsAutoRefresh] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [walletStatus, setWalletStatus] = useState<WalletStatus>({ apple: false, google: false, pwa: true })
+  const [lastUpdate, setLastUpdate] = useState<LastUpdate | null>(null)
+  const [sessionMarking, setSessionMarking] = useState(false)
+  const [selectedBusiness, setSelectedBusiness] = useState('')
 
-  // Production domain constants
-  const PRODUCTION_DOMAIN = 'https://www.rewardjar.xyz'
-  const [baseUrl, setBaseUrl] = useState(PRODUCTION_DOMAIN)
-  
-  useEffect(() => {
-    // Set baseUrl on client side to avoid hydration mismatch
-    if (typeof window !== 'undefined') {
-      setBaseUrl(window.location.origin)
-    }
-  }, [])
+  // Test scenarios are created dynamically by the API
 
-  // Log test results to API
-  const logTestResult = useCallback(async (
-    testType: TestResult['test_type'],
-    status: TestResult['status'],
-    durationMs: number,
-    responseSizeKb: number,
-    errorMessage?: string
-  ) => {
+  // Load existing test data
+  const loadExistingData = async (cardType: 'loyalty' | 'membership') => {
     try {
-      await fetch('/api/test/results', {
+      let url: string
+      
+      if (cardType === 'loyalty') {
+        url = '/api/dev-seed'
+      } else {
+        url = '/api/dev-seed/membership'
+      }
+
+      const response = await fetch(url, {
+        method: 'GET'
+      })
+
+      if (!response.ok) {
+        console.log(`No existing ${cardType} data found, will show empty state`)
+        setTestCards([])
+        return
+      }
+
+      const data = await response.json()
+      
+      if (cardType === 'loyalty') {
+        // Process loyalty card data
+        const cards = data.cards?.map((card: { customerCardId?: string; id?: string; scenario?: string; current_stamps?: number; total_stamps?: number; [key: string]: unknown }) => ({
+          id: card.customerCardId || card.id || '',
+          scenario: card.scenario || 'unknown',
+          cardType: 'loyalty' as const,
+          progress: ((card.current_stamps || 0) / (card.total_stamps || 10)) * 100,
+          isCompleted: (card.current_stamps || 0) >= (card.total_stamps || 10),
+          details: card
+        })) || []
+        setTestCards(cards)
+      } else {
+        // Process membership card data (now using consistent structure)
+        const cards = data.memberships?.map((membership: { customerCardId?: string; scenario?: string; membership?: { id?: string; progress?: number; sessions_used?: number; total_sessions?: number; is_expired?: boolean }; [key: string]: unknown }) => ({
+          id: membership.customerCardId || membership.membership?.id || '',
+          scenario: membership.scenario || 'unknown',
+          cardType: 'gym' as const,
+          progress: membership.membership?.progress || 0,
+          isCompleted: (membership.membership?.sessions_used || 0) >= (membership.membership?.total_sessions || 20),
+          isExpired: membership.membership?.is_expired || false,
+          details: membership
+        })) || []
+        setTestCards(cards)
+      }
+
+      console.log(`✅ Loaded existing ${cardType} data:`, data)
+    } catch (error) {
+      console.error('Error loading existing data:', error)
+      setTestCards([])
+    }
+  }
+
+  // Generate test data based on selected card type
+  const generateTestData = async (cardType: 'loyalty' | 'membership', scenario?: string) => {
+    setLoading(true)
+    try {
+      let url: string
+      let payload: { scenario?: string; count?: number; createAll?: boolean }
+
+      if (cardType === 'loyalty') {
+        url = '/api/dev-seed'
+        payload = scenario ? { scenario, count: 1 } : { createAll: true }
+      } else {
+        url = '/api/dev-seed/membership'
+        payload = scenario ? { scenario, count: 1 } : { scenario: 'all', count: 1 }
+      }
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+
+      if (!response.ok) {
+        throw new Error(`Failed to generate test data: ${response.statusText}`)
+      }
+
+      const data = await response.json()
+      
+      if (cardType === 'loyalty') {
+        // Process loyalty card data
+        const cards = data.cards?.map((card: { customerCardId?: string; id?: string; scenario?: string; current_stamps?: number; total_stamps?: number; [key: string]: unknown }) => ({
+          id: card.customerCardId || card.id || '',
+          scenario: card.scenario || 'unknown',
+          cardType: 'loyalty' as const,
+          progress: ((card.current_stamps || 0) / (card.total_stamps || 10)) * 100,
+          isCompleted: (card.current_stamps || 0) >= (card.total_stamps || 10),
+          details: card
+        })) || []
+        setTestCards(cards)
+      } else {
+        // Process membership card data
+        const cards = data.memberships?.map((membership: { customerCardId?: string; scenario?: string; membership?: { id?: string; progress?: number; sessions_used?: number; total_sessions?: number; is_expired?: boolean }; [key: string]: unknown }) => ({
+          id: membership.customerCardId || membership.membership?.id || '',
+          scenario: membership.scenario || 'unknown',
+          cardType: 'gym' as const,
+          progress: membership.membership?.progress || 0,
+          isCompleted: (membership.membership?.sessions_used || 0) >= (membership.membership?.total_sessions || 20),
+          isExpired: membership.membership?.is_expired || false,
+          details: membership
+        })) || []
+        setTestCards(cards)
+      }
+
+      console.log(`✅ Generated ${cardType} test data:`, data)
+    } catch (error) {
+      console.error('Error generating test data:', error)
+      alert(`Failed to generate test data: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+    setLoading(false)
+  }
+
+  // Check wallet environment status
+  const checkWalletStatus = async () => {
+    try {
+      const response = await fetch('/api/health/env')
+      if (response.ok) {
+        const data = await response.json()
+        console.log('Environment data:', data) // Debug logging
+        setWalletStatus({
+          apple: data.appleWallet?.configured || false,
+          google: data.googleWallet?.configured || false,
+          pwa: true // PWA is always available
+        })
+      }
+    } catch (error) {
+      console.error('Error checking wallet status:', error)
+      // Set default values on error
+      setWalletStatus({
+        apple: false,
+        google: false,
+        pwa: true
+      })
+    }
+  }
+
+  // Generate wallet pass
+  const generateWallet = async (cardId: string, walletType: 'apple' | 'google' | 'pwa') => {
+    try {
+      const cardType = selectedTab === 'loyalty' ? '' : 'membership/'
+      const url = `/api/wallet/${walletType}/${cardType}${cardId}`
+      
+      if (walletType === 'apple') {
+        // For Apple Wallet, try to download PKPass or show preview
+        const response = await fetch(url)
+        if (response.headers.get('content-type')?.includes('application/vnd.apple.pkpass')) {
+          // Download PKPass file
+          const blob = await response.blob()
+          const downloadUrl = window.URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = downloadUrl
+          a.download = `${selectedTab}-${cardId.substring(0, 8)}.pkpass`
+          a.click()
+          window.URL.revokeObjectURL(downloadUrl)
+        } else {
+          // Open preview in new tab
+          window.open(url, '_blank')
+        }
+      } else {
+        // Open in new tab for Google Wallet and PWA
+        window.open(url, '_blank')
+      }
+    } catch (error) {
+      console.error(`Error generating ${walletType} wallet:`, error)
+      alert(`Failed to generate ${walletType} wallet: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
+
+  // Mark session or stamp
+  const markUsage = async (cardId: string, usageType: 'session' | 'stamp') => {
+    if (!selectedBusiness) {
+      alert('Please select a business first')
+      return
+    }
+
+    setSessionMarking(true)
+    try {
+      const response = await fetch(`/api/wallet/mark-session/${cardId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          card_id: selectedCard || 'test',
-          test_type: testType,
-          status,
-          duration_ms: durationMs,
-          response_size_kb: responseSizeKb,
-          error_message: errorMessage
+          businessId: selectedBusiness,
+          usageType,
+          notes: `Test ${usageType} marking from wallet preview`
         })
       })
-    } catch (error) {
-      console.error('Failed to log test result:', error)
-    }
-  }, [selectedCard])
 
-  // Get card status based on progress
-  const getCardStatus = useCallback((current: number, total: number): TestCard['status'] => {
-    const progress = (current / total) * 100
-    if (current === 0) return 'empty'
-    if (current >= total) return current > total ? 'over_complete' : 'completed'
-    if (progress >= 90) return 'almost_complete'
-    return 'in_progress'
-  }, [])
-
-  // Load test cards
-  const loadTestCards = useCallback(async () => {
-    try {
-      setIsLoading(true)
-      const startTime = Date.now()
-      
-      const response = await fetch('/api/dev-seed')
-      const duration = Date.now() - startTime
-      
       if (!response.ok) {
-        throw new Error(`Failed to load test cards: ${response.status}`)
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to mark usage')
       }
-      
-      const data = await response.json()
-      
-      // Transform the data into test cards with proper typing
-      const cards: TestCard[] = (data.cards || []).map((card: RawCardData) => {
-        const currentStamps = card.current_stamps || 0
-        const totalStamps = card.total_stamps || 10
-        
-        return {
-          id: card.id,
-          name: card.name || 'Test Card',
-          business_name: card.business_name || 'Test Business',
-          current_stamps: currentStamps,
-          total_stamps: totalStamps,
-          reward_description: card.reward_description || 'Test Reward',
-          progress: Math.min((currentStamps / totalStamps) * 100, 100),
-          status: getCardStatus(currentStamps, totalStamps),
-          test_scenario: card.test_scenario || 'default'
-        }
+
+      const result = await response.json()
+      setLastUpdate({
+        timestamp: new Date().toISOString(),
+        type: usageType,
+        success: true,
+        details: result
       })
-      
-      setTestCards(cards)
-      
-      // Auto-select first card if none selected
-      if (!selectedCard && cards.length > 0) {
-        setSelectedCard(cards[0].id)
-      }
-      
-      // Log performance metrics (using qr_code as fallback type)
-      await logTestResult('qr_code', 'success', duration, JSON.stringify(data).length)
-      
-    } catch (error) {
-      console.error('Failed to load test cards:', error)
-      await logTestResult('qr_code', 'error', 0, 0, error instanceof Error ? error.message : 'Unknown error')
-    } finally {
-      setIsLoading(false)
-    }
-  }, [getCardStatus, logTestResult, selectedCard])
 
-  // Generate QR code URL for join link
-  const getJoinUrl = useCallback((stampCardId: string) => {
-    return `${PRODUCTION_DOMAIN}/join/${stampCardId}`
-  }, [])
-
-  // Test Google Wallet functionality
-  const testGoogleWallet = useCallback(async (cardId: string) => {
-    try {
-      setIsLoading(true)
-      const startTime = Date.now()
+      // Refresh test data to show updated progress
+      await generateTestData(selectedTab)
       
-      const response = await fetch(`/api/wallet/google/${cardId}`)
-      const duration = Date.now() - startTime
-      const contentLength = parseInt(response.headers.get('content-length') || '0')
-      
-      if (response.ok) {
-        await logTestResult('google_wallet', 'success', duration, Math.round(contentLength / 1024))
-        
-        // Open Google Wallet in new tab
-        window.open(`/api/wallet/google/${cardId}`, '_blank')
-      } else {
-        const errorData = await response.text()
-        await logTestResult('google_wallet', 'error', duration, Math.round(contentLength / 1024), errorData)
-      }
-      
+      console.log(`✅ ${usageType} marked successfully:`, result)
     } catch (error) {
-      console.error('Google Wallet test failed:', error)
-      await logTestResult('google_wallet', 'error', 0, 0, error instanceof Error ? error.message : 'Unknown error')
-    } finally {
-      setIsLoading(false)
-    }
-  }, [logTestResult])
-
-  // Test QR code generation
-  const testQRCodeGeneration = useCallback(async (stampCardId: string) => {
-    try {
-      const startTime = Date.now()
-      const joinUrl = getJoinUrl(stampCardId)
-      
-      // Test client-side QR generation (this component)
-      const qrElement = document.querySelector(`#qr-${stampCardId}`)
-      const duration = Date.now() - startTime
-      
-      if (qrElement) {
-        await logTestResult('qr_code', 'success', duration, joinUrl.length)
-        
-        // Test that URL is accessible
-        try {
-          const response = await fetch(joinUrl, { method: 'HEAD' })
-          if (response.ok) {
-            console.log('✅ QR code URL is accessible:', joinUrl)
-          } else {
-            console.warn('⚠️ QR code URL returned:', response.status, joinUrl)
-          }
-        } catch (urlError) {
-          console.warn('⚠️ Could not test QR code URL:', urlError)
-        }
-      } else {
-        await logTestResult('qr_code', 'error', duration, 0, 'QR code element not found')
-      }
-      
-    } catch (error) {
-      console.error('QR code test failed:', error)
-      await logTestResult('qr_code', 'error', 0, 0, error instanceof Error ? error.message : 'Unknown error')
-    }
-  }, [getJoinUrl, logTestResult])
-
-  // Check environment status
-  const checkEnvironmentStatus = useCallback(async () => {
-    try {
-      const response = await fetch('/api/health/env')
-      const data = await response.json()
-      
-      setEnvironmentStatus({
-        google_wallet: data.google_wallet?.configured || false,
-        apple_wallet: data.apple_wallet?.configured || false,
-        pwa_wallet: true, // Always available
-        qr_generation: true, // Client-side generation always available
-        overall_health: response.ok
-      })
-      
-    } catch (error) {
-      console.error('Failed to check environment status:', error)
-      setEnvironmentStatus({
-        google_wallet: false,
-        apple_wallet: false,
-        pwa_wallet: true,
-        qr_generation: true,
-        overall_health: false
+      console.error(`Error marking ${usageType}:`, error)
+      setLastUpdate({
+        timestamp: new Date().toISOString(),
+        type: usageType,
+        success: false,
+        details: { error: error instanceof Error ? error.message : 'Unknown error' }
       })
     }
-  }, [])
+    setSessionMarking(false)
+  }
 
-  // Load performance metrics
-  const loadPerformanceMetrics = useCallback(async () => {
-    try {
-      const response = await fetch('/api/test/results')
-      if (response.ok) {
-        const data = await response.json()
-        const results: TestResult[] = data.data || []
-        
-        // Calculate Google Wallet metrics
-        const googleWalletResults = results.filter(r => r.test_type === 'google_wallet')
-        const successfulGoogle = googleWalletResults.filter(r => r.status === 'success')
-        
-        // Calculate QR code metrics
-        const qrResults = results.filter(r => r.test_type === 'qr_code')
-        const successfulQR = qrResults.filter(r => r.status === 'success')
-        
-        // Calculate overall API response metrics
-        const allAPIResults = results
-        const successfulAPI = allAPIResults.filter(r => r.status === 'success')
-        
-        setPerformanceMetrics({
-          google_wallet: {
-            avg_response_time: successfulGoogle.length > 0 
-              ? Math.round(successfulGoogle.reduce((sum, r) => sum + r.duration_ms, 0) / successfulGoogle.length)
-              : 0,
-            success_rate: googleWalletResults.length > 0 
-              ? Math.round((successfulGoogle.length / googleWalletResults.length) * 100)
-              : 0,
-            total_requests: googleWalletResults.length,
-            avg_file_size: successfulGoogle.length > 0
-              ? Math.round(successfulGoogle.reduce((sum, r) => sum + r.response_size_kb, 0) / successfulGoogle.length)
-              : 0
-          },
-          qr_generation: {
-            avg_response_time: successfulQR.length > 0
-              ? Math.round(successfulQR.reduce((sum, r) => sum + r.duration_ms, 0) / successfulQR.length)
-              : 0,
-            success_rate: qrResults.length > 0
-              ? Math.round((successfulQR.length / qrResults.length) * 100)
-              : 0,
-            total_generated: qrResults.length,
-            avg_size: successfulQR.length > 0
-              ? Math.round(successfulQR.reduce((sum, r) => sum + r.response_size_kb, 0) / successfulQR.length)
-              : 0
-          },
-          api_response: {
-            avg_response_time: successfulAPI.length > 0
-              ? Math.round(successfulAPI.reduce((sum, r) => sum + r.duration_ms, 0) / successfulAPI.length)
-              : 0,
-            success_rate: allAPIResults.length > 0
-              ? Math.round((successfulAPI.length / allAPIResults.length) * 100)
-              : 0,
-            total_requests: allAPIResults.length
-          }
-        })
-        
-        setTestResults(results.slice(-10)) // Show last 10 results
-      }
-    } catch (error) {
-      console.error('Failed to load performance metrics:', error)
-    }
-  }, [])
-
-  // Auto-refresh functionality
-  const toggleAutoRefresh = useCallback(() => {
-    if (isAutoRefresh && refreshInterval) {
-      clearInterval(refreshInterval)
-      setRefreshInterval(null)
-      setIsAutoRefresh(false)
-    } else {
-      const interval = setInterval(() => {
-        loadTestCards()
-        checkEnvironmentStatus()
-        loadPerformanceMetrics()
-      }, 10000) // Refresh every 10 seconds
-      setRefreshInterval(interval)
-      setIsAutoRefresh(true)
-    }
-  }, [isAutoRefresh, refreshInterval, loadTestCards, checkEnvironmentStatus, loadPerformanceMetrics])
-
-  // Initial load
+  // Initialize page
   useEffect(() => {
-    loadTestCards()
-    checkEnvironmentStatus()
-    loadPerformanceMetrics()
-  }, [loadTestCards, checkEnvironmentStatus, loadPerformanceMetrics])
-    
-    // Cleanup interval on unmount
-  useEffect(() => {
-    return () => {
-      if (refreshInterval) {
-        clearInterval(refreshInterval)
-      }
-    }
-  }, [refreshInterval])
+    checkWalletStatus()
+    loadExistingData(selectedTab)
+  }, [])
 
-  const selectedCardData = testCards.find(card => card.id === selectedCard)
+  // Switch card type
+  useEffect(() => {
+    if (selectedTab) {
+      loadExistingData(selectedTab)
+    }
+  }, [selectedTab])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Wallet className="h-6 w-6" />
-                  Google Wallet Testing Interface
-                </CardTitle>
-                <CardDescription>
-                  Comprehensive testing for Google Wallet integration with QR code generation and performance monitoring
-                </CardDescription>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant={isAutoRefresh ? "destructive" : "outline"}
-                  size="sm"
-                  onClick={toggleAutoRefresh}
-                  className="flex items-center gap-2"
-                >
-                  {isAutoRefresh ? <XCircle className="h-4 w-4" /> : <RefreshCw className="h-4 w-4" />}
-                  {isAutoRefresh ? 'Stop Auto-Refresh' : 'Auto-Refresh'}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    loadTestCards()
-                    checkEnvironmentStatus()
-                    loadPerformanceMetrics()
-                  }}
-                  disabled={isLoading}
-                  className="flex items-center gap-2"
-                >
-                  <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                  Refresh
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-        </Card>
+    <div className="max-w-7xl mx-auto p-6 space-y-6">
+      {/* Header */}
+      <div className="text-center space-y-2">
+        <h1 className="text-3xl font-bold text-gray-900">Wallet Preview Testing</h1>
+        <p className="text-gray-600">Test RewardJar 4.0 wallet integration with real-time data synchronization</p>
+      </div>
 
-        {/* Environment Status */}
-        <Card>
-          <CardHeader>
+      {/* Environment Status */}
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-center">
             <CardTitle className="flex items-center gap-2">
               <Activity className="h-5 w-5" />
               Environment Status
             </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              <div className="text-center">
-                <div className={`w-3 h-3 rounded-full mx-auto mb-2 ${
-                  environmentStatus.google_wallet ? 'bg-green-500' : 'bg-red-500'
-                }`} />
-                <p className="text-sm font-medium">Google Wallet</p>
-                <p className="text-xs text-gray-500">
-                  {environmentStatus.google_wallet ? 'Configured' : 'Not Configured'}
-                </p>
-              </div>
-              <div className="text-center">
-                <div className={`w-3 h-3 rounded-full mx-auto mb-2 ${
-                  environmentStatus.apple_wallet ? 'bg-green-500' : 'bg-blue-500'
-                }`} />
-                <p className="text-sm font-medium">Apple Wallet</p>
-                <p className="text-xs text-gray-500">
-                  {environmentStatus.apple_wallet ? 'Configured' : 'Optional'}
-                </p>
-                <p className="text-xs text-blue-600 font-medium">
-                  {!environmentStatus.apple_wallet && 'Not required for Google Wallet'}
-                </p>
-                <p className="text-xs text-gray-400">
-                  {!environmentStatus.apple_wallet && 'Google Wallet + PWA provide full coverage'}
-                </p>
-              </div>
-              <div className="text-center">
-                <div className={`w-3 h-3 rounded-full mx-auto mb-2 ${
-                  environmentStatus.pwa_wallet ? 'bg-green-500' : 'bg-red-500'
-                }`} />
-                <p className="text-sm font-medium">PWA Wallet</p>
-                <p className="text-xs text-gray-500">Always Available</p>
-              </div>
-              <div className="text-center">
-                <div className={`w-3 h-3 rounded-full mx-auto mb-2 ${
-                  environmentStatus.qr_generation ? 'bg-green-500' : 'bg-red-500'
-                }`} />
-                <p className="text-sm font-medium">QR Generation</p>
-                <p className="text-xs text-gray-500">Client-side Ready</p>
-              </div>
-              <div className="text-center">
-                <div className={`w-3 h-3 rounded-full mx-auto mb-2 ${
-                  environmentStatus.overall_health ? 'bg-green-500' : 'bg-red-500'
-                }`} />
-                <p className="text-sm font-medium">Overall Health</p>
-                <p className="text-xs text-gray-500">
-                  {environmentStatus.overall_health ? 'Healthy' : 'Issues Detected'}
-                </p>
-              </div>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={checkWalletStatus}
+            >
+              Refresh Status
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="text-center">
+              <div className={`w-3 h-3 rounded-full mx-auto mb-2 ${walletStatus.apple ? 'bg-green-500' : 'bg-red-500'}`}></div>
+              <p className="text-sm font-medium">Apple Wallet</p>
+              <p className={`text-xs ${walletStatus.apple ? 'text-green-600' : 'text-red-600'}`}>
+                {walletStatus.apple ? 'Configured' : 'Not Configured'}
+              </p>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Test Card Selection */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5" />
-              Test Card Selection
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Select Test Card</label>
-                <select
-                  value={selectedCard}
-                  onChange={(e) => setSelectedCard(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-md"
-                >
-                  <option value="">Choose a test card...</option>
-                  {testCards.map((card) => (
-                    <option key={card.id} value={card.id}>
-                      {card.name} ({card.test_scenario}) - {card.current_stamps}/{card.total_stamps}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium mb-2">Generate New Test Data</label>
-                <Button
-                  onClick={() => fetch('/api/dev-seed', { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ createAll: true })
-                  }).then(() => loadTestCards())}
-                  disabled={isLoading}
-                  className="w-full flex items-center gap-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  Create 8 Test Scenarios
-                </Button>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium mb-2">Selected Card Status</label>
-                {selectedCardData ? (
-                  <div className="p-3 bg-gray-50 rounded-md">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Badge variant={selectedCardData.status === 'completed' ? 'default' : 'secondary'}>
-                        {selectedCardData.status.replace('_', ' ')}
-                      </Badge>
-                      <span className="text-sm font-medium">{Math.round(selectedCardData.progress)}%</span>
-                    </div>
-                    <p className="text-xs text-gray-600">{selectedCardData.business_name}</p>
-                    <p className="text-xs text-gray-500">{selectedCardData.current_stamps}/{selectedCardData.total_stamps} stamps</p>
-                  </div>
-                ) : (
-                  <p className="text-sm text-gray-500 p-3 bg-gray-50 rounded-md">
-                    No card selected
-                  </p>
-                )}
-              </div>
+            <div className="text-center">
+              <div className={`w-3 h-3 rounded-full mx-auto mb-2 ${walletStatus.google ? 'bg-green-500' : 'bg-red-500'}`}></div>
+              <p className="text-sm font-medium">Google Wallet</p>
+              <p className={`text-xs ${walletStatus.google ? 'text-green-600' : 'text-red-600'}`}>
+                {walletStatus.google ? 'Configured' : 'Not Configured'}
+              </p>
             </div>
-          </CardContent>
-        </Card>
+            <div className="text-center">
+              <div className="w-3 h-3 rounded-full mx-auto mb-2 bg-green-500"></div>
+              <p className="text-sm font-medium">PWA Wallet</p>
+              <p className="text-xs text-green-600">Always Available</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* Google Wallet Testing */}
-        {selectedCardData && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Smartphone className="h-5 w-5" />
-                Google Wallet Testing - {selectedCardData.name}
-              </CardTitle>
-              <CardDescription>
-                Test Google Wallet pass generation and QR code functionality
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Google Wallet Button */}
-                <div className="text-center space-y-3">
-                  <h4 className="font-semibold flex items-center justify-center gap-2">
-                    <Wallet className="h-4 w-4" />
-                    Google Wallet Pass
-                  </h4>
-                  <Button
-                    onClick={() => testGoogleWallet(selectedCardData.id)}
-                    disabled={isLoading}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 font-medium py-3"
-                    style={{ backgroundColor: '#4285f4' }}
-                  >
-                    <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M21 8V7l-3 2-3-2v1l3 2 3-2zM1 12v6c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2v-6H1zm20-7H3c-1.1 0-2 .9-2 2v1h22V7c0-1.1-.9-2-2-2z"/>
-                    </svg>
-                    Add to Google Wallet
-                  </Button>
-                  <p className="text-xs text-gray-600 mb-2">
-                    Opens Google Wallet pass in new tab
-                  </p>
-                  <div className="text-xs text-blue-600 font-medium">
-                    ✓ Level L QR codes • ✓ 256x256px optimized • ✓ 4-module padding
-                  </div>
-                </div>
-
-                {/* QR Code Preview */}
-                <div className="text-center space-y-3">
-                  <h4 className="font-semibold flex items-center justify-center gap-2">
-                    <QrCode className="h-4 w-4" />
-                    Join QR Code
-                  </h4>
-                  <div className="bg-white p-4 rounded-lg border-2 border-gray-200 inline-block">
-                    <QRCode
-                      id={`qr-${selectedCardData.id}`}
-                      value={getJoinUrl(selectedCardData.id)}
-                      size={128}
-                      level="L"
-                      includeMargin={true}
+      {/* Main Testing Interface */}
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <CardTitle>Wallet Testing Interface</CardTitle>
+            <Button 
+              onClick={() => generateTestData(selectedTab)} 
+              disabled={loading}
+            >
+              {loading ? 'Generating...' : 'Regenerate Test Data'}
+            </Button>
+          </div>
+        </CardHeader>
+        
+        <CardContent>
+          <Tabs value={selectedTab} onValueChange={(value) => setSelectedTab(value as 'loyalty' | 'membership')}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="loyalty" className="flex items-center gap-2">
+                <CreditCard className="h-4 w-4" />
+                Loyalty Cards
+              </TabsTrigger>
+              <TabsTrigger value="membership" className="flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Gym Memberships
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="loyalty" className="space-y-6">
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Loyalty Card Test Scenarios</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {testCards.filter(card => card.cardType === 'loyalty').map((card) => (
+                    <TestCardComponent
+                      key={card.id}
+                      card={card}
+                      onGenerateWallet={generateWallet}
+                      onMarkUsage={markUsage}
+                      walletStatus={walletStatus}
+                      isMarking={sessionMarking}
                     />
-                  </div>
-                  <p className="text-xs text-gray-600 max-w-xs break-all">
-                    {getJoinUrl(selectedCardData.id)}
-                  </p>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => testQRCodeGeneration(selectedCardData.id)}
-                    className="flex items-center gap-2"
-                  >
-                    <Eye className="h-4 w-4" />
-                    Test QR Code
-                  </Button>
-                </div>
-
-                {/* Card Details */}
-                <div className="space-y-3">
-                  <h4 className="font-semibold">Card Details</h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Business:</span>
-                      <span className="font-medium">{selectedCardData.business_name}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Progress:</span>
-                      <span className="font-medium">{selectedCardData.current_stamps}/{selectedCardData.total_stamps}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Reward:</span>
-                      <span className="font-medium text-xs">{selectedCardData.reward_description}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Test Scenario:</span>
-                      <Badge variant="outline">{selectedCardData.test_scenario}</Badge>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Performance Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Google Wallet Performance */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
-                Google Wallet API Performance
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Average Response Time</span>
-                  <Badge variant={performanceMetrics.google_wallet.avg_response_time < 2000 ? 'default' : 'destructive'}>
-                    {performanceMetrics.google_wallet.avg_response_time}ms
-                  </Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Success Rate</span>
-                  <Badge variant={performanceMetrics.google_wallet.success_rate >= 95 ? 'default' : 'destructive'}>
-                    {performanceMetrics.google_wallet.success_rate}%
-                  </Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Total Requests</span>
-                  <span className="font-medium">{performanceMetrics.google_wallet.total_requests}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Avg File Size</span>
-                  <span className="font-medium">{performanceMetrics.google_wallet.avg_file_size}KB</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* QR Code Performance */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <QrCode className="h-5 w-5" />
-                QR Code Generation Performance
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Average Generation Time</span>
-                  <Badge variant={performanceMetrics.qr_generation.avg_response_time < 100 ? 'default' : 'destructive'}>
-                    {performanceMetrics.qr_generation.avg_response_time}ms
-                  </Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Success Rate</span>
-                  <Badge variant={performanceMetrics.qr_generation.success_rate >= 95 ? 'default' : 'destructive'}>
-                    {performanceMetrics.qr_generation.success_rate}%
-                  </Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Total Generated</span>
-                  <span className="font-medium">{performanceMetrics.qr_generation.total_generated}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Avg Size (bytes)</span>
-                  <span className="font-medium">{performanceMetrics.qr_generation.avg_size}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Recent Test Results */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5" />
-              Recent Test Results
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-2">Type</th>
-                    <th className="text-left p-2">Status</th>
-                    <th className="text-left p-2">Duration</th>
-                    <th className="text-left p-2">Size</th>
-                    <th className="text-left p-2">Timestamp</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {testResults.map((result, index) => (
-                    <tr key={index} className="border-b hover:bg-gray-50">
-                      <td className="p-2">
-                        <Badge variant="outline">{result.test_type}</Badge>
-                      </td>
-                      <td className="p-2">
-                        {result.status === 'success' ? (
-                          <CheckCircle className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <XCircle className="h-4 w-4 text-red-500" />
-                        )}
-                      </td>
-                      <td className="p-2">{result.duration_ms}ms</td>
-                      <td className="p-2">{result.response_size_kb}KB</td>
-                      <td className="p-2">{new Date(result.timestamp).toLocaleTimeString()}</td>
-                    </tr>
                   ))}
-                </tbody>
-              </table>
-              {testResults.length === 0 && (
-                <p className="text-center text-gray-500 py-4">No test results yet</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Debug Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5" />
-              Debug Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <h4 className="font-semibold mb-2">System Status</h4>
-                <div className="space-y-1 text-xs text-gray-600">
-                  <p><strong>Base URL:</strong> {baseUrl}</p>
-                  <p><strong>Production Domain:</strong> {PRODUCTION_DOMAIN}</p>
-                  <p><strong>Auto Refresh:</strong> {isAutoRefresh ? 'Active' : 'Inactive'}</p>
-                  <p><strong>Test Cards:</strong> {testCards.length}</p>
                 </div>
               </div>
-              
-              <div>
-                <h4 className="font-semibold mb-2">Selected Card</h4>
-                {selectedCardData ? (
-                  <div className="space-y-1 text-xs text-gray-600">
-                    <p><strong>ID:</strong> {selectedCardData.id.substring(0, 8)}...</p>
-                    <p><strong>Status:</strong> {selectedCardData.status}</p>
-                    <p><strong>Progress:</strong> {Math.round(selectedCardData.progress)}%</p>
-                    <p><strong>Join URL:</strong> {getJoinUrl(selectedCardData.id).substring(0, 40)}...</p>
+            </TabsContent>
+            
+            <TabsContent value="membership" className="space-y-6">
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-semibold">Gym Membership Test Scenarios</h3>
+                  <div className="flex gap-2">
+                    <Select onValueChange={setSelectedBusiness} value={selectedBusiness}>
+                      <SelectTrigger className="w-48">
+                        <SelectValue placeholder="Select business for testing" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="test-gym-1">Test Gym 1</SelectItem>
+                        <SelectItem value="test-gym-2">Test Gym 2</SelectItem>
+                        <SelectItem value="test-gym-3">Test Gym 3</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                ) : (
-                  <p className="text-xs text-gray-500">No card selected</p>
-                )}
-              </div>
-              
-              <div>
-                <h4 className="font-semibold mb-2">Quick Actions</h4>
-                <div className="space-y-2">
-                  <Button size="sm" variant="outline" onClick={() => window.open('/api/health/env', '_blank')}>
-                    View Environment Status
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => window.open('/api/debug/env', '_blank')}>
-                    Debug Private Key
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => window.open('/api/test/results', '_blank')}>
-                    View All Test Results
-                  </Button>
                 </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {testCards.filter(card => card.cardType === 'gym').map((card) => (
+                    <TestCardComponent
+                      key={card.id}
+                      card={card}
+                      onGenerateWallet={generateWallet}
+                      onMarkUsage={markUsage}
+                      walletStatus={walletStatus}
+                      isMarking={sessionMarking}
+                    />
+                  ))}
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+
+      {/* Last Update Status */}
+      {lastUpdate && (
+        <Card className={lastUpdate.success ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}>
+          <CardContent className="pt-4">
+            <div className="flex items-start gap-3">
+              {lastUpdate.success ? (
+                <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+              ) : (
+                <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+              )}
+              <div className="flex-1">
+                <h4 className={`font-semibold ${lastUpdate.success ? 'text-green-800' : 'text-red-800'}`}>
+                  {lastUpdate.success ? 'Update Successful' : 'Update Failed'}
+                </h4>
+                <p className={`text-sm ${lastUpdate.success ? 'text-green-700' : 'text-red-700'}`}>
+                  {lastUpdate.success ? (
+                                         `${lastUpdate.type === 'session' ? 'Session' : 'Stamp'} marked successfully. 
+                      ${lastUpdate.type === 'session' ? 
+                        `Remaining: ${lastUpdate.details.result?.sessions_remaining || 0}` : 
+                        `Current: ${lastUpdate.details.result?.current_stamps || 0}`}`
+                  ) : (
+                                         lastUpdate.details.error || 'Unknown error'
+                  )}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {new Date(lastUpdate.timestamp).toLocaleTimeString()}
+                </p>
               </div>
             </div>
           </CardContent>
         </Card>
-      </div>
+      )}
+
+      {/* Instructions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Testing Instructions</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <h4 className="font-semibold mb-2">1. Generate Test Data</h4>
+            <p className="text-sm text-gray-600">
+              Click &quot;Regenerate Test Data&quot; to create fresh test scenarios for the selected card type.
+            </p>
+          </div>
+          <div>
+            <h4 className="font-semibold mb-2">2. Test Wallet Generation</h4>
+            <p className="text-sm text-gray-600">
+              Use the Apple (🍎), Google (G), and PWA (📱) buttons to generate wallet passes for each scenario.
+            </p>
+          </div>
+          <div>
+            <h4 className="font-semibold mb-2">3. Test Data Synchronization</h4>
+            <p className="text-sm text-gray-600">
+              For gym memberships, select a business and use &quot;Mark Session&quot; to test real-time updates.
+              For loyalty cards, use &quot;Add Stamp&quot; to test stamp collection.
+            </p>
+          </div>
+          <div>
+            <h4 className="font-semibold mb-2">4. Verify Updates</h4>
+            <p className="text-sm text-gray-600">
+              After marking sessions/stamps, regenerate wallets to verify that updates are reflected immediately.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
     </div>
+  )
+}
+
+// Individual test card component
+function TestCardComponent({ 
+  card, 
+  onGenerateWallet, 
+  onMarkUsage, 
+  walletStatus, 
+  isMarking 
+}: {
+  card: TestCard
+  onGenerateWallet: (cardId: string, walletType: 'apple' | 'google' | 'pwa') => void
+  onMarkUsage: (cardId: string, usageType: 'session' | 'stamp') => void
+  walletStatus: WalletStatus
+  isMarking: boolean
+}) {
+  const [walletGenerating, setWalletGenerating] = useState<Record<string, boolean>>({})
+  
+  const handleGenerateWallet = async (type: 'apple' | 'google' | 'pwa') => {
+    setWalletGenerating(prev => ({ ...prev, [type]: true }))
+    await onGenerateWallet(card.id, type)
+    setWalletGenerating(prev => ({ ...prev, [type]: false }))
+  }
+  
+  const getStatusColor = () => {
+    if (card.isExpired) return 'border-red-200 bg-red-50'
+    if (card.isCompleted) return 'border-green-200 bg-green-50'
+    return 'border-blue-200 bg-blue-50'
+  }
+  
+  const getProgressText = () => {
+    if (card.cardType === 'gym') {
+      const details = card.details.membership || card.details
+      return `${details.sessions_used || 0}/${details.total_sessions || 20} sessions`
+    } else {
+      const details = card.details
+      return `${details.current_stamps || 0}/${details.total_stamps || 10} stamps`
+    }
+  }
+  
+  return (
+    <Card className={getStatusColor()}>
+      <CardHeader className="pb-3">
+        <div className="flex justify-between items-start">
+          <div className="flex-1">
+            <CardTitle className="text-sm">{card.scenario.replace(/_/g, ' ').toUpperCase()}</CardTitle>
+            <p className="text-xs text-gray-600">{getProgressText()}</p>
+          </div>
+          <Badge variant={card.isExpired ? 'destructive' : card.isCompleted ? 'default' : 'secondary'}>
+            {card.isExpired ? 'Expired' : card.isCompleted ? 'Complete' : 'Active'}
+          </Badge>
+        </div>
+      </CardHeader>
+      
+      <CardContent className="space-y-4">
+        {/* Progress Bar */}
+        <div>
+          <div className="flex justify-between text-xs mb-1">
+            <span>Progress</span>
+            <span>{Math.round(card.progress)}%</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2">
+            <div 
+              className={`h-2 rounded-full transition-all ${
+                card.isCompleted ? 'bg-green-500' : 'bg-blue-500'
+              }`}
+              style={{ width: `${Math.min(card.progress, 100)}%` }}
+            />
+          </div>
+        </div>
+        
+        {/* Card Details */}
+        <div className="text-xs text-gray-600 space-y-1">
+          {card.cardType === 'gym' ? (
+            <>
+              <p>Cost: ₩{(card.details.membership?.cost || card.details.cost || 15000).toLocaleString()}</p>
+              {card.details.membership?.expiry_date && (
+                <p>Expires: {new Date(card.details.membership.expiry_date).toLocaleDateString()}</p>
+              )}
+            </>
+          ) : (
+            <>
+              <p>Business: {card.details.business?.name || 'Test Business'}</p>
+              <p>Reward: {card.details.reward_description || 'Free item'}</p>
+            </>
+          )}
+          <p>ID: {card.id.substring(0, 8)}</p>
+        </div>
+        
+        {/* Wallet Generation Buttons */}
+        <div className="space-y-2">
+          <div className="grid grid-cols-3 gap-1">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleGenerateWallet('apple')}
+              disabled={walletGenerating.apple || !walletStatus.apple}
+              className="text-xs"
+              title={walletStatus.apple ? 'Generate Apple Wallet' : 'Apple Wallet not configured'}
+            >
+              {walletGenerating.apple ? '...' : '🍎'}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleGenerateWallet('google')}
+              disabled={walletGenerating.google || !walletStatus.google}
+              className="text-xs"
+              title={walletStatus.google ? 'Generate Google Wallet' : 'Google Wallet not configured'}
+            >
+              {walletGenerating.google ? '...' : 'G'}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleGenerateWallet('pwa')}
+              disabled={walletGenerating.pwa}
+              className="text-xs"
+              title="Generate PWA Wallet"
+            >
+              {walletGenerating.pwa ? '...' : '📱'}
+            </Button>
+          </div>
+          
+          {/* Mark Usage Button */}
+          {!card.isExpired && !card.isCompleted && (
+            <Button
+              size="sm"
+              onClick={() => onMarkUsage(card.id, card.cardType === 'gym' ? 'session' : 'stamp')}
+              disabled={isMarking}
+              className="w-full text-xs"
+            >
+              {isMarking ? 'Marking...' : 
+                card.cardType === 'gym' ? 'Mark Session' : 'Add Stamp'}
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   )
 }
