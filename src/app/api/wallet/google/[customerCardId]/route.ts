@@ -144,12 +144,17 @@ export async function GET(
 
     console.log('Generating Google Wallet for card ID:', customerCardId)
 
-    // Get customer card with stamp card details
+    // Get customer card with stamp card details and membership info
     const { data: customerCard, error } = await supabase
       .from('customer_cards')
       .select(`
         id,
         current_stamps,
+        membership_type,
+        sessions_used,
+        total_sessions,
+        cost,
+        expiry_date,
         created_at,
         stamp_cards (
           id,
@@ -198,32 +203,53 @@ export async function GET(
       description: string
     }
 
-    // Validate required data exists
-    if (!stampCardData) {
-      const errorMsg = 'Stamp card data missing'
+    if (!stampCardData || !businessData) {
+      const errorMsg = 'Stamp card or business data missing'
       console.error(errorMsg)
-      logger.error('Google Wallet stamp card data missing', {
-        customerCardId,
-        timestamp: new Date().toISOString()
-      })
       return NextResponse.json(
-        { error: 'Stamp card data not found' },
+        { error: 'Card data incomplete' },
         { status: 404 }
       )
     }
 
-    if (!businessData) {
-      const errorMsg = 'Business data missing'
-      console.error(errorMsg)
-      logger.error('Google Wallet business data missing', {
-        customerCardId,
-        stampCardId: stampCardData.id,
-        timestamp: new Date().toISOString()
-      })
-      return NextResponse.json(
-        { error: 'Business data not found' },
-        { status: 404 }
-      )
+    // Determine card type and calculate appropriate progress
+    const isGymMembership = customerCard.membership_type === 'gym'
+    let progress: number
+    let isCompleted: boolean
+    let primaryText: string
+    let secondaryText: string
+    let pointsUsed: number
+    let pointsTotal: number
+
+    if (isGymMembership) {
+      // Handle gym membership logic
+      const sessionsUsed = customerCard.sessions_used || 0
+      const totalSessions = customerCard.total_sessions || 20
+      progress = (sessionsUsed / totalSessions) * 100
+      isCompleted = sessionsUsed >= totalSessions
+      pointsUsed = sessionsUsed
+      pointsTotal = totalSessions
+      primaryText = `${sessionsUsed} / ${totalSessions} Sessions Used`
+      secondaryText = isCompleted ? 
+        'All sessions complete!' : 
+        `${totalSessions - sessionsUsed} sessions remaining`
+      
+      // Check if membership is expired
+      const isExpired = customerCard.expiry_date ? new Date(customerCard.expiry_date) < new Date() : false
+      if (isExpired && !isCompleted) {
+        isCompleted = true
+        secondaryText = 'Membership expired'
+      }
+    } else {
+      // Handle loyalty card logic
+      progress = (customerCard.current_stamps / stampCardData.total_stamps) * 100
+      isCompleted = customerCard.current_stamps >= stampCardData.total_stamps
+      pointsUsed = customerCard.current_stamps
+      pointsTotal = stampCardData.total_stamps
+      primaryText = `${customerCard.current_stamps} / ${stampCardData.total_stamps} Stamps`
+      secondaryText = isCompleted ? 
+        'Reward ready to claim!' : 
+        `${stampCardData.total_stamps - customerCard.current_stamps} stamps needed`
     }
 
     const stampCard = {
@@ -241,10 +267,7 @@ export async function GET(
     console.log('Stamp Card:', stampCard)
     console.log('Business:', business)
     
-    // Calculate progress
-    const progress = Math.min((customerCard.current_stamps / stampCard.total_stamps) * 100, 100)
-    const isCompleted = customerCard.current_stamps >= stampCard.total_stamps
-    const stampsRemaining = Math.max(stampCard.total_stamps - customerCard.current_stamps, 0)
+    // Progress and completion already calculated above based on card type
 
     // Generate QR code for join URL
     const PRODUCTION_DOMAIN = 'https://www.rewardjar.xyz'
@@ -372,7 +395,7 @@ export async function GET(
             "header": "Status",
             "body": isCompleted ? 
               "Congratulations! Your reward is ready to claim." : 
-              `Collect ${stampsRemaining} more stamps to unlock your reward.`
+              `Collect ${pointsTotal - pointsUsed} more stamps to unlock your reward.`
           }
         ],
         "hexBackgroundColor": "#10b981", // green-500
@@ -418,7 +441,7 @@ export async function GET(
           saveUrl, 
           isCompleted, 
           progress, 
-          stampsRemaining,
+          pointsTotal - pointsUsed,
           qrCodeDataUrl, // Pass the QR code data URL
           joinUrl // Pass the join URL for additional context
         )
@@ -602,7 +625,7 @@ function generateGoogleWalletHTML(
   saveUrl: string, 
   isCompleted: boolean, 
   progress: number, 
-  _stampsRemaining: number,
+  stampsRemaining: number,
   qrCodeDataUrl: string,
   joinUrl: string
 ): string {

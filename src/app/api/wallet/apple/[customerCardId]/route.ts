@@ -37,12 +37,17 @@ export async function GET(
 
     console.log('🍎 Generating Apple Wallet for card ID:', customerCardId)
 
-    // Get customer card with stamp card details
+    // Get customer card with stamp card details and membership info
     const { data: customerCard, error } = await supabase
       .from('customer_cards')
       .select(`
         id,
         current_stamps,
+        membership_type,
+        sessions_used,
+        total_sessions,
+        cost,
+        expiry_date,
         created_at,
         updated_at,
         stamp_cards (
@@ -69,7 +74,7 @@ export async function GET(
 
     console.log('✅ Fetched customer card:', customerCard)
 
-    // Handle the data structure properly - stamp_cards is an object, not an array
+    // Handle data structure properly - stamp_cards is an object from Supabase joins
     const stampCardData = (customerCard.stamp_cards as unknown) as {
       id: string
       total_stamps: number
@@ -81,12 +86,11 @@ export async function GET(
       }
     }
 
-    const businessData = stampCardData.businesses as {
+    const businessData = stampCardData?.businesses as {
       name: string
       description: string
     }
 
-    // Validate required data exists
     if (!stampCardData) {
       console.error('❌ Stamp card data missing')
       return NextResponse.json(
@@ -95,10 +99,41 @@ export async function GET(
       )
     }
 
-    // Calculate progress and completion status
-    const progress = (customerCard.current_stamps / stampCardData.total_stamps) * 100
-    const isCompleted = customerCard.current_stamps >= stampCardData.total_stamps
-    const stampsRemaining = Math.max(0, stampCardData.total_stamps - customerCard.current_stamps)
+    // Determine card type and calculate appropriate progress
+    const isGymMembership = customerCard.membership_type === 'gym'
+    let progress: number
+    let isCompleted: boolean
+    let remaining: number
+    let primaryValue: string
+    let progressLabel: string
+    let remainingLabel: string
+
+    if (isGymMembership) {
+      // Handle gym membership logic
+      const sessionsUsed = customerCard.sessions_used || 0
+      const totalSessions = customerCard.total_sessions || 20
+      progress = (sessionsUsed / totalSessions) * 100
+      isCompleted = sessionsUsed >= totalSessions
+      remaining = Math.max(0, totalSessions - sessionsUsed)
+      primaryValue = `${sessionsUsed}/${totalSessions}`
+      progressLabel = "Sessions Used"
+      remainingLabel = isCompleted ? "Status" : "Remaining"
+      
+      // Check if membership is expired
+      const isExpired = customerCard.expiry_date ? new Date(customerCard.expiry_date) < new Date() : false
+      if (isExpired && !isCompleted) {
+        isCompleted = true
+        remainingLabel = "Status"
+      }
+    } else {
+      // Handle loyalty card logic
+      progress = (customerCard.current_stamps / stampCardData.total_stamps) * 100
+      isCompleted = customerCard.current_stamps >= stampCardData.total_stamps
+      remaining = Math.max(0, stampCardData.total_stamps - customerCard.current_stamps)
+      primaryValue = `${customerCard.current_stamps}/${stampCardData.total_stamps}`
+      progressLabel = "Stamps Collected"
+      remainingLabel = isCompleted ? "Status" : "Remaining"
+    }
 
     // Generate Apple Wallet pass JSON
     const passData = {
@@ -109,16 +144,16 @@ export async function GET(
       organizationName: "RewardJar",
       description: `${stampCardData.name} - ${businessData.name}`,
       logoText: "RewardJar",
-      backgroundColor: "rgb(16, 185, 129)", // green-500
+      backgroundColor: isGymMembership ? "rgb(99, 102, 241)" : "rgb(16, 185, 129)", // indigo for gym, green for loyalty
       foregroundColor: "rgb(255, 255, 255)",
       labelColor: "rgb(255, 255, 255)",
       
       storeCard: {
         primaryFields: [
           {
-            key: "stamps",
-            label: "Stamps Collected",
-            value: `${customerCard.current_stamps}/${stampCardData.total_stamps}`,
+            key: isGymMembership ? "sessions" : "stamps",
+            label: progressLabel,
+            value: primaryValue,
             textAlignment: "PKTextAlignmentCenter"
           }
         ],
@@ -131,8 +166,10 @@ export async function GET(
           },
           {
             key: "remaining",
-            label: isCompleted ? "Status" : "Remaining",
-            value: isCompleted ? "Completed!" : `${stampsRemaining} stamps`,
+            label: remainingLabel,
+            value: isCompleted ? 
+              (isGymMembership ? "Complete" : "Completed!") : 
+              `${remaining} ${isGymMembership ? 'sessions' : 'stamps'}`,
             textAlignment: "PKTextAlignmentRight"
           }
         ],
@@ -143,17 +180,26 @@ export async function GET(
             value: businessData.name,
             textAlignment: "PKTextAlignmentLeft"
           },
-          {
-            key: "reward",
-            label: "Reward",
-            value: stampCardData.reward_description,
-            textAlignment: "PKTextAlignmentLeft"
-          }
+          ...(isGymMembership ? [
+            {
+              key: "cost",
+              label: "Value",
+              value: `₩${(customerCard.cost || 15000).toLocaleString()}`,
+              textAlignment: "PKTextAlignmentRight"
+            }
+          ] : [
+            {
+              key: "reward",
+              label: "Reward",
+              value: stampCardData.reward_description,
+              textAlignment: "PKTextAlignmentRight"
+            }
+          ])
         ],
         headerFields: [
           {
             key: "card_name",
-            label: "Loyalty Card",
+            label: isGymMembership ? "Membership" : "Loyalty Card",
             value: stampCardData.name,
             textAlignment: "PKTextAlignmentCenter"
           }
@@ -162,18 +208,31 @@ export async function GET(
           {
             key: "description",
             label: "About",
-            value: `Collect ${stampCardData.total_stamps} stamps to earn: ${stampCardData.reward_description}`
+            value: isGymMembership ? 
+              `Gym membership with ${customerCard.total_sessions || 20} sessions. Value: ₩${(customerCard.cost || 15000).toLocaleString()}.` :
+              `Collect ${stampCardData.total_stamps} stamps to earn: ${stampCardData.reward_description}`
           },
           {
             key: "business_info",
             label: businessData.name,
-            value: businessData.description || "Visit us to collect stamps and earn rewards!"
+            value: businessData.description || (isGymMembership ? 
+              "Visit us to use your gym sessions!" : 
+              "Visit us to collect stamps and earn rewards!")
           },
           {
             key: "instructions",
             label: "How to Use",
-            value: "Show this pass to collect stamps at participating locations. Your pass will automatically update when new stamps are added."
+            value: isGymMembership ?
+              "Show this pass at the gym to mark session usage. Your pass will automatically update when sessions are used." :
+              "Show this pass to collect stamps at participating locations. Your pass will automatically update when new stamps are added."
           },
+          ...(isGymMembership && customerCard.expiry_date ? [
+            {
+              key: "expiry_info",
+              label: "Valid Until",
+              value: new Date(customerCard.expiry_date).toLocaleDateString()
+            }
+          ] : []),
           {
             key: "contact",
             label: "Questions?",
@@ -181,46 +240,32 @@ export async function GET(
           }
         ]
       },
-
-      // Use barcodes array (iOS 9+) with fallback to barcode (iOS 8)
-      barcodes: [
-        {
-          message: customerCardId,
-          format: "PKBarcodeFormatQR",
-          messageEncoding: "iso-8859-1",
-          altText: `Card ID: ${customerCardId}`
-        }
-      ],
       
-      // Legacy barcode for iOS 8 compatibility
       barcode: {
         message: customerCardId,
         format: "PKBarcodeFormatQR",
         messageEncoding: "iso-8859-1",
-        altText: `Card ID: ${customerCardId}`
+        altText: `${isGymMembership ? 'Membership' : 'Card'} ID: ${customerCardId}`
       },
-
-      locations: [],
       
-      maxDistance: 1000,
-      relevantDate: new Date().toISOString(),
-      
-      // Additional metadata for better Apple Wallet recognition
-      suppressStripShine: false,
-      sharingProhibited: false,
-      
-      // CRITICAL FIX: webServiceURL must be HTTPS domain, not localhost/IP
-      // Apple Wallet rejects localhost and IP addresses
-      webServiceURL: getValidWebServiceURL(),
+      webServiceURL: `${process.env.BASE_URL || 'https://www.rewardjar.xyz'}/api/wallet/apple/updates`,
       authenticationToken: customerCardId,
-      
-      associatedStoreIdentifiers: [],
       
       userInfo: {
         customerCardId: customerCardId,
         stampCardId: stampCardData.id,
-        businessName: businessData.name
-      }
+        businessName: businessData.name,
+        cardType: isGymMembership ? 'membership' : 'loyalty'
+      },
+      
+      locations: [],
+      maxDistance: 1000,
+      relevantDate: new Date().toISOString(),
+      
+      // Add expiry for gym memberships
+      ...(isGymMembership && customerCard.expiry_date && {
+        expirationDate: customerCard.expiry_date
+      })
     }
 
     // Check if we have all required certificates for PKPass generation
