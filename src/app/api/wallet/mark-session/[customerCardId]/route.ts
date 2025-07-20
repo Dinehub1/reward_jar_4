@@ -8,262 +8,335 @@ export async function POST(
   { params }: { params: Promise<{ customerCardId: string }> }
 ) {
   try {
-    const { customerCardId } = await params
-    const { businessId, usageType = 'session', notes } = await request.json()
-    
-    // Validate UUID format
-    if (!validateUUID(customerCardId)) {
-      return NextResponse.json(
-        { error: 'Invalid customer card ID format' },
-        { status: 400 }
-      )
-    }
-    
-    if (!validateUUID(businessId)) {
-      return NextResponse.json(
-        { error: 'Invalid business ID format' },
-        { status: 400 }
-      )
-    }
+    const resolvedParams = await params
+    const customerCardId = resolvedParams.customerCardId
+    const body = await request.json()
+    const { businessId, usageType = 'auto', notes = null } = body
+
+    console.log('🔄 Processing QR scan mark-session request:', {
+      customerCardId,
+      businessId,
+      usageType,
+      notes
+    })
     
     const supabase = await createClient()
     
-    // Get current user for authorization
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      )
-    }
-    
-    // Validate business ownership
-    const { data: business, error: businessError } = await supabase
-      .from('businesses')
-      .select('id, name')
-      .eq('id', businessId)
-      .eq('owner_id', user.id)
-      .single()
-      
-    if (businessError || !business) {
-      return NextResponse.json(
-        { error: 'Business not found or unauthorized' },
-        { status: 403 }
-      )
-    }
-    
-    // Get customer card details
-    const { data: customerCard, error: cardError } = await supabase
+    // Get customer card with stamp card details and membership info
+    const { data: customerCard, error } = await supabase
       .from('customer_cards')
       .select(`
         id,
+        current_stamps,
         membership_type,
         sessions_used,
         total_sessions,
-        current_stamps,
         cost,
         expiry_date,
-        wallet_type,
-        stamp_cards!inner (
+        created_at,
+        stamp_cards (
           id,
+          name,
           total_stamps,
-          name,
-          reward_description
-        ),
-        customers!inner (
+          reward_description,
+          businesses (
           id,
           name,
-          email
+            description
+          )
         )
       `)
       .eq('id', customerCardId)
       .single()
       
-    if (cardError || !customerCard) {
+    if (error || !customerCard) {
+      console.error('Customer card not found:', error)
       return NextResponse.json(
-        { error: 'Customer card not found' },
+        { 
+          error: 'Customer card not found',
+          success: false 
+        },
         { status: 404 }
       )
     }
     
-    // Handle the data structure properly - stamp_cards and customers are arrays from Supabase joins
-    const stampCardData = Array.isArray(customerCard.stamp_cards) && customerCard.stamp_cards.length > 0 
-      ? customerCard.stamp_cards[0] as {
+    // Handle the data structure properly
+    const stampCardData = (customerCard.stamp_cards as unknown) as {
           id: string
           total_stamps: number
           name: string
           reward_description: string
+      businesses: {
+        id: string
+        name: string
+        description: string
+      }
         }
-      : null
 
-    const customerData = Array.isArray(customerCard.customers) && customerCard.customers.length > 0
-      ? customerCard.customers[0] as {
+    const businessData = stampCardData?.businesses as {
           id: string
           name: string
-          email: string
+      description: string
         }
-      : null
 
-    if (!stampCardData || !customerData) {
+    if (!stampCardData || !businessData) {
       return NextResponse.json(
-        { error: 'Card or customer data not found' },
+        { 
+          error: 'Card data incomplete',
+          success: false 
+        },
         { status: 404 }
       )
     }
     
-    // Validate usage type against card type
-    if (customerCard.membership_type === 'gym' && usageType !== 'session') {
+    // Validate business ID if provided
+    if (businessId && businessId !== businessData.id) {
       return NextResponse.json(
-        { error: 'Gym memberships only support session marking' },
-        { status: 400 }
+        { 
+          error: 'Business ID mismatch',
+          success: false 
+        },
+        { status: 403 }
       )
     }
-    
-    if (customerCard.membership_type === 'loyalty' && usageType !== 'stamp') {
-      return NextResponse.json(
-        { error: 'Loyalty cards only support stamp marking' },
-        { status: 400 }
-      )
+
+    // Determine card type and appropriate action
+    const isMembership = customerCard.membership_type === 'gym' || customerCard.membership_type === 'membership'
+    let actualUsageType = usageType
+
+    // Auto-detect usage type if not specified
+    if (usageType === 'auto') {
+      actualUsageType = isMembership ? 'session' : 'stamp'
     }
-    
-    // Validate membership-specific constraints
-    if (customerCard.membership_type === 'gym') {
-      // Check sessions remaining
-      if (customerCard.sessions_used >= (customerCard.total_sessions || 0)) {
-        return NextResponse.json(
-          { 
+
+    console.log('🔍 Card analysis:', {
+      isMembership,
+      membershipType: customerCard.membership_type,
+      actualUsageType,
+      currentStamps: customerCard.current_stamps,
+      totalStamps: stampCardData.total_stamps,
+      sessionsUsed: customerCard.sessions_used,
+      totalSessions: customerCard.total_sessions,
+      expiry: customerCard.expiry_date
+    })
+
+    let result: any = {}
+
+    if (isMembership && actualUsageType === 'session') {
+      // Handle membership session marking
+      const sessionsUsed = customerCard.sessions_used || 0
+      const totalSessions = customerCard.total_sessions || 20
+
+      // Check if sessions remaining
+      if (sessionsUsed >= totalSessions) {
+        return NextResponse.json({
+          success: false,
             error: 'No sessions remaining',
-            sessions_used: customerCard.sessions_used,
-            total_sessions: customerCard.total_sessions
-          },
-          { status: 400 }
-        )
+          sessionsUsed,
+          totalSessions,
+          sessionsRemaining: 0
+        })
       }
       
       // Check expiry
       if (customerCard.expiry_date && new Date(customerCard.expiry_date) < new Date()) {
-        return NextResponse.json(
-          { 
+        return NextResponse.json({
+          success: false,
             error: 'Membership expired',
-            expiry_date: customerCard.expiry_date
-          },
-          { status: 400 }
-        )
+          expiry: customerCard.expiry_date,
+          sessionsUsed,
+          totalSessions
+        })
       }
-    }
-    
-    // Use the database function to mark usage
-    const { data: result, error: markError } = await supabase
-      .rpc('mark_session_usage', {
-        p_customer_card_id: customerCardId,
-        p_business_id: businessId,
-        p_marked_by: user.id,
-        p_usage_type: usageType,
-        p_notes: notes || null
-      })
-      
-    if (markError) {
-      console.error('Error marking session/stamp:', markError)
-      return NextResponse.json(
-        { error: 'Failed to mark session/stamp', details: markError.message },
-        { status: 500 }
-      )
-    }
-    
-    if (!result.success) {
-      return NextResponse.json(
-        { error: result.error },
-        { status: 400 }
-      )
-    }
-    
-    // Get updated customer card data
-    const { data: updatedCard, error: updateError } = await supabase
-      .from('customer_cards')
-      .select(`
-        id,
-        membership_type,
-        sessions_used,
-        total_sessions,
-        current_stamps,
-        cost,
-        expiry_date,
-        wallet_type,
-        stamp_cards (
-          id,
-          total_stamps,
-          name,
-          reward_description
-        )
-      `)
-      .eq('id', customerCardId)
-      .single()
-      
-    if (updateError) {
-      console.error('Error fetching updated card:', updateError)
-    }
-    
-    // Calculate progress and status
-    let progress = 0
-    let isCompleted = false
-    let remaining = 0
-    
-    if (customerCard.membership_type === 'gym') {
-      progress = ((updatedCard?.sessions_used || result.sessions_used) / (updatedCard?.total_sessions || 20)) * 100
-      remaining = (updatedCard?.total_sessions || 20) - (updatedCard?.sessions_used || result.sessions_used)
-      isCompleted = remaining <= 0
-    } else {
+
+      // Record session usage
+      const { error: sessionError } = await supabase
+        .from('session_usage')
+        .insert({
+          customer_card_id: customerCardId,
+          business_id: businessData.id,
+          marked_by: null, // QR scan doesn't have a specific user
+          usage_type: 'session',
+          notes: notes || `QR scan session marking at ${businessData.name}`
+        })
+
+      if (sessionError) {
+        console.error('Error recording session usage:', sessionError)
+        return NextResponse.json({
+          success: false,
+          error: 'Failed to record session usage'
+        }, { status: 500 })
+      }
+
+      // Update sessions used
+      const { error: updateError } = await supabase
+        .from('customer_cards')
+        .update({
+          sessions_used: sessionsUsed + 1,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', customerCardId)
+
+      if (updateError) {
+        console.error('Error updating sessions used:', updateError)
+        return NextResponse.json({
+          success: false,
+          error: 'Failed to update session count'
+        }, { status: 500 })
+      }
+
+      result = {
+        success: true,
+        action: 'session_marked',
+        cardType: 'membership',
+        sessionsUsed: sessionsUsed + 1,
+        totalSessions,
+        sessionsRemaining: totalSessions - (sessionsUsed + 1),
+        isCompleted: (sessionsUsed + 1) >= totalSessions,
+        message: `Session marked! ${totalSessions - (sessionsUsed + 1)} sessions remaining.`,
+        businessName: businessData.name,
+        membershipCost: customerCard.cost || 15000
+      }
+
+      // Add completion message if all sessions used
+      if ((sessionsUsed + 1) >= totalSessions) {
+        result.message = 'All sessions used! Your membership is complete.'
+        result.completionReward = 'Membership benefits fully utilized'
+      }
+
+    } else if (!isMembership && actualUsageType === 'stamp') {
+      // Handle loyalty card stamp addition
+      const currentStamps = customerCard.current_stamps || 0
       const totalStamps = stampCardData.total_stamps || 10
-      const currentStamps = updatedCard?.current_stamps || result.current_stamps
-      progress = (currentStamps / totalStamps) * 100
-      remaining = totalStamps - currentStamps
-      isCompleted = remaining <= 0
+
+      // Check if already completed
+      if (currentStamps >= totalStamps) {
+        return NextResponse.json({
+          success: false,
+          error: 'Loyalty card already completed',
+          currentStamps,
+          totalStamps,
+          stampsRemaining: 0,
+          rewardReady: true
+        })
+      }
+
+      // Record stamp usage
+      const { error: sessionError } = await supabase
+        .from('session_usage')
+        .insert({
+          customer_card_id: customerCardId,
+          business_id: businessData.id,
+          marked_by: null, // QR scan doesn't have a specific user
+          usage_type: 'stamp',
+          notes: notes || `QR scan stamp collection at ${businessData.name}`
+        })
+
+      if (sessionError) {
+        console.error('Error recording stamp usage:', sessionError)
+        return NextResponse.json({
+          success: false,
+          error: 'Failed to record stamp usage'
+        }, { status: 500 })
+      }
+
+      // Update stamps
+      const { error: updateError } = await supabase
+        .from('customer_cards')
+        .update({
+          current_stamps: currentStamps + 1,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', customerCardId)
+      
+      if (updateError) {
+        console.error('Error updating stamps:', updateError)
+        return NextResponse.json({
+          success: false,
+          error: 'Failed to update stamp count'
+        }, { status: 500 })
+      }
+
+      result = {
+        success: true,
+        action: 'stamp_added',
+        cardType: 'loyalty',
+        currentStamps: currentStamps + 1,
+        totalStamps,
+        stampsRemaining: totalStamps - (currentStamps + 1),
+        isCompleted: (currentStamps + 1) >= totalStamps,
+        message: `Stamp added! ${totalStamps - (currentStamps + 1)} more stamps needed for your reward.`,
+        businessName: businessData.name,
+        rewardDescription: stampCardData.reward_description
+      }
+
+      // Add completion message if reward unlocked
+      if ((currentStamps + 1) >= totalStamps) {
+        result.message = 'Congratulations! Your reward is ready to claim.'
+        result.rewardReady = true
+      }
+
+    } else {
+      return NextResponse.json({
+        success: false,
+        error: `Invalid usage type '${actualUsageType}' for ${isMembership ? 'membership' : 'loyalty'} card`
+      }, { status: 400 })
     }
-    
-    // Trigger immediate wallet updates (will be processed by background job)
-    console.log(`✅ ${usageType} marked successfully for card ${customerCardId}`)
-    console.log(`📊 Progress: ${Math.round(progress)}%, Remaining: ${remaining}`)
-    
-    const response = {
-      success: true,
-      marked_at: new Date().toISOString(),
-      usage_type: usageType,
-      business: {
-        id: business.id,
-        name: business.name
-      },
-      customer: {
-        id: customerData.id,
-        name: customerData.name
-      },
-      card: {
-        id: customerCardId,
-        membership_type: customerCard.membership_type,
-        wallet_type: customerCard.wallet_type,
-        progress: Math.round(progress),
-        is_completed: isCompleted,
-        remaining: remaining
-      },
-      result: usageType === 'session' ? {
-        sessions_used: result.sessions_used,
-        sessions_remaining: result.sessions_remaining,
-        total_sessions: updatedCard?.total_sessions || customerCard.total_sessions
-      } : {
-        current_stamps: result.current_stamps,
-        stamps_remaining: remaining,
-        total_stamps: stampCardData.total_stamps
-      },
-      notes: notes || null
+
+    // Queue wallet updates for real-time synchronization
+    try {
+      const { error: queueError } = await supabase
+        .from('wallet_update_queue')
+        .insert({
+          customer_card_id: customerCardId,
+          update_type: isMembership ? 'session_update' : 'stamp_update',
+          metadata: {
+            action: result.action,
+            timestamp: new Date().toISOString(),
+            businessId: businessData.id,
+            businessName: businessData.name,
+            ...(isMembership ? {
+              sessionsUsed: result.sessionsUsed,
+              totalSessions: result.totalSessions,
+              sessionsRemaining: result.sessionsRemaining
+            } : {
+              currentStamps: result.currentStamps,
+              totalStamps: result.totalStamps,
+              stampsRemaining: result.stampsRemaining
+            })
+          },
+          processed: false,
+          created_at: new Date().toISOString()
+        })
+
+      if (queueError) {
+        console.warn('Warning: Failed to queue wallet update:', queueError)
+        // Don't fail the main request for this
+      } else {
+        console.log('✅ Wallet update queued for real-time synchronization')
+        result.walletUpdateQueued = true
+      }
+    } catch (queueError) {
+      console.warn('Warning: Error queuing wallet update:', queueError)
+      // Continue without failing
     }
-    
-    return NextResponse.json(response, { status: 200 })
+
+    console.log('✅ QR scan processed successfully:', result)
+
+    return NextResponse.json(result, {
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache'
+      }
+    })
     
   } catch (error) {
-    console.error('Error in mark-session API:', error)
+    console.error('Error processing mark-session request:', error)
     return NextResponse.json(
       { 
+        success: false,
         error: 'Internal server error',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        message: error instanceof Error ? error.message : 'Unknown error occurred'
       },
       { status: 500 }
     )

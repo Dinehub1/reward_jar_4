@@ -71,8 +71,8 @@ export async function POST(request: NextRequest) {
 
     if (isLoyaltyCard) {
       // Handle loyalty stamp card
-      const { data: stampCard, error: cardError } = await supabase
-        .from('stamp_cards')
+    const { data: stampCard, error: cardError } = await supabase
+      .from('stamp_cards')
         .select(`
           id, 
           business_id, 
@@ -86,36 +86,36 @@ export async function POST(request: NextRequest) {
           )
         `)
         .eq('id', cardId)
-        .eq('status', 'active')
-        .single()
+      .eq('status', 'active')
+      .single()
 
-      if (cardError || !stampCard) {
-        return NextResponse.json(
-          { error: 'Stamp card not found or inactive' },
-          { status: 404 }
-        )
-      }
+    if (cardError || !stampCard) {
+      return NextResponse.json(
+        { error: 'Stamp card not found or inactive' },
+        { status: 404 }
+      )
+    }
 
       cardData = stampCard
       businessData = Array.isArray(stampCard.businesses) ? stampCard.businesses[0] : stampCard.businesses
 
       // Check if customer has already joined this stamp card
-      const { data: existingCard } = await supabase
-        .from('customer_cards')
-        .select('id')
-        .eq('customer_id', customer.id)
+    const { data: existingCard } = await supabase
+      .from('customer_cards')
+      .select('id')
+      .eq('customer_id', customer.id)
         .eq('stamp_card_id', cardId)
-        .single()
+      .single()
 
-      if (existingCard) {
-        return NextResponse.json(
-          { 
-            error: 'Already joined this stamp card',
-            customerCardId: existingCard.id 
-          },
-          { status: 409 }
-        )
-      }
+    if (existingCard) {
+      return NextResponse.json(
+        { 
+          error: 'Already joined this stamp card',
+          customerCardId: existingCard.id 
+        },
+        { status: 409 }
+      )
+    }
 
     } else if (isMembershipCard) {
       // Handle membership card

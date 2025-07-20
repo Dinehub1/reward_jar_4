@@ -17,20 +17,28 @@ const logger = winston.createLogger({
   ]
 })
 
-// Google Wallet class creation function
-async function createGoogleWalletClass() {
+// Google Wallet class creation function with dynamic card type support
+async function createGoogleWalletClass(cardType: 'loyalty' | 'membership' = 'loyalty') {
   if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY) {
     throw new Error('Google Wallet credentials not configured')
   }
 
   const issuerID = process.env.GOOGLE_ISSUER_ID || '3388000000022940702'
-  const classId = `${issuerID}.loyalty.rewardjar`
+  const classId = `${issuerID}.${cardType}.rewardjar`
   
-  // Create loyalty class definition
-  const loyaltyClass = {
+  console.log('🔐 Creating Google Wallet class with RS256 algorithm')
+  console.log('🔍 Private key format validated for class creation:', {
+    hasBeginMarker: process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY.includes('-----BEGIN PRIVATE KEY-----'),
+    hasEndMarker: process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY.includes('-----END PRIVATE KEY-----'),
+    hasNewlines: process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY.includes('\\n'),
+    length: process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY.length
+  })
+  
+  // Create class definition based on card type
+  const classDefinition = {
     id: classId,
     issuerName: "RewardJar",
-    programName: "Digital Loyalty Cards",
+    programName: cardType === 'membership' ? "Digital Membership Cards" : "Digital Loyalty Cards",
     programLogo: {
       sourceUri: {
         uri: "https://storage.googleapis.com/wallet-lab-tools-codelab-artifacts-public/pass_google_logo.jpg"
@@ -42,60 +50,24 @@ async function createGoogleWalletClass() {
         }
       }
     },
-    hexBackgroundColor: "#10b981",
+    hexBackgroundColor: cardType === 'membership' ? "#6366f1" : "#10b981", // Indigo for membership, green for loyalty
     countryCode: "US",
     reviewStatus: "UNDER_REVIEW",
     allowMultipleUsersPerObject: false
   }
 
   try {
-    // Process the private key to handle various formats properly (same logic as generateGoogleWalletJWT)
-    let privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY
-    
-    // Handle different newline formats
-    if (privateKey.includes('\\n')) {
-      privateKey = privateKey.replace(/\\n/g, '\n')
-    }
-    
-    // Remove any surrounding quotes that might be present
-    privateKey = privateKey.replace(/^["']|["']$/g, '')
-    
-    // Ensure proper line endings for PEM format
-    if (!privateKey.includes('\n')) {
-      // If no newlines, try to detect and add them after header/footer
-      privateKey = privateKey
-        .replace('-----BEGIN PRIVATE KEY-----', '-----BEGIN PRIVATE KEY-----\n')
-        .replace('-----END PRIVATE KEY-----', '\n-----END PRIVATE KEY-----')
-    }
-
-    // Validate PEM format
-    if (!privateKey.includes('-----BEGIN PRIVATE KEY-----') || !privateKey.includes('-----END PRIVATE KEY-----')) {
-      throw new Error('Invalid private key format - must be PEM format')
-    }
-    
-    // Additional validation for JWT library compatibility
-    if (!privateKey.trim().startsWith('-----BEGIN PRIVATE KEY-----')) {
-      throw new Error('Private key must start with PEM header')
-    }
-
-    console.log('🔐 Creating Google Wallet class with RS256 algorithm')
-    console.log('🔍 Private key format validated for class creation:', {
-      hasBeginMarker: privateKey.includes('-----BEGIN PRIVATE KEY-----'),
-      hasEndMarker: privateKey.includes('-----END PRIVATE KEY-----'),
-      hasNewlines: privateKey.includes('\n'),
-      length: privateKey.length
-    })
-
-    // Generate service account token for Google Wallet API
+    // Create JWT for service account authentication
+    const now = Math.floor(Date.now() / 1000)
     const serviceAccountToken = jwt.sign(
       {
         iss: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
         scope: 'https://www.googleapis.com/auth/wallet_object.issuer',
         aud: 'https://oauth2.googleapis.com/token',
-        iat: Math.floor(Date.now() / 1000),
-        exp: Math.floor(Date.now() / 1000) + 3600
+        iat: now,
+        exp: now + 3600
       },
-      privateKey,
+      process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY.replace(/\\n/g, '\n'),
       { algorithm: 'RS256' }
     )
 
@@ -115,7 +87,7 @@ async function createGoogleWalletClass() {
         'Authorization': `Bearer ${access_token}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(loyaltyClass)
+      body: JSON.stringify(classDefinition)
     })
 
     if (!classResponse.ok) {
@@ -137,10 +109,11 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ customerCardId: string }> }
 ) {
+  const resolvedParams = await params
+  const customerCardId = resolvedParams.customerCardId
+  
   try {
-    const resolvedParams = await params
     const supabase = await createClient()
-    const customerCardId = resolvedParams.customerCardId
 
     console.log('Generating Google Wallet for card ID:', customerCardId)
 
@@ -213,7 +186,7 @@ export async function GET(
     }
 
     // Determine card type and calculate appropriate progress
-    const isGymMembership = customerCard.membership_type === 'gym'
+    const isMembership = customerCard.membership_type === 'gym' || customerCard.membership_type === 'membership'
     let progress: number
     let isCompleted: boolean
     let primaryText: string
@@ -221,8 +194,8 @@ export async function GET(
     let pointsUsed: number
     let pointsTotal: number
 
-    if (isGymMembership) {
-      // Handle gym membership logic
+    if (isMembership) {
+      // Handle membership logic
       const sessionsUsed = customerCard.sessions_used || 0
       const totalSessions = customerCard.total_sessions || 20
       progress = (sessionsUsed / totalSessions) * 100
@@ -267,8 +240,6 @@ export async function GET(
     console.log('Stamp Card:', stampCard)
     console.log('Business:', business)
     
-    // Progress and completion already calculated above based on card type
-
     // Generate QR code for join URL
     const PRODUCTION_DOMAIN = 'https://www.rewardjar.xyz'
     let baseUrl = process.env.BASE_URL || process.env.NEXT_PUBLIC_BASE_URL || PRODUCTION_DOMAIN
@@ -286,14 +257,14 @@ export async function GET(
     const qrGenerationStartTime = Date.now()
     try {
       qrCodeDataUrl = await QRCode.toDataURL(joinUrl, {
-        errorCorrectionLevel: 'L', // Level L (7%) - most reliable for scanning per Google Wallet guidelines
+        errorCorrectionLevel: 'L',
         type: 'image/png',
-        margin: 4, // 4-module padding as per Google Wallet best practices
+        margin: 4,
         color: {
           dark: '#000000',
           light: '#FFFFFF'
         },
-        width: 256 // 256x256px optimal size for wallet display and mobile scanning
+        width: 256
       })
       
       const qrGenerationTime = Date.now() - qrGenerationStartTime
@@ -337,15 +308,15 @@ export async function GET(
       )
     }
 
-    // Ensure Google Wallet class exists
+    // Ensure Google Wallet class exists with correct card type
     try {
-      await createGoogleWalletClass()
+      await createGoogleWalletClass(isMembership ? 'membership' : 'loyalty')
     } catch (error) {
       console.warn('Could not create Google Wallet class:', error)
       // Continue anyway - class might already exist
     }
 
-    // Generate Google Wallet pass data
+    // Generate Google Wallet pass data with dynamic card type support
     const googlePassData = {
       "@context": "https://schema.org",
       "@type": "LoyaltyProgram",
@@ -357,16 +328,16 @@ export async function GET(
         "description": business.description
       },
       "loyaltyObject": {
-        "id": `${process.env.GOOGLE_ISSUER_ID || '3388000000022940702'}.loyalty.rewardjar.${customerCardId}`,
-        "classId": `${process.env.GOOGLE_ISSUER_ID || '3388000000022940702'}.loyalty.rewardjar`,
+        "id": `${process.env.GOOGLE_ISSUER_ID || '3388000000022940702'}.${isMembership ? 'membership' : 'loyalty'}.rewardjar.${customerCardId}`,
+        "classId": `${process.env.GOOGLE_ISSUER_ID || '3388000000022940702'}.${isMembership ? 'membership' : 'loyalty'}.rewardjar`,
         "state": "ACTIVE",
         "accountId": customerCardId,
         "accountName": `Customer ${customerCardId.substring(0, 8)}`,
         "loyaltyPoints": {
           "balance": {
-            "string": `${customerCard.current_stamps}/${stampCard.total_stamps}`
+            "string": isMembership ? `${pointsUsed}/${pointsTotal}` : `${customerCard.current_stamps}/${stampCardData.total_stamps}`
           },
-          "label": "Stamps Collected"
+          "label": isMembership ? "Sessions Used" : "Stamps Collected"
         },
         "secondaryLoyaltyPoints": {
           "balance": {
@@ -383,25 +354,29 @@ export async function GET(
           {
             "id": "business_info",
             "header": business.name,
-            "body": business.description || "Visit us to collect stamps and earn rewards!"
+            "body": business.description || (isMembership ? "Visit us for your fitness sessions!" : "Visit us to collect stamps and earn rewards!")
           },
           {
             "id": "reward_info",
-            "header": "Your Reward",
-            "body": stampCard.reward_description
+            "header": isMembership ? "Membership Value" : "Your Reward",
+            "body": isMembership ? 
+              `₩${(customerCard.cost || 15000).toLocaleString()} membership with ${customerCard.total_sessions || 20} sessions` :
+              stampCard.reward_description
           },
           {
             "id": "status",
             "header": "Status",
             "body": isCompleted ? 
-              "Congratulations! Your reward is ready to claim." : 
-              `Collect ${pointsTotal - pointsUsed} more stamps to unlock your reward.`
+              (isMembership ? "All sessions used!" : "Congratulations! Your reward is ready to claim.") :
+              (isMembership ? 
+                `${pointsTotal - pointsUsed} sessions remaining` :
+                `Collect ${pointsTotal - pointsUsed} more stamps to unlock your reward.`)
           }
         ],
-        "hexBackgroundColor": "#10b981", // green-500
+        "hexBackgroundColor": isMembership ? "#6366f1" : "#10b981", // Indigo for membership, green for loyalty
         "validTimeInterval": {
           "start": {
-            "date": new Date().toISOString()  // Full ISO 8601 format required by Google Wallet
+            "date": new Date().toISOString()
           }
         }
       }
@@ -415,6 +390,7 @@ export async function GET(
       return NextResponse.json({
         loyaltyObject: googlePassData.loyaltyObject,
         serviceAccountConfigured: !!hasPrivateKey,
+        cardType: isMembership ? 'membership' : 'loyalty',
         environment: {
           serviceAccountEmail: !!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
           classId: !!process.env.GOOGLE_CLASS_ID,
@@ -442,8 +418,9 @@ export async function GET(
           isCompleted, 
           progress, 
           pointsTotal - pointsUsed,
-          qrCodeDataUrl, // Pass the QR code data URL
-          joinUrl // Pass the join URL for additional context
+          qrCodeDataUrl,
+          joinUrl,
+          isMembership // Pass card type to HTML generator
         )
         
         return new NextResponse(googleWalletHTML, {
@@ -500,44 +477,18 @@ export async function GET(
                     <li>• Issuer account approval</li>
                 </ul>
             </div>
-            
-            <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                <h3 class="font-semibold text-gray-900 mb-2">Card Information:</h3>
-                <div class="text-sm text-gray-700 space-y-1">
-                    <p><strong>Card:</strong> ${stampCard.name}</p>
-                    <p><strong>Business:</strong> ${business.name}</p>
-                    <p><strong>Progress:</strong> ${customerCard.current_stamps}/${stampCard.total_stamps} stamps (${Math.round(progress)}%)</p>
-                    <p><strong>Reward:</strong> ${stampCard.reward_description}</p>
-                </div>
-            </div>
-            
-            <div class="bg-green-50 border border-green-200 rounded-lg p-4">
-                <h3 class="font-semibold text-green-900 mb-2">Alternative Options:</h3>
-                <div class="space-y-2">
-                    <a href="/api/wallet/pwa/${customerCardId}" class="block w-full bg-green-600 hover:bg-green-700 text-white text-center py-2 px-4 rounded font-medium">
-                        Use Web App Instead
-                    </a>
-                    <a href="/api/wallet/apple/${customerCardId}" class="block w-full bg-gray-600 hover:bg-gray-700 text-white text-center py-2 px-4 rounded font-medium">
-                        Try Apple Wallet
-                    </a>
-                </div>
-            </div>
         </div>
         
         <div class="text-center">
-            <a href="/customer/card/${customerCardId}" class="text-gray-600 hover:text-gray-900 text-sm">
-                ← Back to Card
+            <a href="https://developers.google.com/wallet/generic/web/prerequisites" 
+               target="_blank" 
+               class="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
+                Setup Guide
             </a>
         </div>
     </div>
-    
-    <script>
-        // If Google Wallet is configured, this would generate the "Add to Google Wallet" button
-        console.log('Google Wallet pass data:', ${JSON.stringify(googlePassData, null, 2)});
-    </script>
 </body>
-</html>
-    `
+</html>`
 
     return new NextResponse(instructionsHTML, {
       headers: {
@@ -546,226 +497,290 @@ export async function GET(
     })
 
   } catch (error) {
-    console.error('Error generating Google Wallet pass:', error)
-    logger.error('Google Wallet pass generation failed', {
-      customerCardId: (await params).customerCardId,
+    const errorMsg = `Google Wallet generation error: ${error}`
+    console.error(errorMsg)
+    logger.error('Google Wallet generation failed', {
+      customerCardId,
       error: error instanceof Error ? error.message : String(error),
       timestamp: new Date().toISOString()
     })
+    
     return NextResponse.json(
-      { error: 'Failed to generate Google Wallet pass' },
+      { 
+        error: 'Failed to generate Google Wallet pass',
+        message: error instanceof Error ? error.message : 'Unknown error occurred'
+      },
       { status: 500 }
     )
   }
 }
 
-// Google Wallet JWT generation with proper private key handling
-function generateGoogleWalletJWT(loyaltyObject: Record<string, unknown>): string {
-  const jwtPayload = {
+// JWT generation function for Google Wallet with enhanced error handling
+function generateGoogleWalletJWT(loyaltyObject: any) {
+  console.log('🔐 Signing JWT with RS256 algorithm for Google Wallet')
+  
+  // Validate private key exists
+  if (!process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY) {
+    throw new Error('GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY environment variable is not set')
+  }
+  
+  // Validate service account email
+  if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL) {
+    throw new Error('GOOGLE_SERVICE_ACCOUNT_EMAIL environment variable is not set')
+  }
+  
+  // Process the private key to handle various formats
+  let privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY
+  
+  console.log('🔍 Original private key format check:', {
+    length: privateKey.length,
+    hasEscapedNewlines: privateKey.includes('\\n'),
+    hasActualNewlines: privateKey.includes('\n'),
+    startsWithBeginMarker: privateKey.startsWith('-----BEGIN'),
+    endsWithEndMarker: privateKey.endsWith('-----')
+  })
+  
+  // Clean up any surrounding quotes or whitespace
+  privateKey = privateKey.trim().replace(/^["']|["']$/g, '')
+  
+  // Replace escaped newlines with actual newlines
+  if (privateKey.includes('\\n')) {
+    privateKey = privateKey.replace(/\\n/g, '\n')
+    console.log('✅ Converted escaped newlines to actual newlines')
+  }
+  
+  // Remove any extra quotes that might be embedded within the key
+  privateKey = privateKey.replace(/^""|""$/g, '')
+  
+  // Ensure proper PEM format structure
+  if (!privateKey.includes('-----BEGIN PRIVATE KEY-----')) {
+    // Try to add PEM headers if missing
+    if (!privateKey.startsWith('-----BEGIN')) {
+      privateKey = `-----BEGIN PRIVATE KEY-----\n${privateKey}`
+    }
+    if (!privateKey.endsWith('-----END PRIVATE KEY-----')) {
+      privateKey = `${privateKey}\n-----END PRIVATE KEY-----`
+    }
+    console.log('✅ Added missing PEM format headers')
+  }
+  
+  // Validate private key format structure
+  console.log('🔍 Final private key format validation:', {
+    hasBeginMarker: privateKey.includes('-----BEGIN PRIVATE KEY-----'),
+    hasEndMarker: privateKey.includes('-----END PRIVATE KEY-----'),
+    hasNewlines: privateKey.includes('\n'),
+    totalLength: privateKey.length,
+    lineCount: privateKey.split('\n').length
+  })
+
+  // Additional validation - check if key has proper structure
+  const keyLines = privateKey.split('\n')
+  const hasProperStructure = keyLines.length >= 3 && 
+                             keyLines.some(line => line.trim() === '-----BEGIN PRIVATE KEY-----') && 
+                             keyLines.some(line => line.trim() === '-----END PRIVATE KEY-----')
+  
+  if (!hasProperStructure) {
+    console.error('❌ Invalid private key structure detected')
+    console.error('Key lines:', keyLines.map((line, i) => `${i}: "${line.trim()}"`))
+    throw new Error('Invalid private key format - secretOrPrivateKey must be an asymmetric key when using RS256. Please ensure GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY is a valid PEM-formatted RSA private key with proper newlines.')
+  }
+
+  // Validate the key contains base64 content between headers
+  const keyContent = keyLines.filter(line => 
+    !line.includes('-----BEGIN') && 
+    !line.includes('-----END') && 
+    line.trim().length > 0
+  )
+  
+  if (keyContent.length === 0) {
+    console.error('❌ No base64 content found in private key')
+    throw new Error('Invalid private key format - no base64 content found between PEM headers')
+  }
+
+  const claims = {
     iss: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
     aud: 'google',
+    origins: ['www.rewardjar.xyz', 'rewardjar.xyz'],
     typ: 'savetowallet',
-    iat: Math.floor(Date.now() / 1000),
     payload: {
       loyaltyObjects: [loyaltyObject]
     }
   }
 
-  if (!process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY) {
-    throw new Error('Google service account private key not configured')
-  }
-
-  // Process the private key to handle various formats properly
-  let privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY
-  
-  // Handle different newline formats
-  if (privateKey.includes('\\n')) {
-    privateKey = privateKey.replace(/\\n/g, '\n')
-  }
-  
-  // Remove any surrounding quotes that might be present
-  privateKey = privateKey.replace(/^["']|["']$/g, '')
-  
-  // Ensure proper line endings for PEM format
-  if (!privateKey.includes('\n')) {
-    // If no newlines, try to detect and add them after header/footer
-    privateKey = privateKey
-      .replace('-----BEGIN PRIVATE KEY-----', '-----BEGIN PRIVATE KEY-----\n')
-      .replace('-----END PRIVATE KEY-----', '\n-----END PRIVATE KEY-----')
-  }
-
-  // Validate PEM format
-  if (!privateKey.includes('-----BEGIN PRIVATE KEY-----') || !privateKey.includes('-----END PRIVATE KEY-----')) {
-    throw new Error('Invalid private key format - must be PEM format')
-  }
-  
-  // Additional validation for JWT library compatibility
-  if (!privateKey.trim().startsWith('-----BEGIN PRIVATE KEY-----')) {
-    throw new Error('Private key must start with PEM header')
-  }
-
-  console.log('🔐 Signing JWT with RS256 algorithm for Google Wallet')
-  console.log('🔍 Private key format validated:', {
-    hasBeginMarker: privateKey.includes('-----BEGIN PRIVATE KEY-----'),
-    hasEndMarker: privateKey.includes('-----END PRIVATE KEY-----'),
-    hasNewlines: privateKey.includes('\n'),
-    length: privateKey.length
+  console.log('🔐 JWT claims:', {
+    issuer: claims.iss,
+    audience: claims.aud,
+    origins: claims.origins,
+    type: claims.typ,
+    hasLoyaltyObjects: !!claims.payload.loyaltyObjects.length
   })
 
-  return jwt.sign(jwtPayload, privateKey, {
-    algorithm: 'RS256'
-  })
+  try {
+    console.log('🔐 Attempting JWT signing with validated private key...')
+    const token = jwt.sign(claims, privateKey, {
+      algorithm: 'RS256'
+    })
+    
+    console.log('✅ JWT generated successfully')
+    console.log('🔍 Token preview:', token.substring(0, 50) + '...')
+    return token
+  } catch (error) {
+    console.error('❌ JWT signing failed with error:', error)
+    
+    if (error instanceof Error) {
+      if (error.message.includes('secretOrPrivateKey')) {
+        throw new Error('Invalid private key format - secretOrPrivateKey must be an asymmetric key when using RS256. Please check that GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY contains a valid PEM-formatted RSA private key.')
+      } else if (error.message.includes('PEM')) {
+        throw new Error('Invalid PEM format - please ensure the private key is properly formatted with correct newlines and headers.')
+      } else {
+        throw new Error(`JWT signing failed: ${error.message}`)
+      }
+    }
+    
+    throw new Error('JWT signing failed with unknown error')
+  }
 }
 
-// Generate interactive Google Wallet HTML
+// Enhanced HTML generation function with card type support
 function generateGoogleWalletHTML(
-  customerCard: Record<string, unknown>, 
-  stampCard: Record<string, unknown>, 
-  business: Record<string, unknown>, 
+  customerCard: any, 
+  stampCard: any, 
+  business: any, 
   saveUrl: string, 
   isCompleted: boolean, 
   progress: number, 
-  stampsRemaining: number,
-  qrCodeDataUrl: string,
-  joinUrl: string
-): string {
+  remaining: number,
+  qrCodeDataUrl: string, 
+  joinUrl: string,
+  isMembership: boolean = false
+) {
+  const cardTypeLabel = isMembership ? 'Membership Card' : 'Loyalty Card'
+  const progressLabel = isMembership ? 'Sessions' : 'Stamps'
+  const cardColor = isMembership ? '#6366f1' : '#10b981'
+  
   return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${stampCard.name} - Google Wallet</title>
+    <title>Google Wallet</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <meta name="theme-color" content="#4285f4">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; }
-        .progress-bar {
-            background: linear-gradient(90deg, #10b981 0%, #10b981 ${progress}%, #e5e7eb ${progress}%, #e5e7eb 100%);
+        .card-gradient {
+            background: linear-gradient(135deg, ${cardColor}22, ${cardColor}11);
         }
-        .google-wallet-button {
-            background: #4285f4;
-            transition: all 0.3s ease;
+        .btn-primary {
+            background-color: ${cardColor};
         }
-        .google-wallet-button:hover {
-            background: #3367d6;
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(66, 133, 244, 0.3);
+        .btn-primary:hover {
+            background-color: ${cardColor}dd;
         }
     </style>
 </head>
-<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+<body class="bg-gray-50 min-h-screen">
     <div class="container mx-auto px-4 py-8 max-w-md">
-        <!-- Header -->
         <div class="text-center mb-6">
-            <h1 class="text-2xl font-bold text-gray-900">Google Wallet</h1>
-            <p class="text-gray-600">Digital Loyalty Card</p>
+            <div class="flex justify-center items-center mb-4">
+                <svg class="w-8 h-8 mr-2" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M21 8V7l-3 2-3-2v1l3 2 3-2zM1 12v6c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2v-6H1zm20-7H3c-1.1 0-2 .9-2 2v1h22V7c0-1.1-.9-2-2-2z"/>
+                </svg>
+                <h1 class="text-xl font-semibold text-gray-800">Google Wallet</h1>
+            </div>
+            <p class="text-sm text-gray-600">Digital ${cardTypeLabel}</p>
         </div>
 
-        <!-- Main Card -->
-        <div class="bg-white rounded-xl shadow-2xl overflow-hidden mb-6">
-            <!-- Card Header -->
-            <div class="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-6">
-                <div class="flex items-center justify-between mb-4">
-                    <div>
-                        <h2 class="text-xl font-bold">${stampCard.name}</h2>
-                        <p class="text-blue-100">${business.name}</p>
-                    </div>
-                    <div class="text-right">
-                        <div class="text-2xl font-bold">${customerCard.current_stamps}</div>
-                        <div class="text-sm text-blue-100">of ${stampCard.total_stamps}</div>
-                    </div>
+        <div class="card-gradient rounded-2xl p-6 mb-6 shadow-lg" style="background: linear-gradient(135deg, ${cardColor}, ${cardColor}dd);">
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <h2 class="text-white text-lg font-bold">${stampCard.name}</h2>
+                    <p class="text-white text-sm opacity-90">${business.name}</p>
                 </div>
-                
-                <!-- Progress Bar -->
-                <div class="w-full bg-blue-400 rounded-full h-3 mb-2">
-                    <div class="progress-bar h-3 rounded-full transition-all duration-500"></div>
+                <div class="text-right">
+                    <div class="text-white text-2xl font-bold">${isMembership ? customerCard.sessions_used || 0 : customerCard.current_stamps || 0}</div>
+                    <div class="text-white text-xs opacity-75">of ${isMembership ? customerCard.total_sessions || 20 : stampCard.total_stamps}</div>
                 </div>
-                <div class="text-center text-blue-100 text-sm">${Math.round(progress)}% Complete</div>
             </div>
+            
+            <div class="mb-4">
+                <div class="flex justify-between text-white text-xs mb-1">
+                    <span>${progressLabel} Progress</span>
+                    <span>${Math.round(progress)}% Complete</span>
+                </div>
+                <div class="w-full bg-white bg-opacity-20 rounded-full h-2">
+                    <div class="bg-white h-2 rounded-full transition-all duration-300" style="width: ${Math.min(progress, 100)}%"></div>
+                </div>
+            </div>
+            
+            <div class="text-white text-sm">
+                ${isCompleted ? 
+                  (isMembership ? '🎉 All sessions used!' : '🎉 Reward ready!') : 
+                  (isMembership ? `${remaining} sessions remaining` : `${remaining} stamps needed`)
+                }
+            </div>
+        </div>
 
-            <!-- Card Content -->
-            <div class="p-6">
-                <!-- Reward Section -->
-                <div class="mb-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Your Reward</h3>
-                    <p class="text-gray-700 mb-4">${stampCard.reward_description}</p>
-                    
-                    ${isCompleted ? 
-                      '<div class="bg-green-50 border border-green-200 rounded-lg p-3"><div class="flex items-center text-green-800"><svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg><span class="font-semibold">Ready to claim!</span></div><p class="text-green-700 text-sm mt-1">Show this card to redeem your reward.</p></div>' :
-                      '<div class="bg-gray-50 border border-gray-200 rounded-lg p-3"><p class="text-gray-600 text-sm">Collect ${stampsRemaining} more stamps to unlock this reward.</p></div>'
+        <div class="space-y-4 mb-6">
+            <div class="bg-white rounded-lg p-4 shadow-sm">
+                <h3 class="font-semibold text-gray-800 mb-2">${isMembership ? 'Membership Value' : 'Your Reward'}</h3>
+                <p class="text-gray-600 text-sm">
+                    ${isMembership ? 
+                      `₩${(customerCard.cost || 15000).toLocaleString()} membership with ${customerCard.total_sessions || 20} sessions` :
+                      stampCard.reward_description
                     }
-                </div>
-
-                                <!-- QR Code Section -->
-                <div class="text-center border-t pt-4">
-                    <div class="bg-gray-50 rounded-lg p-4 mb-3">
-                        <div class="w-32 h-32 bg-white border-2 border-gray-200 rounded-lg mx-auto flex items-center justify-center mb-2">
-                            ${qrCodeDataUrl ? 
-                              `<img src="${qrCodeDataUrl}" alt="QR Code linking to ${joinUrl}" class="w-full h-full object-contain rounded-lg">` :
-                              `<svg class="w-16 h-16 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                                 <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm2 2V5h1v1H5zM3 13a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3zm2 2v-1h1v1H5zM13 3a1 1 0 00-1 1v3a1 1 0 001 1h3a1 1 0 001-1V4a1 1 0 00-1-1h-3zm1 2v1h1V5h-1z" clip-rule="evenodd"></path>
-                               </svg>
-                               <div class="text-xs text-red-500 mt-1">QR Code failed to load</div>`
-                             }
-                        </div>
-                        <p class="text-sm text-gray-600">Scan this QR code at ${business.name} to collect stamps</p>
-                        ${qrCodeDataUrl ? 
-                          `<p class="text-xs text-gray-500 mt-2">Links to: ${joinUrl}</p>` :
-                          `<p class="text-xs text-gray-500 mt-2">QR code temporarily unavailable</p>`
-                        }
-                    </div>
-                    <p class="text-xs text-gray-500">Card ID: ${(customerCard.id as string).substring(0, 8)}</p>
-                </div>
+                </p>
             </div>
+            
+            ${business.description ? `
+            <div class="bg-white rounded-lg p-4 shadow-sm">
+                <h3 class="font-semibold text-gray-800 mb-2">${business.name}</h3>
+                <p class="text-gray-600 text-sm">${business.description}</p>
+            </div>
+            ` : ''}
+            
+            ${qrCodeDataUrl ? `
+            <div class="bg-white rounded-lg p-4 shadow-sm text-center">
+                <h3 class="font-semibold text-gray-800 mb-3">Scan this QR code at ${business.name} to ${isMembership ? 'mark sessions' : 'collect stamps'}</h3>
+                <img src="${qrCodeDataUrl}" alt="QR Code" class="mx-auto mb-2" style="width: 200px; height: 200px;">
+                <p class="text-xs text-gray-500 mt-2">Links to: ${joinUrl}</p>
+                <p class="text-xs text-gray-400 mt-1">Card ID: ${customerCard.id.substring(0, 8)}</p>
+            </div>
+            ` : ''}
         </div>
 
-        <!-- Google Wallet Button -->
-        <div class="mb-6">
+        <div class="text-center">
             <a href="${saveUrl}" 
-               target="_blank" 
-               class="google-wallet-button w-full text-white font-semibold py-4 px-6 rounded-lg block text-center">
-                <div class="flex items-center justify-center">
-                    <svg class="w-6 h-6 mr-2" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M21 8V7l-3 2-3-2v1l3 2 3-2zM1 12v6c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2v-6H1zm20-7H3c-1.1 0-2 .9-2 2v1h22V7c0-1.1-.9-2-2-2z"/>
-                    </svg>
-                    Add to Google Wallet
-                </div>
+               class="btn-primary text-white px-8 py-3 rounded-lg font-medium inline-flex items-center justify-center hover:shadow-lg transition-all duration-200 w-full">
+                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M21 8V7l-3 2-3-2v1l3 2 3-2zM1 12v6c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2v-6H1zm20-7H3c-1.1 0-2 .9-2 2v1h22V7c0-1.1-.9-2-2-2z"/>
+                </svg>
+                Add to Google Wallet
             </a>
         </div>
 
-        <!-- Alternative Actions -->
-        <div class="space-y-3">
-            <button onclick="refreshCard()" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors">
-                Refresh Card
-            </button>
-            <div class="flex space-x-3">
-                <a href="/api/wallet/apple/${customerCard.id}" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg text-center transition-colors">
-                    Try Apple Wallet
-                </a>
-                <a href="/api/wallet/pwa/${customerCard.id}" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg text-center transition-colors">
-                    Use Web App
-                </a>
+        <div class="text-center mt-4">
+            <p class="text-xs text-gray-500">
+                After adding your ${cardTypeLabel.toLowerCase()} to Wallet, you'll see your point 
+                balance and ${cardTypeLabel.toLowerCase()} benefits in places like Maps, Shopping, and 
+                more. You can turn this off in 
+                <a href="#" class="text-blue-600">Google Wallet passes data</a> or on 
+                an individual pass in the Google Wallet app.
+            </p>
+        </div>
+
+        <div class="mt-6 space-y-2">
+            <p class="text-xs text-gray-400">
+                Pass providers can automatically add related passes, 
+                promotions, offers and more to your existing passes which can 
+                be controlled on your device in Wallet settings.
+            </p>
+            <div class="flex justify-center space-x-4 text-xs">
+                <a href="#" class="text-blue-600">Terms</a>
+                <span class="text-gray-400">and</span>
+                <a href="#" class="text-blue-600">Privacy Policy</a>
             </div>
         </div>
     </div>
-
-    <script>
-        function refreshCard() {
-            window.location.reload();
-        }
-
-        // Auto-refresh every 30 seconds to sync stamps
-        setInterval(refreshCard, 30000);
-        
-        // Track Google Wallet button clicks
-        document.querySelector('.google-wallet-button').addEventListener('click', function() {
-            console.log('Google Wallet button clicked');
-            // You can add analytics tracking here
-        });
-    </script>
 </body>
-</html>
-  `
+</html>`
 } 

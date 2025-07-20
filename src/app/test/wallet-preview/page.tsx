@@ -5,13 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { AlertCircle, CheckCircle, Users, CreditCard, Activity } from 'lucide-react'
+import { createClient } from '@/lib/supabase'
 
 interface TestCard {
   id: string
   scenario: string
-  cardType: 'loyalty' | 'gym'
+  cardType: 'loyalty' | 'membership'
   progress: number
   isCompleted: boolean
   isExpired?: boolean
@@ -48,73 +48,82 @@ interface LastUpdate {
   success: boolean
   details: {
     error?: string
-    result?: {
-      sessions_remaining?: number
-      current_stamps?: number
-    }
+    sessions_used?: number
+    sessions_remaining?: number
+    current_stamps?: number
+    message?: string
   }
 }
 
 export default function WalletPreviewPage() {
   const [selectedTab, setSelectedTab] = useState<'loyalty' | 'membership'>('loyalty')
   const [testCards, setTestCards] = useState<TestCard[]>([])
-  const [loading, setLoading] = useState(false)
   const [walletStatus, setWalletStatus] = useState<WalletStatus>({ apple: false, google: false, pwa: true })
-  const [lastUpdate, setLastUpdate] = useState<LastUpdate | null>(null)
+  const [loading, setLoading] = useState(false)
   const [sessionMarking, setSessionMarking] = useState(false)
-  const [selectedBusiness, setSelectedBusiness] = useState('')
+  const [lastUpdate, setLastUpdate] = useState<LastUpdate | null>(null)
 
-  // Test scenarios are created dynamically by the API
-
-  // Load existing test data
+  // Load existing test data with proper card type filtering
   const loadExistingData = async (cardType: 'loyalty' | 'membership') => {
     try {
-      let url: string
+      console.log(`🔍 Loading existing ${cardType} cards...`)
       
-      if (cardType === 'loyalty') {
-        url = '/api/dev-seed'
-      } else {
-        url = '/api/dev-seed/membership'
-      }
-
-      const response = await fetch(url, {
-        method: 'GET'
-      })
-
+      // Always load from the main dev-seed endpoint to get all cards
+      const response = await fetch('/api/dev-seed')
+      
       if (!response.ok) {
-        console.log(`No existing ${cardType} data found, will show empty state`)
+        console.warn(`Failed to load existing data:`, response.statusText)
         setTestCards([])
         return
       }
 
       const data = await response.json()
+      console.log(`📊 Raw data from API:`, data)
       
-      if (cardType === 'loyalty') {
-        // Process loyalty card data
-        const cards = data.cards?.map((card: { customerCardId?: string; id?: string; scenario?: string; current_stamps?: number; total_stamps?: number; [key: string]: unknown }) => ({
-          id: card.customerCardId || card.id || '',
-          scenario: card.scenario || 'unknown',
-          cardType: 'loyalty' as const,
-          progress: ((card.current_stamps || 0) / (card.total_stamps || 10)) * 100,
-          isCompleted: (card.current_stamps || 0) >= (card.total_stamps || 10),
-          details: card
-        })) || []
-        setTestCards(cards)
+      // Process all cards and filter by membership_type
+      let allCards: TestCard[] = []
+      
+      if (data.cards && Array.isArray(data.cards)) {
+        allCards = data.cards.map((card: any) => {
+          // Determine card type based on membership_type field
+          const isMembership = card.membership_type === 'gym' || card.membership_type === 'membership'
+          const actualCardType = isMembership ? 'membership' : 'loyalty'
+          
+          if (isMembership) {
+            // Process as membership card
+            return {
+              id: card.customerCardId || card.id || '',
+              scenario: card.scenario || 'unknown',
+              cardType: 'membership' as const,
+              progress: ((card.sessions_used || 0) / (card.total_sessions || 20)) * 100,
+              isCompleted: (card.sessions_used || 0) >= (card.total_sessions || 20),
+              isExpired: card.expiry_date ? new Date(card.expiry_date) < new Date() : false,
+              details: card
+            }
+          } else {
+            // Process as loyalty card
+            return {
+              id: card.customerCardId || card.id || '',
+              scenario: card.scenario || 'unknown',
+              cardType: 'loyalty' as const,
+              progress: ((card.current_stamps || 0) / (card.total_stamps || 10)) * 100,
+              isCompleted: (card.current_stamps || 0) >= (card.total_stamps || 10),
+              details: card
+            }
+          }
+        })
       } else {
-        // Process membership card data (now using consistent structure)
-        const cards = data.memberships?.map((membership: { customerCardId?: string; scenario?: string; membership?: { id?: string; progress?: number; sessions_used?: number; total_sessions?: number; is_expired?: boolean }; [key: string]: unknown }) => ({
-          id: membership.customerCardId || membership.membership?.id || '',
-          scenario: membership.scenario || 'unknown',
-          cardType: 'gym' as const,
-          progress: membership.membership?.progress || 0,
-          isCompleted: (membership.membership?.sessions_used || 0) >= (membership.membership?.total_sessions || 20),
-          isExpired: membership.membership?.is_expired || false,
-          details: membership
-        })) || []
-        setTestCards(cards)
+        console.warn('⚠️ Unexpected data structure - no cards array found:', data)
       }
+      
+      // Filter cards by the requested type
+      const filteredCards = allCards.filter(card => card.cardType === cardType)
+      
+      console.log(`✅ Found ${allCards.length} total cards, ${filteredCards.length} ${cardType} cards`)
+      console.log(`📋 ${cardType} cards:`, filteredCards.map(c => ({ id: c.id.substring(0, 8), scenario: c.scenario, type: c.cardType })))
+      
+      setTestCards(filteredCards)
 
-      console.log(`✅ Loaded existing ${cardType} data:`, data)
     } catch (error) {
       console.error('Error loading existing data:', error)
       setTestCards([])
@@ -125,15 +134,19 @@ export default function WalletPreviewPage() {
   const generateTestData = async (cardType: 'loyalty' | 'membership', scenario?: string) => {
     setLoading(true)
     try {
+      console.log(`🔧 Generating ${cardType} test data...`)
+      
       let url: string
       let payload: { scenario?: string; count?: number; createAll?: boolean }
 
       if (cardType === 'loyalty') {
+        // Generate loyalty cards using the main dev-seed endpoint
         url = '/api/dev-seed'
         payload = scenario ? { scenario, count: 1 } : { createAll: true }
       } else {
+        // Generate membership cards using the membership endpoint
         url = '/api/dev-seed/membership'
-        payload = scenario ? { scenario, count: 1 } : { scenario: 'all', count: 1 }
+        payload = scenario ? { scenario, count: 1 } : { scenario: 'new_membership', count: 5 }
       }
 
       const response = await fetch(url, {
@@ -147,33 +160,11 @@ export default function WalletPreviewPage() {
       }
 
       const data = await response.json()
+      console.log(`📊 Generated ${cardType} test data:`, data)
       
-      if (cardType === 'loyalty') {
-        // Process loyalty card data
-        const cards = data.cards?.map((card: { customerCardId?: string; id?: string; scenario?: string; current_stamps?: number; total_stamps?: number; [key: string]: unknown }) => ({
-          id: card.customerCardId || card.id || '',
-          scenario: card.scenario || 'unknown',
-          cardType: 'loyalty' as const,
-          progress: ((card.current_stamps || 0) / (card.total_stamps || 10)) * 100,
-          isCompleted: (card.current_stamps || 0) >= (card.total_stamps || 10),
-          details: card
-        })) || []
-        setTestCards(cards)
-      } else {
-        // Process membership card data
-        const cards = data.memberships?.map((membership: { customerCardId?: string; scenario?: string; membership?: { id?: string; progress?: number; sessions_used?: number; total_sessions?: number; is_expired?: boolean }; [key: string]: unknown }) => ({
-          id: membership.customerCardId || membership.membership?.id || '',
-          scenario: membership.scenario || 'unknown',
-          cardType: 'gym' as const,
-          progress: membership.membership?.progress || 0,
-          isCompleted: (membership.membership?.sessions_used || 0) >= (membership.membership?.total_sessions || 20),
-          isExpired: membership.membership?.is_expired || false,
-          details: membership
-        })) || []
-        setTestCards(cards)
-      }
+      // After generating data, reload the filtered view to get the latest data
+      await loadExistingData(cardType)
 
-      console.log(`✅ Generated ${cardType} test data:`, data)
     } catch (error) {
       console.error('Error generating test data:', error)
       alert(`Failed to generate test data: ${error instanceof Error ? error.message : 'Unknown error'}`)
@@ -205,11 +196,11 @@ export default function WalletPreviewPage() {
     }
   }
 
-  // Generate wallet pass
+  // Generate wallet pass - FIXED: Corrected URL generation logic
   const generateWallet = async (cardId: string, walletType: 'apple' | 'google' | 'pwa') => {
     try {
-      const cardType = selectedTab === 'loyalty' ? '' : 'membership/'
-      const url = `/api/wallet/${walletType}/${cardType}${cardId}`
+      // Fixed: Use the main wallet endpoints that automatically handle both card types
+      const url = `/api/wallet/${walletType}/${cardId}`
       
       if (walletType === 'apple') {
         // For Apple Wallet, try to download PKPass or show preview
@@ -237,22 +228,17 @@ export default function WalletPreviewPage() {
     }
   }
 
-  // Mark session or stamp
+  // Mark session or stamp using the test-friendly stamp/add API
   const markUsage = async (cardId: string, usageType: 'session' | 'stamp') => {
-    if (!selectedBusiness) {
-      alert('Please select a business first')
-      return
-    }
-
     setSessionMarking(true)
     try {
-      const response = await fetch(`/api/wallet/mark-session/${cardId}`, {
+      const response = await fetch('/api/stamp/add', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          businessId: selectedBusiness,
+          customerCardId: cardId,
           usageType,
-          notes: `Test ${usageType} marking from wallet preview`
+          businessConfirmation: true, // For testing purposes
         })
       })
 
@@ -368,7 +354,7 @@ export default function WalletPreviewPage() {
               </TabsTrigger>
               <TabsTrigger value="membership" className="flex items-center gap-2">
                 <Users className="h-4 w-4" />
-                Gym Memberships
+                Membership Cards
               </TabsTrigger>
             </TabsList>
             
@@ -392,24 +378,10 @@ export default function WalletPreviewPage() {
             
             <TabsContent value="membership" className="space-y-6">
               <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-semibold">Gym Membership Test Scenarios</h3>
-                  <div className="flex gap-2">
-                    <Select onValueChange={setSelectedBusiness} value={selectedBusiness}>
-                      <SelectTrigger className="w-48">
-                        <SelectValue placeholder="Select business for testing" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="test-gym-1">Test Gym 1</SelectItem>
-                        <SelectItem value="test-gym-2">Test Gym 2</SelectItem>
-                        <SelectItem value="test-gym-3">Test Gym 3</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+                <h3 className="text-lg font-semibold">Membership Card Test Scenarios</h3>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {testCards.filter(card => card.cardType === 'gym').map((card) => (
+                  {testCards.filter(card => card.cardType === 'membership').map((card) => (
                     <TestCardComponent
                       key={card.id}
                       card={card}
@@ -444,8 +416,8 @@ export default function WalletPreviewPage() {
                   {lastUpdate.success ? (
                                          `${lastUpdate.type === 'session' ? 'Session' : 'Stamp'} marked successfully. 
                       ${lastUpdate.type === 'session' ? 
-                        `Remaining: ${lastUpdate.details.result?.sessions_remaining || 0}` : 
-                        `Current: ${lastUpdate.details.result?.current_stamps || 0}`}`
+                        `Remaining: ${lastUpdate.details.sessions_remaining || 0}` : 
+                        `Current: ${lastUpdate.details.current_stamps || 0}`}`
                   ) : (
                                          lastUpdate.details.error || 'Unknown error'
                   )}
@@ -480,8 +452,9 @@ export default function WalletPreviewPage() {
           <div>
             <h4 className="font-semibold mb-2">3. Test Data Synchronization</h4>
             <p className="text-sm text-gray-600">
-              For gym memberships, select a business and use &quot;Mark Session&quot; to test real-time updates.
+              For membership cards, use &quot;Mark Session&quot; to test real-time updates.
               For loyalty cards, use &quot;Add Stamp&quot; to test stamp collection.
+              No business selection required - the system auto-detects card types.
             </p>
           </div>
           <div>
@@ -525,7 +498,7 @@ function TestCardComponent({
   }
   
   const getProgressText = () => {
-    if (card.cardType === 'gym') {
+    if (card.cardType === 'membership') {
       const details = card.details.membership || card.details
       return `${details.sessions_used || 0}/${details.total_sessions || 20} sessions`
     } else {
@@ -567,7 +540,7 @@ function TestCardComponent({
         
         {/* Card Details */}
         <div className="text-xs text-gray-600 space-y-1">
-          {card.cardType === 'gym' ? (
+          {card.cardType === 'membership' ? (
             <>
               <p>Cost: ₩{(card.details.membership?.cost || card.details.cost || 15000).toLocaleString()}</p>
               {card.details.membership?.expiry_date && (
@@ -622,12 +595,12 @@ function TestCardComponent({
           {!card.isExpired && !card.isCompleted && (
             <Button
               size="sm"
-              onClick={() => onMarkUsage(card.id, card.cardType === 'gym' ? 'session' : 'stamp')}
+              onClick={() => onMarkUsage(card.id, card.cardType === 'membership' ? 'session' : 'stamp')}
               disabled={isMarking}
               className="w-full text-xs"
             >
               {isMarking ? 'Marking...' : 
-                card.cardType === 'gym' ? 'Mark Session' : 'Add Stamp'}
+                card.cardType === 'membership' ? 'Mark Session' : 'Add Stamp'}
             </Button>
           )}
         </div>
