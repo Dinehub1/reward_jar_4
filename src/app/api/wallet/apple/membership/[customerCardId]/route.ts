@@ -2,6 +2,94 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import validateUUID from 'uuid-validate'
 
+// Type definitions for membership card data
+interface CustomerCard {
+  id: string
+  membership_type: string
+  sessions_used: number
+  total_sessions: number
+  cost: number
+  expiry_date: string | null
+  wallet_type: string | null
+  created_at: string
+  customers?: {
+    id: string
+    name: string
+    email: string
+  }[]
+}
+
+interface BusinessData {
+  name: string
+  description: string
+}
+
+interface PassData {
+  formatVersion: number
+  passTypeIdentifier: string
+  serialNumber: string
+  teamIdentifier: string
+  organizationName: string
+  description: string
+  backgroundColor: string
+  foregroundColor: string
+  labelColor: string
+  logoText: string
+  storeCard: {
+    primaryFields: Array<{
+      key: string
+      label: string
+      value: string
+      textAlignment: string
+    }>
+    secondaryFields: Array<{
+      key: string
+      label: string
+      value: string
+      textAlignment: string
+    }>
+    headerFields: Array<{
+      key: string
+      label: string
+      value: string
+      textAlignment: string
+    }>
+    auxiliaryFields: Array<{
+      key: string
+      label: string
+      value: string
+      textAlignment: string
+    }>
+    backFields: Array<{
+      key: string
+      label: string
+      value: string
+    }>
+  }
+  barcode: {
+    message: string
+    format: string
+    messageEncoding: string
+    altText: string
+  }
+  webServiceURL: string
+  authenticationToken: string
+  userInfo: {
+    customerCardId: string
+    membershipType: string
+    businessName: string
+  }
+  relevantDate: string
+}
+
+interface CalculatedData {
+  sessionsRemaining: number
+  progress: number
+  isExpired: boolean
+  isCompleted: boolean
+  costPerSession: number
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ customerCardId: string }> }
@@ -266,10 +354,10 @@ export async function GET(
 
 // Generate HTML preview for membership card
 function generateMembershipHTML(
-  customerCard: any,
-  business: any,
-  passData: any,
-  calculated: any
+  customerCard: CustomerCard,
+  business: BusinessData,
+  passData: PassData,
+  calculated: CalculatedData
 ): string {
   const { sessionsRemaining, progress, isExpired, isCompleted, costPerSession } = calculated
   

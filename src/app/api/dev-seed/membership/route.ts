@@ -2,6 +2,23 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { v4 as uuid } from 'uuid'
 
+// Type definition for membership data from Supabase
+interface MembershipRecord {
+  id: string
+  membership_type: string
+  sessions_used: number
+  total_sessions: number
+  cost: number
+  expiry_date: string | null
+  wallet_type: string | null
+  created_at: string
+  customers: {
+    id: string
+    name: string
+    email: string
+  }[] | null
+}
+
 // Test scenarios for gym membership cards
 const MEMBERSHIP_SCENARIOS = {
   new_membership: {
@@ -172,7 +189,7 @@ export async function POST(request: NextRequest) {
           const customerId = selectedCustomer.id
           
           // Use the existing membership card template or create one if needed
-          let membershipCardId = 'ab4b5394-89d5-4389-a3b1-5614be74dc6b' // The Premium Gym Membership we know exists
+          const membershipCardId = 'ab4b5394-89d5-4389-a3b1-5614be74dc6b' // The Premium Gym Membership we know exists
           
           // Verify the membership card exists, if not create it
           const { data: existingMembershipCard } = await supabase
@@ -381,7 +398,7 @@ export async function GET() {
     }
     
     // Transform data to match POST response structure
-    const transformedMemberships = memberships?.map((membership) => {
+    const transformedMemberships = (memberships as MembershipRecord[])?.map((membership) => {
       const progress = membership.total_sessions > 0 
         ? Math.round((membership.sessions_used / membership.total_sessions) * 100)
         : 0
@@ -402,9 +419,9 @@ export async function GET() {
           progress: progress
         },
         customer: {
-          id: membership.customers?.id,
-          name: membership.customers?.name,
-          email: membership.customers?.email
+          id: membership.customers?.[0]?.id,
+          name: membership.customers?.[0]?.name,
+          email: membership.customers?.[0]?.email
         }
       }
     }) || []

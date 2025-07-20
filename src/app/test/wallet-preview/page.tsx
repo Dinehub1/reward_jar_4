@@ -288,14 +288,11 @@ export default function WalletPreviewPage() {
   // Initialize page
   useEffect(() => {
     checkWalletStatus()
-    loadExistingData(selectedTab)
   }, [])
 
-  // Switch card type
+  // Load data when tab changes
   useEffect(() => {
-    if (selectedTab) {
-      loadExistingData(selectedTab)
-    }
+    loadExistingData(selectedTab)
   }, [selectedTab])
 
   return (
