@@ -17,18 +17,22 @@ import QRCode from 'qrcode'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { customerCardId: string } }
+  { params }: { params: Promise<{ customerCardId: string }> }
 ) {
   try {
+    // Await params as required by Next.js 15.3.5
+    const resolvedParams = await params
+    const customerCardId = resolvedParams.customerCardId
+    
     const { searchParams } = new URL(request.url)
     const debug = searchParams.get('debug') === 'true'
     const cardType = searchParams.get('type') || 'loyalty'
     const timestamp = Date.now()
     
-    console.log(`🎫 Generating Google Wallet pass for card: ${params.customerCardId}`)
+    console.log(`🎫 Generating Google Wallet pass for card: ${customerCardId}`)
     
     // Create unique card ID with timestamp to bypass all caching
-    const uniqueCardId = `${params.customerCardId}_${timestamp}`
+    const uniqueCardId = `${customerCardId}_${timestamp}`
     
     // Get card data from database
     const supabase = createServiceClient()
@@ -59,7 +63,7 @@ export async function GET(
           email
         )
       `)
-      .eq('id', params.customerCardId)
+      .eq('id', customerCardId)
       .single()
 
     if (error || !customerCard) {
@@ -108,7 +112,7 @@ export async function GET(
 
     // Generate QR code
     const baseUrl = process.env.BASE_URL || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
-    const cardAccessUrl = `${baseUrl}/customer/card/${params.customerCardId}`
+    const cardAccessUrl = `${baseUrl}/customer/card/${customerCardId}`
     
     const qrCodeDataURL = await QRCode.toDataURL(cardAccessUrl, {
       width: 200,
@@ -161,7 +165,7 @@ export async function GET(
       
       // Account information
       accountId: uniqueCardId,
-      accountName: ((customerCard.customers as any)?.[0]?.name || (customerCard.customers as any)?.name) || `Customer ${params.customerCardId.substring(0, 8)}`,
+      accountName: ((customerCard.customers as any)?.[0]?.name || (customerCard.customers as any)?.name) || `Customer ${customerCardId.substring(0, 8)}`,
       
       // Loyalty points (stamps or sessions)
       loyaltyPoints: {
@@ -182,8 +186,8 @@ export async function GET(
       // QR code
       barcode: {
         type: 'QR_CODE',
-        value: params.customerCardId,
-        alternateText: `Card ID: ${params.customerCardId}`
+        value: customerCardId,
+        alternateText: `Card ID: ${customerCardId}`
       },
       
       // Business and reward information
