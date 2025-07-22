@@ -148,48 +148,98 @@ export default function WalletPreviewPage() {
     }
   }
 
-  // Mark usage (stamp or session)
+  // Enhanced mark usage with wallet sync (QR Scan Simulation)
   const markUsage = async (cardId: string, usageType: 'stamp' | 'session') => {
     if (sessionMarking) return
     
     setSessionMarking(true)
+    setError(null) // Clear previous errors
+    
     try {
-      const response = await fetch(`/api/wallet/mark-session/${cardId}`, {
+      console.log(`🔍 Starting QR scan simulation for ${usageType} on card: ${cardId}`)
+      
+      // Step 1: Mark the usage (stamp or session)
+      const markResponse = await fetch(`/api/wallet/mark-session/${cardId}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_TEST_TOKEN || 'test-token'}`
+        },
         body: JSON.stringify({
           usageType: usageType === 'stamp' ? 'auto' : 'session',
           testMode: true
         })
       })
 
-      if (!response.ok) {
-        const errorData = await response.json()
+      if (!markResponse.ok) {
+        const errorData = await markResponse.json()
         throw new Error(errorData.error || 'Failed to mark usage')
       }
 
-      const result = await response.json()
+      const markResult = await markResponse.json()
+      console.log(`✅ ${usageType} marked successfully:`, markResult)
+
+      // Step 2: Queue wallet update for all platforms
+      try {
+        const updateResponse = await fetch(`/api/wallet/update-queue/${cardId}`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_TEST_TOKEN || 'test-token'}`
+          },
+          body: JSON.stringify({
+            platform: 'all',
+            updateType: usageType === 'stamp' ? 'stamp_update' : 'session_update',
+            testMode: true
+          })
+        })
+
+        if (updateResponse.ok) {
+          const updateResult = await updateResponse.json()
+          console.log(`✅ Wallet sync queued successfully:`, updateResult)
+        } else {
+          console.warn(`⚠️ Wallet sync failed but usage was marked:`, await updateResponse.text())
+        }
+      } catch (syncError) {
+        console.warn(`⚠️ Wallet sync error (usage still marked):`, syncError)
+      }
+
+      // Step 3: Update local state and refresh data
       setLastUpdate({
         timestamp: new Date().toISOString(),
         type: usageType,
         success: true,
-        details: result
+        details: { 
+          ...markResult,
+          walletSyncAttempted: true,
+          message: markResult.message || `${usageType === 'stamp' ? 'Stamp' : 'Session'} marked successfully!`
+        }
       })
 
-      // Refresh test data
+      // Step 4: Show success alert
+      const successMessage = markResult.message || `${usageType === 'stamp' ? 'Stamp' : 'Session'} added successfully!`
+      alert(`✅ QR Scan Success: ${successMessage}`)
+
+      // Step 5: Refresh test data to show updated counts
       await generateTestData(selectedTab)
       
-      console.log(`✅ ${usageType} marked successfully:`, result)
     } catch (error) {
-      console.error(`Error marking ${usageType}:`, error)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      console.error(`❌ Error in QR scan simulation:`, error)
+      
+      // Set error state for red alert display
+      setError(`QR scan failed: ${errorMessage}`)
+      
       setLastUpdate({
         timestamp: new Date().toISOString(),
         type: usageType,
         success: false,
-        details: { error: error instanceof Error ? error.message : 'Unknown error' }
+        details: { error: errorMessage, action: 'qr_scan_simulation' }
       })
     }
-    setSessionMarking(false)
+    
+    // Reset loading state after 1 second
+    setTimeout(() => setSessionMarking(false), 1000)
   }
 
   // Platform detection for wallet generation
@@ -520,7 +570,7 @@ export default function WalletPreviewPage() {
                             disabled={sessionMarking}
                             className="w-full bg-green-500 hover:bg-green-600"
                           >
-                            {sessionMarking ? 'Adding Stamp...' : '📱 Simulate QR Scan (Add Stamp)'}
+                            {sessionMarking ? 'Processing QR Scan...' : '📱 Simulate QR Scan (Add Stamp + Sync Wallets)'}
                           </Button>
 
                           {/* Individual Wallet Generation Tests */}
@@ -639,7 +689,7 @@ export default function WalletPreviewPage() {
                             disabled={sessionMarking}
                             className="w-full bg-indigo-500 hover:bg-indigo-600"
                           >
-                            {sessionMarking ? 'Marking Session...' : '📱 Simulate QR Scan (Mark Session)'}
+                            {sessionMarking ? 'Processing QR Scan...' : '📱 Simulate QR Scan (Mark Session + Sync Wallets)'}
                           </Button>
 
                           {/* Individual Wallet Generation Tests */}
