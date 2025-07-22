@@ -81,11 +81,11 @@ export async function GET(
     console.log(`📋 Card type detected: ${cardTypeDisplay}`)
     console.log(`🏷️ Setting Google Wallet title to: "${cardTypeDisplay}"`)
 
-    // Dynamic class ID based on card type
+    // Dynamic class ID based on card type - Use v2 classes with correct programName
     const issuerID = process.env.GOOGLE_ISSUER_ID || '3388000000022940702'
     const dynamicClassId = isStampCard 
-      ? `${issuerID}.loyalty.rewardjar`
-      : `${issuerID}.membership.rewardjar`
+      ? `${issuerID}.loyalty.rewardjar_v2`
+      : `${issuerID}.membership.rewardjar_v2`
 
     // Calculate progress and status
     let progress = 0

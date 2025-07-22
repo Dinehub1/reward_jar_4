@@ -173,14 +173,16 @@ The debug output confirms all 8 title override fields are correctly set:
 
 ### **✅ Fresh Google Wallet URLs Generated**
 
-**Loyalty Card (Shows "Stamp Cards")**:
+**✅ NEW WORKING URLs with V2 Classes**:
+
+**Loyalty Card (Uses v2 class with "Stamp Cards" programName)**:
 ```
-https://pay.google.com/gp/v/save/eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJyZXdhcmRqYXJAcmV3YXJkamFyLTQ2MTMxMC5pYW0uZ3NlcnZpY2VhY2NvdW50LmNvbSIsImF1ZCI6Imdvb2dsZSIsInR5cCI6InNhdmV0b3dhbGxldCIsImlhdCI6MTc1MzE4MTI4OSwicGF5bG9hZCI6eyJsb3lhbHR5T2JqZWN0cyI6W3siaWQiOiIzMzg4MDAwMDAwMDIyOTQwNzAyLmxveWFsdHkucmV3YXJkamFyLjNlMjM0NjEwLTk5NTMtNGE4Yi05NTBlLWIwM2ExOTI0YTFmZV8xNzUzMTgxMjg4NjQ2IiwiY2xhc3NJZCI6IjMzODgwMDAwMDAwMjI5NDA3MDIubG95YWx0eS5yZXdhcmRqYXIiLCJzdGF0ZSI6IkFDVElWRSIsImxvY2FsaXplZElzc3Vlck5hbWUiOnsiZGVmYXVsdFZhbHVlIjp7Imxhbmd1YWdlIjoiZW4tVVMiLCJ2YWx1ZSI6IlN0YW1wIENhcmRzIn19...
+https://pay.google.com/gp/v/save/eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJyZXdhcmRqYXJAcmV3YXJkamFyLTQ2MTMxMC5pYW0uZ3NlcnZpY2VhY2NvdW50LmNvbSIsImF1ZCI6Imdvb2dsZSIsInR5cCI6InNhdmV0b3dhbGxldCIsImlhdCI6MTc1MzIwMzk2MSwicGF5bG9hZCI6eyJsb3lhbHR5T2JqZWN0cyI6W3siaWQiOiIzMzg4MDAwMDAwMDIyOTQwNzAyLmxveWFsdHkucmV3YXJkamFyX3YyLjNlMjM0NjEwLTk5NTMtNGE4Yi05NTBlLWIwM2ExOTI0YTFmZV8xNzUzMjAzOTYwODA0IiwiY2xhc3NJZCI6IjMzODgwMDAwMDAwMjI5NDA3MDIubG95YWx0eS5yZXdhcmRqYXJfdjIi...
 ```
 
-**Membership Card (Shows "Membership Cards")**:
+**Membership Card (Uses v2 class with "Membership Cards" programName)**:
 ```
-https://pay.google.com/gp/v/save/eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJyZXdhcmRqYXJAcmV3YXJkamFyLTQ2MTMxMC5pYW0uZ3NlcnZpY2VhY2NvdW50LmNvbSIsImF1ZCI6Imdvb2dsZSIsInR5cCI6InNhdmV0b3dhbGxldCIsImlhdCI6MTc1MzE4MTI5OSwicGF5bG9hZCI6eyJsb3lhbHR5T2JqZWN0cyI6W3siaWQiOiIzMzg4MDAwMDAwMDIyOTQwNzAyLm1lbWJlcnNoaXAucmV3YXJkamFyLjI3ZGVlYjU4LTM3NmYtNGM0YS05OWE5LTI0NDQwNGI1MDg4NV8xNzUzMTgxMjk3ODUzIiwiY2xhc3NJZCI6IjMzODgwMDAwMDAwMjI5NDA3MDIubWVtYmVyc2hpcC5yZXdhcmRqYXIiLCJzdGF0ZSI6IkFDVElWRSIsImxvY2FsaXplZElzc3Vlck5hbWUiOnsiZGVmYXVsdFZhbHVlIjp7Imxhbmd1YWdlIjoiZW4tVVMiLCJ2YWx1ZSI6Ik1lbWJlcnNoaXAgQ2FyZHMifX19...
+https://pay.google.com/gp/v/save/eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJyZXdhcmRqYXJAcmV3YXJkamFyLTQ2MTMxMC5pYW0uZ3NlcnZpY2VhY2NvdW50LmNvbSIsImF1ZCI6Imdvb2dsZSIsInR5cCI6InNhdmV0b3dhbGxldCIsImlhdCI6MTc1MzIwMzk2OSwicGF5bG9hZCI6eyJsb3lhbHR5T2JqZWN0cyI6W3siaWQiOiIzMzg4MDAwMDAwMDIyOTQwNzAyLm1lbWJlcnNoaXAucmV3YXJkamFyX3YyLjI3ZGVlYjU4LTM3NmYtNGM0YS05OWE5LTI0NDQwNGI1MDg4NV8xNzUzMjAzOTY4OTEyIiwiY2xhc3NJZCI6IjMzODgwMDAwMDAwMjI5NDA3MDIubWVtYmVyc2hpcC5yZXdhcmRqYXJfdjIi...
 ```
 
 ---
@@ -221,24 +223,31 @@ https://pay.google.com/gp/v/save/eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOi
 
 ---
 
-## 🔄 **Fallback Plan (Not Needed)**
+## 🔄 **Fallback Plan (IMPLEMENTED)**
 
-The comprehensive title override strategy was successful, but if needed, the fallback plan would involve:
+The comprehensive title override strategy wasn't sufficient to override immutable class-level `programName`, so the fallback plan was implemented:
 
 1. **Create New Google Wallet Classes** with correct `programName` values
 2. **Update Class Creation Route** to support versioned classes
 3. **Modify Route Logic** to use new class IDs
 
-**Commands (if needed)**:
+**Commands (EXECUTED)**:
 ```bash
+# Successfully created new classes with correct programName
 curl -X POST "http://localhost:3000/api/wallet/google/class" \
   -H "Content-Type: application/json" \
-  -d '{"cardType": "loyalty", "issuerId": "3388000000022940702_v2"}'
+  -d '{"cardType": "loyalty", "version": "v2"}'
+# Result: Class "3388000000022940702.loyalty.rewardjar_v2" created with programName: "Stamp Cards"
 
 curl -X POST "http://localhost:3000/api/wallet/google/class" \
   -H "Content-Type: application/json" \
-  -d '{"cardType": "membership", "issuerId": "3388000000022940702_v2"}'
+  -d '{"cardType": "membership", "version": "v2"}'
+# Result: Class "3388000000022940702.membership.rewardjar_v2" created with programName: "Membership Cards"
 ```
+
+**Route Updated**: Main Google Wallet route now uses v2 classes:
+- Loyalty cards: `3388000000022940702.loyalty.rewardjar_v2`
+- Membership cards: `3388000000022940702.membership.rewardjar_v2`
 
 ---
 

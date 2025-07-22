@@ -13,11 +13,12 @@ export async function POST(request: Request) {
     // Get card type from request body (default to loyalty for backward compatibility)
     const body = await request.json().catch(() => ({}))
     const cardType = body.cardType || 'loyalty'
+    const version = body.version || 'v2' // Default to v2 for new classes with correct titles
 
     const issuerID = process.env.GOOGLE_ISSUER_ID || '3388000000022940702'
     const classId = cardType === 'membership' 
-      ? `${issuerID}.membership.rewardjar`
-      : `${issuerID}.loyalty.rewardjar`
+      ? `${issuerID}.membership.rewardjar_${version}`
+      : `${issuerID}.loyalty.rewardjar_${version}`
     
     const programName = cardType === 'membership' ? 'Membership Cards' : 'Stamp Cards'
     
