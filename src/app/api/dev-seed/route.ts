@@ -1,564 +1,298 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/**
+ * RewardJar 4.0 - Dev Seed API Route
+ * Generates demo data for both stamp and membership cards
+ * 
+ * @version 4.0
+ * @path /api/dev-seed
+ * @created July 21, 2025
+ */
+
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase-server'
+import { createClient } from '@supabase/supabase-js'
 
-// Type definitions for Supabase data
-interface Business {
-  name: string
-  description: string
-}
+// Initialize Supabase client
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
-interface StampCard {
-  id: string
-  name: string
-  total_stamps: number
-  reward_description: string
-  businesses: Business
-}
+// Simple debouncing mechanism to prevent rapid duplicate calls
+let lastGenerationTime = 0
+const DEBOUNCE_DELAY = 1000 // 1 second
 
-interface Customer {
-  name: string
-  email: string
-}
-
-// interface CustomerCard {
-//   id: string
-//   current_stamps: number
-//   created_at: string
-//   updated_at: string
-//   stamp_cards: StampCard
-//   customers: Customer
-// }
-
-// Development Seed API - Generate test data for wallet testing
-// Available in production for testing purposes with optional API key protection
-export async function POST(request: NextRequest) {
-  // Optional API key protection for production environments
-  const apiKey = request.headers.get('x-api-key')
-  const requiredApiKey = process.env.DEV_SEED_API_KEY
-  
-  if (process.env.NODE_ENV === 'production' && requiredApiKey && apiKey !== requiredApiKey) {
-    return NextResponse.json(
-      { error: 'Invalid or missing API key for dev seed endpoint' },
-      { status: 401 }
-    )
+  // Demo card configurations
+  const DEMO_CARDS = [
+    // Stamp Cards (Loyalty subtype)
+    {
+      id: '3e234610-9953-4a8b-950e-b03a1924a1fe',
+      membership_type: 'loyalty',
+      current_stamps: 3,
+      total_stamps: 10,
+      business_name: 'NIO Coffee',
+      card_name: 'Coffee Loyalty Card',
+      reward_description: 'Get your 10th coffee free!',
+      grid_layout: '5x2'
+    },
+  {
+    id: '10e2488a-7c4b-495d-a5ee-ec5a7ec4f13e',
+    membership_type: 'loyalty',
+    current_stamps: 7,
+    total_stamps: 12,
+    business_name: 'NIO Coffee Premium',
+    card_name: 'Premium Rewards Card',
+    reward_description: 'Premium blend coffee + pastry combo free!',
+    grid_layout: '4x3'
+  },
+  // Membership Cards (Membership subtype)
+  {
+    id: '90910c9c-f8cc-4e49-b53c-87863f8f30a5',
+    membership_type: 'membership',
+    sessions_used: 5,
+    total_sessions: 20,
+    cost: 15000, // ₩15,000
+    business_name: 'FitLife Gym',
+    card_name: 'Premium Membership',
+    reward_description: 'Full gym access with personal training sessions',
+    expiry_days: 90
+  },
+  {
+    id: '27deeb58-376f-4c4a-99a9-244404b50885',
+    membership_type: 'membership',
+    sessions_used: 8,
+    total_sessions: 10,
+    cost: 8000, // ₩8,000
+    business_name: 'FitLife Basic',
+    card_name: 'Basic Membership',
+    reward_description: 'Essential gym access and group classes',
+    expiry_days: 30
   }
-
-  try {
-    const supabase = await createClient()
-    const body = await request.json()
-    const { 
-      scenario = 'default',
-      count = 1,
-      cleanup = false,
-      createAll = false
-    } = body
-
-    console.log('🧪 Dev-seed API called:', { scenario, count, cleanup, createAll })
-
-    // Cleanup existing test data if requested
-    if (cleanup) {
-      await cleanupTestData(supabase)
-      return NextResponse.json({
-        success: true,
-        message: 'Test data cleaned up successfully'
-      })
-    }
-
-    // Create all 8 test scenarios if requested
-    if (createAll) {
-      const allScenarios = [
-        'empty',
-        'small_card',
-        'large_card', 
-        'long_names',
-        'half_complete',
-        'almost_complete',
-        'completed',
-        'over_complete'
-      ]
-      
-      console.log('🎯 Generating all test scenarios:', allScenarios)
-      const results = []
-      
-      for (const scenarioType of allScenarios) {
-        try {
-        const result = await generateTestData(supabase, scenarioType, 1)
-        results.push(...result)
-          console.log(`✅ Generated scenario: ${scenarioType}`)
-        } catch (error) {
-          console.error(`❌ Failed to generate scenario ${scenarioType}:`, error)
-          // Continue with other scenarios
-        }
-      }
-      
-      const baseUrl = process.env.BASE_URL || 'https://www.rewardjar.xyz'
-      
-      return NextResponse.json({
-        success: true,
-        scenario: 'all_scenarios',
-        count: results.length,
-        data: results,
-        message: `Generated ${results.length} test customer cards across all scenarios`,
-        testUrls: results.map(card => ({
-          id: card.customerCardId,
-          scenario: card.scenario,
-          progress: `${card.currentStamps}/${card.totalStamps}`,
-          apple: `${baseUrl}/api/wallet/apple/${card.customerCardId}`,
-          google: `${baseUrl}/api/wallet/google/${card.customerCardId}`,
-          pwa: `${baseUrl}/api/wallet/pwa/${card.customerCardId}`,
-          debug: `${baseUrl}/api/wallet/apple/${card.customerCardId}?debug=true`
-        }))
-      })
-    }
-
-    // Generate test data based on scenario
-    console.log('🎯 Generating single scenario:', scenario)
-    const result = await generateTestData(supabase, scenario, count)
-    
-    const baseUrl = process.env.BASE_URL || 'https://www.rewardjar.xyz'
-    
-    return NextResponse.json({
-      success: true,
-      scenario,
-      count,
-      data: result,
-      message: `Generated ${result.length} test customer cards`,
-      testUrls: result.map(card => ({
-        id: card.customerCardId,
-        scenario: card.scenario,
-        progress: `${card.currentStamps}/${card.totalStamps}`,
-        apple: `${baseUrl}/api/wallet/apple/${card.customerCardId}`,
-        google: `${baseUrl}/api/wallet/google/${card.customerCardId}`,
-        pwa: `${baseUrl}/api/wallet/pwa/${card.customerCardId}`,
-        debug: `${baseUrl}/api/wallet/apple/${card.customerCardId}?debug=true`
-      }))
-    })
-
-  } catch (error) {
-    console.error('❌ Error in dev seed endpoint:', error)
-    return NextResponse.json(
-      { 
-        error: 'Failed to generate test data',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    )
-  }
-}
+]
 
 export async function GET(request: NextRequest) {
-  // Optional API key protection for production environments
-  const apiKey = request.headers.get('x-api-key')
-  const requiredApiKey = process.env.DEV_SEED_API_KEY
-  
-  if (process.env.NODE_ENV === 'production' && requiredApiKey && apiKey !== requiredApiKey) {
-    return NextResponse.json(
-      { error: 'Invalid or missing API key for dev seed endpoint' },
-      { status: 401 }
-    )
-  }
-
   try {
-    console.log('🔍 Fetching existing test data...')
-    const supabase = await createClient()
-    
-    // Get existing test data with proper joins
-    const { data: testCards, error } = await supabase
+    // Check for existing cards to avoid duplicates with full related data
+    const { data: existingCards, error: checkError } = await supabase
       .from('customer_cards')
       .select(`
         id,
+        membership_type, 
         current_stamps,
-        created_at,
-        updated_at,
+        sessions_used, 
+        total_sessions, 
+        cost, 
+        expiry_date,
         stamp_cards (
           id,
           name,
           total_stamps,
           reward_description,
           businesses (
+            id,
             name,
             description
           )
         ),
         customers (
+          id,
           name,
           email
         )
       `)
-      .order('created_at', { ascending: false })
-      .limit(50)
+      .in('id', DEMO_CARDS.map(card => card.id))
 
-    if (error) {
-      console.error('❌ Database error:', error)
-      throw error
+    if (checkError) {
+      console.error('Error checking existing cards:', checkError)
     }
 
-    console.log('📊 Found test cards:', testCards?.length || 0)
-
-    // Format response for test interface
-    const formattedCards = testCards?.map(card => {
-      const stampCard = (card.stamp_cards as unknown) as StampCard
-      const business = (stampCard?.businesses as unknown) as Business
-      const customer = (card.customers as unknown) as Customer
-      
-      const totalStamps = stampCard?.total_stamps || 10
-      const currentStamps = card.current_stamps || 0
-      const completionPercentage = Math.round((currentStamps / totalStamps) * 100)
-      
-      return {
-      id: card.id,
-        current_stamps: currentStamps,
-        total_stamps: totalStamps,
-        completion_percentage: completionPercentage,
-        stamp_card_name: stampCard?.name || 'Unknown Card',
-        business_name: business?.name || 'Unknown Business',
-        customer_name: customer?.name || 'Unknown Customer',
-        customer_email: customer?.email || 'unknown@example.com',
-      created_at: card.created_at,
-      updated_at: card.updated_at,
-      test_urls: {
-        apple: `/api/wallet/apple/${card.id}`,
-        google: `/api/wallet/google/${card.id}`,
-        pwa: `/api/wallet/pwa/${card.id}`,
-        debug: `/api/wallet/apple/${card.id}?debug=true`
-      }
-      }
-    }) || []
-
-    console.log('✅ Formatted cards for test interface:', formattedCards.length)
+    const existingCardIds = existingCards?.map(card => card.id) || []
+    const cardsToGenerate = DEMO_CARDS.filter(card => !existingCardIds.includes(card.id))
 
     return NextResponse.json({
       success: true,
-      count: formattedCards.length,
-      cards: formattedCards,
-      scenarios: [
-        'default',
-        'empty',
-        'half_complete',
-        'almost_complete',
-        'completed',
-        'over_complete',
-        'large_card',
-        'small_card',
-        'long_names'
-      ],
-      message: `Found ${formattedCards.length} test cards`
+      message: `Found ${existingCards?.length || 0} existing cards, ${cardsToGenerate.length} available for generation`,
+      cards: existingCards || [],
+      availableForGeneration: cardsToGenerate.length,
+      totalCards: DEMO_CARDS.length
     })
 
   } catch (error) {
-    console.error('❌ Error fetching test data:', error)
-    return NextResponse.json(
-      { 
-        error: 'Failed to fetch test data',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    )
+    console.error('Error in dev-seed GET:', error)
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to check demo cards'
+    }, { status: 500 })
   }
 }
 
-async function generateTestData(supabase: any, scenario: string, count: number) {
-  console.log(`🎯 Generating ${count} test cards for scenario: ${scenario}`)
-  const results = []
-  
-  for (let i = 0; i < count; i++) {
-    try {
-    const testData = await createTestCard(supabase, scenario, i + 1)
-    results.push(testData)
-    } catch (error) {
-      console.error(`❌ Failed to create test card ${i + 1} for scenario ${scenario}:`, error)
-      // Continue with other cards
-    }
-  }
-  
-  return results
-}
-
-async function createTestCard(supabase: any, scenario: string, index: number) {
-  // Generate UUIDs for test entities
-  const businessId = crypto.randomUUID()
-  const customerId = crypto.randomUUID()
-  const stampCardId = crypto.randomUUID()
-  const customerCardId = crypto.randomUUID()
-
-  // Configure scenario-specific data
-  const scenarioConfig = getScenarioConfig(scenario, index)
-  
-  console.log(`🏗️ Creating test card: ${scenario} #${index}`)
-  
+export async function POST(request: NextRequest) {
   try {
-    // Get or create test users to avoid foreign key constraints
-    let businessOwnerId = businessId
-    let customerUserId = customerId
-    
-    // Try to get existing test users
-    const { data: existingUsers } = await supabase
-    .from('users')
-      .select('id, role_id, email')
-      .or('email.like.*test*,email.like.*example*')
-      .limit(10)
-
-    if (existingUsers && existingUsers.length > 0) {
-      const businessUser = existingUsers.find((u: any) => u.role_id === 2)
-      const customerUser = existingUsers.find((u: any) => u.role_id === 3)
-      
-      if (businessUser) {
-        businessOwnerId = businessUser.id
-        console.log('📋 Using existing business user:', businessUser.email)
-      }
-      if (customerUser) {
-        customerUserId = customerUser.id
-        console.log('📋 Using existing customer user:', customerUser.email)
-      }
-  }
-
-  // Create business
-  const { error: businessError } = await supabase
-    .from('businesses')
-    .insert({
-      id: businessId,
-      owner_id: businessOwnerId,
-      name: scenarioConfig.businessName,
-        description: scenarioConfig.businessDescription,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-    })
-      .select()
-      .single()
-  
-    if (businessError) {
-      console.error('❌ Error creating business:', businessError)
-      throw businessError
-    }
-
-  // Create stamp card
-  const { error: stampCardError } = await supabase
-    .from('stamp_cards')
-    .insert({
-      id: stampCardId,
-      business_id: businessId,
-      name: scenarioConfig.stampCardName,
-      total_stamps: scenarioConfig.totalStamps,
-      reward_description: scenarioConfig.rewardDescription,
-        status: 'active',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-    })
-      .select()
-      .single()
-  
-    if (stampCardError) {
-      console.error('❌ Error creating stamp card:', stampCardError)
-      throw stampCardError
-    }
-
-  // Create customer
-  const { error: customerError } = await supabase
-    .from('customers')
-    .insert({
-      id: customerId,
-      user_id: customerUserId,
-      name: scenarioConfig.customerName,
-        email: `test-customer-${scenario}-${index}@example.com`,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-    })
-      .select()
-      .single()
-  
-    if (customerError) {
-      console.error('❌ Error creating customer:', customerError)
-      throw customerError
-    }
-
-  // Create customer card
-  const { error: customerCardError } = await supabase
-    .from('customer_cards')
-    .insert({
-      id: customerCardId,
-      customer_id: customerId,
-      stamp_card_id: stampCardId,
-      current_stamps: scenarioConfig.currentStamps,
-        wallet_pass_id: null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+    // Debounce rapid duplicate calls
+    const now = Date.now()
+    if (now - lastGenerationTime < DEBOUNCE_DELAY) {
+      return NextResponse.json({
+        success: true,
+        message: 'Request debounced - please wait before generating again',
+        debounced: true
       })
-      .select()
-      .single()
-  
-    if (customerCardError) {
-      console.error('❌ Error creating customer card:', customerCardError)
-      throw customerCardError
     }
+    lastGenerationTime = now
 
-    console.log(`✅ Successfully created test scenario: ${scenario} #${index}`)
+    const body = await request.json()
+    const { createAll = false, scenario, count = 1 } = body
 
-  return {
-      customerCardId: customerCardId,
-    scenario: scenario,
-      businessName: scenarioConfig.businessName,
-      stampCardName: scenarioConfig.stampCardName,
-      customerName: scenarioConfig.customerName,
-      currentStamps: scenarioConfig.currentStamps,
-      totalStamps: scenarioConfig.totalStamps,
-      completionPercentage: Math.round((scenarioConfig.currentStamps / scenarioConfig.totalStamps) * 100),
-      testUrls: {
-      apple: `/api/wallet/apple/${customerCardId}`,
-      google: `/api/wallet/google/${customerCardId}`,
-      pwa: `/api/wallet/pwa/${customerCardId}`,
-      debug: `/api/wallet/apple/${customerCardId}?debug=true`
-    }
-    }
-
-  } catch (error) {
-    console.error(`❌ Error creating test card for scenario ${scenario}:`, error)
-    throw error
-  }
-}
-
-function getScenarioConfig(scenario: string, index: number) {
-  const baseConfig = {
-    businessName: `Test Business ${index}`,
-    businessDescription: `Test business for scenario ${scenario}`,
-    stampCardName: `Test Stamp Card ${index}`,
-    customerName: `Test Customer ${index}`,
-    totalStamps: 10,
-    currentStamps: 5,
-    rewardDescription: 'Test reward description'
-  }
-
-  switch (scenario) {
-    case 'empty':
-      return {
-        ...baseConfig,
-        businessName: `Empty Card Business ${index}`,
-        stampCardName: `Empty Card Test ${index}`,
-        currentStamps: 0,
-        rewardDescription: 'Free item when you collect 10 stamps'
-      }
-    
-    case 'half_complete':
-      return {
-        ...baseConfig,
-        businessName: `Half Complete Business ${index}`,
-        stampCardName: `Half Complete Test ${index}`,
-        currentStamps: 5,
-        rewardDescription: 'Free coffee when you collect 10 stamps'
-      }
-    
-    case 'almost_complete':
-      return {
-        ...baseConfig,
-        businessName: `Almost Complete Business ${index}`,
-        stampCardName: `Almost Complete Test ${index}`,
-        currentStamps: 9,
-        rewardDescription: 'Free meal when you collect 10 stamps'
-      }
-    
-    case 'completed':
-      return {
-        ...baseConfig,
-        businessName: `Completed Business ${index}`,
-        stampCardName: `Completed Test ${index}`,
-        currentStamps: 10,
-        rewardDescription: 'Free premium item - reward earned!'
-      }
-    
-    case 'over_complete':
-      return {
-        ...baseConfig,
-        businessName: `Over Complete Business ${index}`,
-        stampCardName: `Over Complete Test ${index}`,
-        currentStamps: 12,
-        rewardDescription: 'Free premium item - reward earned!'
-      }
-    
-    case 'large_card':
-      return {
-        ...baseConfig,
-        businessName: `Large Card Business ${index}`,
-        stampCardName: `Large Card Test ${index}`,
-        totalStamps: 50,
-        currentStamps: 15,
-        rewardDescription: 'Free premium package when you collect 50 stamps'
-      }
-    
-    case 'small_card':
-      return {
-        ...baseConfig,
-        businessName: `Small Card Business ${index}`,
-        stampCardName: `Small Card Test ${index}`,
-        totalStamps: 3,
-        currentStamps: 2,
-        rewardDescription: 'Free item when you collect 3 stamps'
-      }
-    
-    case 'long_names':
-      return {
-        ...baseConfig,
-        businessName: `Very Long Business Name That Might Cause Display Issues In Wallet ${index}`,
-        stampCardName: `Very Long Stamp Card Name That Tests Text Overflow ${index}`,
-        customerName: `Very Long Customer Name That Tests Display ${index}`,
-        rewardDescription: 'Very long reward description that tests how the wallet handles extended text content and word wrapping in the pass display'
-      }
-    
-    default: // 'default'
-      return baseConfig
-  }
-}
-
-async function cleanupTestData(supabase: any) {
-  try {
-    console.log('🧹 Starting cleanup of test data...')
-    
-  // Delete test data in reverse order of dependencies
-  
-    // Delete customer cards first
-    const { error: customerCardsError } = await supabase
+    // Check for existing cards to prevent duplicates
+    const { data: existingCards } = await supabase
       .from('customer_cards')
-      .delete()
-      .in('customer_id', 
-        supabase
-        .from('customers')
-        .select('id')
-        .like('email', '%test-%')
-      )
-    
-    if (customerCardsError) console.warn('⚠️  Error cleaning customer cards:', customerCardsError)
-
-    // Delete customers
-    const { error: customersError } = await supabase
-      .from('customers')
-      .delete()
-      .like('email', '%test-%')
-    
-    if (customersError) console.warn('⚠️  Error cleaning customers:', customersError)
-
-  // Delete stamp cards
-    const { error: stampCardsError } = await supabase
-    .from('stamp_cards')
-    .delete()
-      .in('business_id', 
-        supabase
-      .from('businesses')
       .select('id')
-      .like('name', '%Test%')
-    )
-    
-    if (stampCardsError) console.warn('⚠️  Error cleaning stamp cards:', stampCardsError)
+      .in('id', DEMO_CARDS.map(card => card.id))
 
-  // Delete businesses
-    const { error: businessesError } = await supabase
-    .from('businesses')
-    .delete()
-    .like('name', '%Test%')
+    const existingCardIds = existingCards?.map(card => card.id) || []
+    const cardsToGenerate = DEMO_CARDS.filter(card => !existingCardIds.includes(card.id))
 
-    if (businessesError) console.warn('⚠️  Error cleaning businesses:', businessesError)
+    if (cardsToGenerate.length === 0) {
+      return NextResponse.json({
+        success: true,
+        message: 'All demo cards already exist',
+        cards: existingCards,
+        generated: 0
+      })
+    }
 
-    console.log('✅ Test data cleanup completed')
+    // Generate demo businesses first
+    const businesses = [
+      {
+        id: '539c1e0d-c7e8-4237-abb2-90f3ae29f903',
+        name: 'NIO Coffee',
+        description: 'Premium coffee experience',
+        owner_id: '00000000-0000-0000-0000-000000000001'
+      },
+      {
+        id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+        name: 'FitLife Gym',
+        description: 'Modern fitness center',
+        owner_id: '00000000-0000-0000-0000-000000000001'
+      }
+    ]
+
+    for (const business of businesses) {
+      await supabase
+        .from('businesses')
+        .upsert(business, { onConflict: 'id' })
+    }
+
+    // Generate stamp card templates
+    const stampCardTemplates = cardsToGenerate
+      .filter(card => card.membership_type === 'loyalty')
+      .map(card => ({
+        id: card.id,
+        business_id: card.business_name.includes('Coffee') ? businesses[0].id : businesses[1].id,
+        name: card.card_name,
+        total_stamps: card.total_stamps,
+        reward_description: card.reward_description,
+        status: 'active'
+      }))
+
+    if (stampCardTemplates.length > 0) {
+      await supabase
+        .from('stamp_cards')
+        .upsert(stampCardTemplates, { onConflict: 'id' })
+    }
+
+    // Generate membership card templates
+    const membershipCardTemplates = cardsToGenerate
+      .filter(card => card.membership_type === 'membership')
+      .map(card => ({
+        id: card.id,
+        business_id: businesses[1].id, // FitLife Gym
+        name: card.card_name,
+        membership_type: 'membership', // Updated to use 'membership' instead of 'gym'
+        total_sessions: card.total_sessions,
+        cost: card.cost,
+        duration_days: card.expiry_days,
+        status: 'active'
+      }))
+
+    if (membershipCardTemplates.length > 0) {
+      await supabase
+        .from('membership_cards')
+        .upsert(membershipCardTemplates, { onConflict: 'id' })
+    }
+
+    // Generate demo customer
+    const demoCustomer = {
+      id: '00000000-0000-0000-0000-000000000002',
+      user_id: '00000000-0000-0000-0000-000000000003',
+      name: 'Demo Customer',
+      email: 'demo@rewardjar.com'
+    }
+
+    await supabase
+      .from('customers')
+      .upsert(demoCustomer, { onConflict: 'id' })
+
+    // Generate customer cards
+    const customerCards = cardsToGenerate.map(card => ({
+      id: card.id,
+      customer_id: demoCustomer.id,
+      stamp_card_id: card.id,
+      current_stamps: card.current_stamps || 0,
+      membership_type: card.membership_type,
+      total_sessions: card.total_sessions,
+      sessions_used: card.sessions_used || 0,
+      cost: card.cost,
+      expiry_date: card.expiry_days 
+        ? new Date(Date.now() + card.expiry_days * 24 * 60 * 60 * 1000).toISOString()
+        : null,
+      wallet_type: 'pwa',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    }))
+
+    const { data: createdCards, error: createError } = await supabase
+      .from('customer_cards')
+      .upsert(customerCards, { onConflict: 'id' })
+      .select()
+
+    if (createError) {
+      throw createError
+    }
+
+    // Generate card customizations
+    const customizations = cardsToGenerate.map(card => ({
+      business_id: card.business_name.includes('Coffee') ? businesses[0].id : businesses[1].id,
+      card_type: card.membership_type === 'loyalty' ? 'stamp' : 'membership',
+      business_name: card.business_name,
+      logo_url: `https://example.com/${card.business_name.toLowerCase().replace(' ', '-')}-logo.png`,
+      total_stamps_or_sessions: card.total_stamps || card.total_sessions,
+      expiry_days: card.expiry_days || 365,
+      stamp_grid_layout: card.grid_layout || '5x2',
+      primary_color: card.membership_type === 'loyalty' ? '#10b981' : '#6366f1',
+      secondary_color: card.membership_type === 'loyalty' ? '#047857' : '#4338ca'
+    }))
+
+    for (const customization of customizations) {
+      await supabase
+        .from('card_customizations')
+        .upsert(customization, { onConflict: 'business_id,card_type' })
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `Generated ${cardsToGenerate.length} demo cards (${cardsToGenerate.filter(c => c.membership_type === 'loyalty').length} stamp, ${cardsToGenerate.filter(c => c.membership_type === 'membership').length} membership)`,
+      cards: createdCards,
+      generated: cardsToGenerate.length,
+      subtypes: {
+        loyalty: cardsToGenerate.filter(c => c.membership_type === 'loyalty').length,
+        membership: cardsToGenerate.filter(c => c.membership_type === 'membership').length
+      }
+    })
+
   } catch (error) {
-    console.error('❌ Error during cleanup:', error)
-    throw error
+    console.error('Error generating demo cards:', error)
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to generate demo cards',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 })
   }
 } 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
+import QRCode from 'qrcode'
 
 export async function GET(
   request: NextRequest,
@@ -137,6 +138,20 @@ export async function GET(
     console.log('Card Type:', isMembership ? 'Membership' : 'Loyalty')
     console.log('Stamp Card:', stampCard)
     console.log('Business:', business)
+    
+    // Generate QR code for the customer card access URL
+    // Use environment variable for base URL, fallback to localhost for development
+    const baseUrl = process.env.BASE_URL || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+    const cardAccessUrl = `${baseUrl}/customer/card/${customerCardId}`
+    
+    const qrCodeDataURL = await QRCode.toDataURL(cardAccessUrl, {
+      width: 200,
+      margin: 2,
+      color: {
+        dark: '#000000',
+        light: '#FFFFFF'
+      }
+    })
     
     // Generate PWA wallet HTML
     const walletHTML = `
@@ -279,10 +294,8 @@ export async function GET(
                 <!-- QR Code Section -->
                 <div class="text-center border-t pt-4">
                     <div class="bg-gray-50 rounded-lg p-4 mb-3">
-                        <div class="w-32 h-32 bg-white border-2 border-gray-200 rounded-lg mx-auto flex items-center justify-center mb-2">
-                            <svg class="w-16 h-16 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm2 2V5h1v1H5zM3 13a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3zm2 2v-1h1v1H5zM13 3a1 1 0 00-1 1v3a1 1 0 001 1h3a1 1 0 001-1V4a1 1 0 00-1-1h-3zm1 2v1h1V5h-1z" clip-rule="evenodd"></path>
-                            </svg>
+                        <div class="w-40 h-40 bg-white border-2 border-gray-200 rounded-lg mx-auto flex items-center justify-center mb-2 p-2">
+                            <img src="${qrCodeDataURL}" alt="QR Code for ${business.name}" class="w-full h-full rounded" />
                         </div>
                         <p class="text-sm text-gray-600">
                           Scan this QR code at ${business.name} to ${isMembership ? 'mark sessions' : 'collect stamps'}

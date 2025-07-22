@@ -242,14 +242,14 @@ export async function POST(
 
       // Update stamps
       const { error: updateError } = await supabase
-        .from('customer_cards')
+      .from('customer_cards')
         .update({
           current_stamps: currentStamps + 1,
           updated_at: new Date().toISOString()
         })
-        .eq('id', customerCardId)
+      .eq('id', customerCardId)
       
-      if (updateError) {
+    if (updateError) {
         console.error('Error updating stamps:', updateError)
         return NextResponse.json({
           success: false,

@@ -100,7 +100,7 @@ export async function GET(
     }
 
     // Determine card type and calculate appropriate progress
-    const isGymMembership = customerCard.membership_type === 'gym'
+    const isMembershipCard = customerCard.membership_type === 'membership'
     let progress: number
     let isCompleted: boolean
     let remaining: number
@@ -108,8 +108,8 @@ export async function GET(
     let progressLabel: string
     let remainingLabel: string
 
-    if (isGymMembership) {
-      // Handle gym membership logic
+    if (isMembershipCard) {
+      // Handle membership card logic
       const sessionsUsed = customerCard.sessions_used || 0
       const totalSessions = customerCard.total_sessions || 20
       progress = (sessionsUsed / totalSessions) * 100
@@ -144,14 +144,14 @@ export async function GET(
       organizationName: "RewardJar",
       description: `${stampCardData.name} - ${businessData.name}`,
       logoText: "RewardJar",
-      backgroundColor: isGymMembership ? "rgb(99, 102, 241)" : "rgb(16, 185, 129)", // indigo for gym, green for loyalty
+      backgroundColor: isMembershipCard ? "rgb(99, 102, 241)" : "rgb(16, 185, 129)", // indigo for gym, green for loyalty
       foregroundColor: "rgb(255, 255, 255)",
       labelColor: "rgb(255, 255, 255)",
       
       storeCard: {
         primaryFields: [
           {
-            key: isGymMembership ? "sessions" : "stamps",
+            key: isMembershipCard ? "sessions" : "stamps",
             label: progressLabel,
             value: primaryValue,
             textAlignment: "PKTextAlignmentCenter"
@@ -168,8 +168,8 @@ export async function GET(
             key: "remaining",
             label: remainingLabel,
             value: isCompleted ? 
-              (isGymMembership ? "Complete" : "Completed!") : 
-              `${remaining} ${isGymMembership ? 'sessions' : 'stamps'}`,
+              (isMembershipCard ? "Complete" : "Completed!") : 
+              `${remaining} ${isMembershipCard ? 'sessions' : 'stamps'}`,
             textAlignment: "PKTextAlignmentRight"
           }
         ],
@@ -180,7 +180,7 @@ export async function GET(
             value: businessData.name,
             textAlignment: "PKTextAlignmentLeft"
           },
-          ...(isGymMembership ? [
+          ...(isMembershipCard ? [
             {
               key: "cost",
               label: "Value",
@@ -199,7 +199,7 @@ export async function GET(
         headerFields: [
           {
             key: "card_name",
-            label: isGymMembership ? "Membership" : "Loyalty Card",
+            label: isMembershipCard ? "Membership" : "Loyalty Card",
             value: stampCardData.name,
             textAlignment: "PKTextAlignmentCenter"
           }
@@ -208,25 +208,25 @@ export async function GET(
           {
             key: "description",
             label: "About",
-            value: isGymMembership ? 
+            value: isMembershipCard ? 
               `Gym membership with ${customerCard.total_sessions || 20} sessions. Value: ₩${(customerCard.cost || 15000).toLocaleString()}.` :
               `Collect ${stampCardData.total_stamps} stamps to earn: ${stampCardData.reward_description}`
           },
           {
             key: "business_info",
             label: businessData.name,
-            value: businessData.description || (isGymMembership ? 
+            value: businessData.description || (isMembershipCard ? 
               "Visit us to use your gym sessions!" : 
               "Visit us to collect stamps and earn rewards!")
           },
           {
             key: "instructions",
             label: "How to Use",
-            value: isGymMembership ?
+            value: isMembershipCard ?
               "Show this pass at the gym to mark session usage. Your pass will automatically update when sessions are used." :
               "Show this pass to collect stamps at participating locations. Your pass will automatically update when new stamps are added."
           },
-          ...(isGymMembership && customerCard.expiry_date ? [
+          ...(isMembershipCard && customerCard.expiry_date ? [
             {
               key: "expiry_info",
               label: "Valid Until",
@@ -245,7 +245,7 @@ export async function GET(
         message: customerCardId,
         format: "PKBarcodeFormatQR",
         messageEncoding: "iso-8859-1",
-        altText: `${isGymMembership ? 'Membership' : 'Card'} ID: ${customerCardId}`
+        altText: `${isMembershipCard ? 'Membership' : 'Card'} ID: ${customerCardId}`
       },
       
       webServiceURL: `${process.env.BASE_URL || 'https://www.rewardjar.xyz'}/api/wallet/apple/updates`,
@@ -255,7 +255,7 @@ export async function GET(
         customerCardId: customerCardId,
         stampCardId: stampCardData.id,
         businessName: businessData.name,
-        cardType: isGymMembership ? 'membership' : 'loyalty'
+        cardType: isMembershipCard ? 'membership' : 'loyalty'
       },
       
       locations: [],
@@ -263,7 +263,7 @@ export async function GET(
       relevantDate: new Date().toISOString(),
       
       // Add expiry for gym memberships
-      ...(isGymMembership && customerCard.expiry_date && {
+      ...(isMembershipCard && customerCard.expiry_date && {
         expirationDate: customerCard.expiry_date
       })
     }

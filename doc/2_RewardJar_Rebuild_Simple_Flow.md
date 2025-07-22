@@ -171,8 +171,8 @@ graph TD
 ### Business Routes (Protected - role_id: 2)
 ```
 /business/dashboard         # Business overview (both card types)
-/business/stamp-cards       # Loyalty card management
-/business/stamp-cards/new   # Create new loyalty card
+/business/stamp-cards       # stamp card management
+/business/stamp-cards/new   # Create new stamp card
 /business/memberships       # Membership card management (NEW)
 /business/memberships/new   # Create new membership card (NEW)
 /business/analytics         # Usage statistics (both card types)

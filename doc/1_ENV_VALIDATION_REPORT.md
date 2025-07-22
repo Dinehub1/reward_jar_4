@@ -45,8 +45,7 @@ SUPABASE_ACCESS_TOKEN=sbp_0e5fe1e3e59b64f0... (MCP database access token)
 ```env
 API_KEY=rewardjar_api_key_2025_production_ready (configured)
 DEV_SEED_API_KEY=optional (not set)
-NEXT_PUBLIC_POSTHOG_KEY=phc_key (optional)
-NEXT_PUBLIC_POSTHOG_HOST=https://app.posthog.com (optional)
+
 ```
 
 
@@ -312,7 +311,7 @@ curl -s "http://localhost:3000/api/wallet/google/27deeb58-376f-4c4a-99a9-244404b
 # "3388000000022940702.membership.rewardjar"
 
 # Test loyalty card (should show green theme and stamps)
-curl -s "http://localhost:3000/api/wallet/google/10e2488a-7c4b-495d-a5ee-ec5a7ec4f13e?debug=true" | jq '.loyaltyObject.hexBackgroundColor, .loyaltyObject.loyaltyPoints.label, .loyaltyObject.classId'
+curl -s "http://localhost:3000/api/wallet/google/10e2488a-7c4b-495d-a5ee-ec5a7ec4f132e?debug=true" | jq '.loyaltyObject.hexBackgroundColor, .loyaltyObject.loyaltyPoints.label, .loyaltyObject.classId'
 # Expected Output:
 # "#10b981"
 # "Stamps Collected"

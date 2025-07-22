@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import jwt from 'jsonwebtoken'
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
     if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY) {
       return NextResponse.json(
@@ -10,14 +10,22 @@ export async function POST() {
       )
     }
 
+    // Get card type from request body (default to loyalty for backward compatibility)
+    const body = await request.json().catch(() => ({}))
+    const cardType = body.cardType || 'loyalty'
+
     const issuerID = process.env.GOOGLE_ISSUER_ID || '3388000000022940702'
-    const classId = `${issuerID}.loyalty.rewardjar`
+    const classId = cardType === 'membership' 
+      ? `${issuerID}.membership.rewardjar`
+      : `${issuerID}.loyalty.rewardjar`
     
-    // Create loyalty class definition
+    const programName = cardType === 'membership' ? 'Membership Cards' : 'Stamp Cards'
+    
+    // Create dynamic class definition
     const loyaltyClass = {
       id: classId,
       issuerName: "RewardJar",
-      programName: "Digital Loyalty Cards",
+      programName: programName,
       programLogo: {
         sourceUri: {
           uri: "https://storage.googleapis.com/wallet-lab-tools-codelab-artifacts-public/pass_google_logo.jpg"
