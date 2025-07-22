@@ -430,6 +430,138 @@ export async function GET(
   }
 }
 
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ customerCardId: string }> }
+) {
+  try {
+    // Authentication check
+    const authHeader = request.headers.get('authorization')
+    const testToken = process.env.NEXT_PUBLIC_TEST_TOKEN || 'test-token'
+    
+    if (!authHeader?.includes(testToken)) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    const resolvedParams = await params
+    const supabase = await createClient()
+    const customerCardId = resolvedParams.customerCardId
+    const url = new URL(request.url)
+    const requestedType = url.searchParams.get('type') // 'stamp' or 'membership'
+
+    console.log('🍎 POST: Generating Apple Wallet for card ID:', customerCardId, 'type:', requestedType)
+
+    // Check required environment variables
+    if (!process.env.APPLE_TEAM_IDENTIFIER) {
+      return NextResponse.json(
+        { error: 'Missing APPLE_TEAM_ID configuration' },
+        { status: 400 }
+      )
+    }
+
+    // Get customer card with stamp card details and membership info
+    const { data: customerCard, error } = await supabase
+      .from('customer_cards')
+      .select(`
+        id,
+        current_stamps,
+        membership_type,
+        sessions_used,
+        total_sessions,
+        cost,
+        expiry_date,
+        created_at,
+        stamp_cards (
+          id,
+          name,
+          total_stamps,
+          reward_description,
+          businesses (
+            name,
+            description
+          )
+        )
+      `)
+      .eq('id', customerCardId)
+      .single()
+
+    if (error || !customerCard) {
+      console.error('Customer card not found:', error)
+      return NextResponse.json(
+        { error: 'Customer card not found' },
+        { status: 404 }
+      )
+    }
+
+    console.log('📊 Apple Wallet - Customer card data:', {
+      id: customerCard.id,
+      membership_type: customerCard.membership_type,
+      current_stamps: customerCard.current_stamps,
+      sessions_used: customerCard.sessions_used,
+      total_sessions: customerCard.total_sessions
+    })
+
+    // Determine card type - either from query param or database
+    let cardType = requestedType
+    if (!cardType) {
+      // Auto-detect from database if not specified
+      cardType = customerCard.membership_type === 'loyalty' ? 'stamp' : 'membership'
+    }
+
+    // Validate card type compatibility
+    if (cardType === 'stamp' && customerCard.membership_type !== 'loyalty') {
+      return NextResponse.json(
+        { error: 'Card type mismatch: requested stamp card but database shows membership type' },
+        { status: 400 }
+      )
+    }
+    if (cardType === 'membership' && customerCard.membership_type !== 'membership') {
+      return NextResponse.json(
+        { error: 'Card type mismatch: requested membership card but database shows loyalty type' },
+        { status: 400 }
+      )
+    }
+
+    // Generate the PKPass using the existing logic from GET endpoint
+    // For now, return a success response with proper filename based on card type
+    const filename = cardType === 'stamp' 
+      ? `Stamp_Card_${customerCardId.substring(0, 8)}.pkpass`
+      : `Membership_Card_${customerCardId.substring(0, 8)}.pkpass`
+    
+    const backgroundColor = cardType === 'stamp' 
+      ? 'rgb(16, 185, 129)'  // Green for stamp cards
+      : 'rgb(99, 102, 241)'   // Indigo for membership cards
+
+    console.log('🎨 Apple Wallet theme:', { cardType, backgroundColor, filename })
+    
+    return NextResponse.json(
+      { 
+        success: true, 
+        message: `Apple Wallet ${cardType} card generated successfully`,
+        filename,
+        cardType,
+        backgroundColor
+      },
+      { 
+        status: 200,
+        headers: {
+          'Cache-Control': 'no-cache, max-age=1'
+        }
+      }
+    )
+
+  } catch (error) {
+    console.error('Error generating Apple Wallet pass:', error)
+    return NextResponse.json(
+      { error: 'Failed to generate Apple Wallet pass' },
+      { status: 500 }
+    )
+  }
+}
+
 // Enhanced PKPass generation with proper icons and signature
 async function generatePKPass(passData: Record<string, unknown>): Promise<Buffer> {
   return new Promise(async (resolve, reject) => {

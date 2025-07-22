@@ -58,6 +58,7 @@ export default function WalletPreviewPage() {
   const [sessionMarking, setSessionMarking] = useState(false)
   const [lastUpdate, setLastUpdate] = useState<LastUpdate | null>(null)
   const [mounted, setMounted] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   
   const searchParams = useSearchParams()
   const customerCardId = searchParams?.get('customerCardId')
@@ -262,22 +263,21 @@ export default function WalletPreviewPage() {
     if (sessionMarking) return // Prevent multiple concurrent calls
     
     setSessionMarking(true)
+    setError(null) // Clear previous errors
     
     try {
-      console.log(`🎫 Generating ${platform} wallet for ${cardType} card: ${cardId}`)
+      // Map cardType to API type parameter
+      const apiType = cardType === 'loyalty' ? 'stamp' : 'membership'
+      console.log(`🎫 Generating ${platform} wallet for ${cardType} card (API type: ${apiType}): ${cardId}`)
       
-      // Add authentication header if needed
+      // Add authentication header
       const headers: HeadersInit = {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.NEXT_PUBLIC_TEST_TOKEN || 'test-token'}`
       }
       
-      // Add test token if available
-      if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_TEST_TOKEN) {
-        headers['Authorization'] = `Bearer ${process.env.NEXT_PUBLIC_TEST_TOKEN}`
-      }
-      
-      const response = await fetch(`/api/wallet/${platform}/${cardId}?type=${cardType}`, {
-        method: 'GET',
+      const response = await fetch(`/api/wallet/${platform}/${cardId}?type=${apiType}`, {
+        method: 'POST',
         headers
       })
       
@@ -290,7 +290,7 @@ export default function WalletPreviewPage() {
           const url = URL.createObjectURL(blob)
           const a = document.createElement('a')
           a.href = url
-          a.download = `${cardType === 'loyalty' ? 'Stamp' : 'Membership'}_Card_${cardId.substring(0, 8)}.pkpass`
+          a.download = `${apiType === 'stamp' ? 'Stamp' : 'Membership'}_Card_${cardId.substring(0, 8)}.pkpass`
           document.body.appendChild(a)
           a.click()
           document.body.removeChild(a)
@@ -298,19 +298,33 @@ export default function WalletPreviewPage() {
           
           // Show success alert
           alert(`✅ Apple Pass generated successfully! Download should start automatically.`)
+        } else if (platform === 'google') {
+          // For Google Wallet, get the save URL
+          const data = await response.json()
+          if (data.saveUrl) {
+            window.open(data.saveUrl, '_blank')
+            alert(`✅ Google Pass generated successfully!`)
+          } else {
+            throw new Error('No save URL returned from Google Wallet API')
+          }
         } else {
-          // For Google and PWA, open in new tab
-          window.open(`/api/wallet/${platform}/${cardId}?type=${cardType}`, '_blank')
-          
-          // Show success alert
-          alert(`✅ ${platform.charAt(0).toUpperCase() + platform.slice(1)} Pass generated successfully!`)
+          // For PWA, open in new tab
+          const htmlContent = await response.text()
+          const newWindow = window.open('', '_blank')
+          if (newWindow) {
+            newWindow.document.write(htmlContent)
+            newWindow.document.close()
+            alert(`✅ PWA Pass generated successfully!`)
+          } else {
+            throw new Error('Could not open PWA pass in new window')
+          }
         }
         
         setLastUpdate({
           timestamp: new Date().toISOString(),
           type: 'stamp',
           success: true,
-          details: { platform, cardType, action: 'specific_wallet_generated', cardId }
+          details: { platform, cardType: apiType, action: 'specific_wallet_generated', cardId }
         })
       } else {
         const errorText = await response.text()
@@ -320,8 +334,8 @@ export default function WalletPreviewPage() {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       console.error(`❌ Error generating ${platform} wallet:`, error)
       
-      // Show error alert
-      alert(`❌ Error generating ${platform} pass: ${errorMessage}`)
+      // Set error state for red alert display
+      setError(`Error generating ${platform} pass: ${errorMessage}`)
       
       setLastUpdate({
         timestamp: new Date().toISOString(),
@@ -390,13 +404,34 @@ export default function WalletPreviewPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-3xl font-bold text-center">
-              🎫 RewardJar 4.0 - Loyalty Card Testing
+              🎫 RewardJar 4.0 - Wallet Testing
             </CardTitle>
             <p className="text-center text-gray-600">
               Test wallet integrations for both Stamp Cards and Membership Cards
             </p>
           </CardHeader>
         </Card>
+
+        {/* Error Alert */}
+        {error && (
+          <Card className="border-red-200 bg-red-50">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-2 text-red-700">
+                <AlertCircle className="h-5 w-5" />
+                <span className="font-medium">Error:</span>
+                <span>{error}</span>
+                <Button
+                  onClick={() => setError(null)}
+                  variant="outline"
+                  size="sm"
+                  className="ml-auto text-red-700 border-red-300 hover:bg-red-100"
+                >
+                  Dismiss
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Main Tabs Interface */}
         <Tabs value={selectedTab} onValueChange={(value) => setSelectedTab(value as 'loyalty' | 'membership')}>
@@ -419,7 +454,7 @@ export default function WalletPreviewPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Coffee className="h-5 w-5 text-green-500" />
-                  Loyalty Card: Stamp Card Testing
+                  Stamp Card Testing
                 </CardTitle>
                 <p className="text-sm text-gray-600">
                   Test stamp collection, 5x2 grid layout, and reward redemption
@@ -530,7 +565,7 @@ export default function WalletPreviewPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Calendar className="h-5 w-5 text-indigo-500" />
-                  Loyalty Card: Membership Card Testing
+                  Membership Card Testing
                 </CardTitle>
                 <p className="text-sm text-gray-600">
                   Test session tracking, cost display, and expiry management
