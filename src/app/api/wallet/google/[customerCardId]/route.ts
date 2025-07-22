@@ -82,7 +82,7 @@ export async function GET(
     console.log(`🏷️ Setting Google Wallet title to: "${cardTypeDisplay}"`)
 
     // Dynamic class ID based on card type - Use v2 classes with correct programName
-    const issuerID = process.env.GOOGLE_ISSUER_ID || '3388000000022940702'
+  const issuerID = process.env.GOOGLE_ISSUER_ID || '3388000000022940702'
     const dynamicClassId = isStampCard 
       ? `${issuerID}.loyalty.rewardjar_v2`
       : `${issuerID}.membership.rewardjar_v2`
@@ -451,8 +451,8 @@ export async function POST(
       )
     }
 
-    const resolvedParams = await params
-    const customerCardId = resolvedParams.customerCardId
+  const resolvedParams = await params
+  const customerCardId = resolvedParams.customerCardId
     const url = new URL(request.url)
     const requestedType = url.searchParams.get('type') // 'stamp' or 'membership'
 
@@ -651,9 +651,9 @@ export async function POST(
     // Sign JWT with RS256
     const token = jwt.sign(jwtPayload, privateKey, { algorithm: 'RS256' })
     const saveUrl = `https://pay.google.com/gp/v/save/${token}`
-
+    
     return NextResponse.json(
-      {
+      { 
         success: true,
         saveUrl,
         cardType,

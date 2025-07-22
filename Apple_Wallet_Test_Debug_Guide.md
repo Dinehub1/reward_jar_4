@@ -16,6 +16,7 @@ This guide provides comprehensive testing and debugging instructions for Apple W
 - ✅ **QR Scanning Enhancement**: Added wallet sync and real-time updates with queue management
 - ✅ **Pass Generation Fix**: Implemented POST endpoints for all wallet types with authentication
 - ✅ **Error Handling**: Enhanced error alerts with proper card type context and dismissible UI
+- ✅ **Platform Detection Test**: Added debug mode and consistency checks for wallet generation
 
 ## 🧪 Testing Interface - /test/wallet-preview
 
@@ -62,6 +63,39 @@ curl -X POST \
 # true
 # [{"platform": "apple", "id": "uuid", "status": "queued"}, ...]
 ```
+
+### **Platform Detection Test**
+
+The enhanced platform detection functionality now includes:
+- ✅ **Debug mode toggle** with real-time platform detection
+- ✅ **User-Agent analysis** with detailed reasoning
+- ✅ **Platform consistency checks** between detected and requested platforms
+- ✅ **API response validation** for stamp count and theme consistency
+
+```bash
+# Test platform detection with different User-Agent headers
+curl -H "User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X)" \
+  -H "Authorization: Bearer $NEXT_PUBLIC_TEST_TOKEN" \
+  "http://localhost:3000/test/wallet-preview?customerCardId=3e234610-9953-4a8b-950e-b03a1924a1fe"
+# Expected: Apple Pass generation prioritized
+
+curl -H "User-Agent: Mozilla/5.0 (Linux; Android 11; SM-G975F)" \
+  -H "Authorization: Bearer $NEXT_PUBLIC_TEST_TOKEN" \
+  "http://localhost:3000/test/wallet-preview?customerCardId=3e234610-9953-4a8b-950e-b03a1924a1fe"
+# Expected: Google Pass generation prioritized
+
+curl -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)" \
+  -H "Authorization: Bearer $NEXT_PUBLIC_TEST_TOKEN" \
+  "http://localhost:3000/test/wallet-preview?customerCardId=3e234610-9953-4a8b-950e-b03a1924a1fe"
+# Expected: PWA Pass generation prioritized
+```
+
+### **Consistency Validation**
+The debug mode validates:
+- **Stamp Count Consistency**: Ensures all platforms show same count (e.g., "3/10")
+- **Theme Consistency**: Validates color schemes (Green #10b981 for stamp, Indigo #6366f1 for membership)
+- **Platform Matching**: Warns when requested platform differs from detected platform
+- **API Response Integrity**: Logs detailed response data for debugging
 
 ## 🎯 Enhanced Test Scenario Matrix
 

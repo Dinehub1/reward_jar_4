@@ -13,10 +13,10 @@ interface TestCard {
   id: string
   membership_type: 'loyalty' | 'membership'
   current_stamps?: number
-  sessions_used?: number
-  total_sessions?: number
-  cost?: number
-  expiry_date?: string
+      sessions_used?: number
+      total_sessions?: number
+      cost?: number
+      expiry_date?: string
   stamp_cards: {
     id: string
     name: string
@@ -46,6 +46,12 @@ interface LastUpdate {
   details: any
 }
 
+interface PlatformInfo {
+  detected: 'apple' | 'google' | 'pwa'
+  userAgent: string
+  reasoning: string
+}
+
 export default function WalletPreviewPage() {
   const [selectedTab, setSelectedTab] = useState<'loyalty' | 'membership'>('loyalty')
   const [testCards, setTestCards] = useState<TestCard[]>([])
@@ -59,6 +65,8 @@ export default function WalletPreviewPage() {
   const [lastUpdate, setLastUpdate] = useState<LastUpdate | null>(null)
   const [mounted, setMounted] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [debugMode, setDebugMode] = useState(false)
+  const [platformInfo, setPlatformInfo] = useState<PlatformInfo | null>(null)
   
   const searchParams = useSearchParams()
   const customerCardId = searchParams?.get('customerCardId')
@@ -242,18 +250,67 @@ export default function WalletPreviewPage() {
     setTimeout(() => setSessionMarking(false), 1000)
   }
 
-  // Platform detection for wallet generation
+  // Enhanced platform detection with debug logging
   const detectPlatform = useCallback((): 'apple' | 'google' | 'pwa' => {
     if (typeof window !== 'undefined') {
       const userAgent = window.navigator.userAgent
-      if (userAgent.includes('iPhone') || userAgent.includes('iPad')) {
+      console.log('🔍 Platform Detection - User Agent:', userAgent)
+      
+      if (userAgent.includes('iPhone') || userAgent.includes('iPad') || userAgent.includes('Mac')) {
+        console.log('📱 Platform Detected: Apple (iOS/macOS)')
         return 'apple'
       } else if (userAgent.includes('Android')) {
+        console.log('🤖 Platform Detected: Google (Android)')
         return 'google'
+      } else {
+        console.log('🌐 Platform Detected: PWA (Default/Other)')
       }
     }
     return 'pwa'
   }, [])
+
+  // Detailed platform info detection for debug mode
+  const detectPlatformInfo = useCallback((): PlatformInfo => {
+    if (typeof window === 'undefined') {
+      return {
+        detected: 'pwa',
+        userAgent: 'Server-side rendering',
+        reasoning: 'No window object available'
+      }
+    }
+
+    const userAgent = window.navigator.userAgent
+    let detected: 'apple' | 'google' | 'pwa' = 'pwa'
+    let reasoning = 'Default fallback'
+
+    if (userAgent.includes('iPhone')) {
+      detected = 'apple'
+      reasoning = 'iPhone detected in User-Agent'
+    } else if (userAgent.includes('iPad')) {
+      detected = 'apple'
+      reasoning = 'iPad detected in User-Agent'
+    } else if (userAgent.includes('Mac')) {
+      detected = 'apple'
+      reasoning = 'macOS detected in User-Agent'
+    } else if (userAgent.includes('Android')) {
+      detected = 'google'
+      reasoning = 'Android detected in User-Agent'
+    } else {
+      reasoning = 'No mobile platform detected, using PWA'
+    }
+
+    const info: PlatformInfo = { detected, userAgent, reasoning }
+    console.log('🔬 Detailed Platform Info:', info)
+    return info
+  }, [])
+
+  // Update platform info when debug mode is enabled
+  useEffect(() => {
+    if (mounted && debugMode) {
+      const info = detectPlatformInfo()
+      setPlatformInfo(info)
+    }
+  }, [mounted, debugMode, detectPlatformInfo])
 
   // Debounced wallet generation function
   const generateWallet = useCallback(async (cardId: string, cardType: 'loyalty' | 'membership') => {
@@ -308,7 +365,7 @@ export default function WalletPreviewPage() {
     setTimeout(() => setSessionMarking(false), 1000)
   }, [detectPlatform, sessionMarking])
 
-  // Generate specific wallet type with enhanced error handling
+  // Generate specific wallet type with enhanced logging and platform consistency checks
   const generateSpecificWallet = useCallback(async (cardId: string, platform: 'apple' | 'google' | 'pwa', cardType: 'loyalty' | 'membership') => {
     if (sessionMarking) return // Prevent multiple concurrent calls
     
@@ -318,7 +375,17 @@ export default function WalletPreviewPage() {
     try {
       // Map cardType to API type parameter
       const apiType = cardType === 'loyalty' ? 'stamp' : 'membership'
-      console.log(`🎫 Generating ${platform} wallet for ${cardType} card (API type: ${apiType}): ${cardId}`)
+      const detectedPlatform = detectPlatform()
+      
+      console.log(`🎫 Platform Consistency Check:`)
+      console.log(`   Requested Platform: ${platform}`)
+      console.log(`   Detected Platform: ${detectedPlatform}`)
+      console.log(`   Card Type: ${cardType} → API Type: ${apiType}`)
+      console.log(`   Card ID: ${cardId}`)
+      
+      if (debugMode && detectedPlatform !== platform) {
+        console.warn(`⚠️ Platform Mismatch: Requested ${platform} but detected ${detectedPlatform}`)
+      }
       
       // Add authentication header
       const headers: HeadersInit = {
@@ -326,18 +393,25 @@ export default function WalletPreviewPage() {
         'Authorization': `Bearer ${process.env.NEXT_PUBLIC_TEST_TOKEN || 'test-token'}`
       }
       
-      const response = await fetch(`/api/wallet/${platform}/${cardId}?type=${apiType}`, {
+      const apiUrl = `/api/wallet/${platform}/${cardId}?type=${apiType}`
+      console.log(`📡 API Request: POST ${apiUrl}`)
+      
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers
       })
       
+      console.log(`📡 API Response: ${response.status} ${response.statusText}`)
+      
       if (response.ok) {
-        console.log(`✅ ${platform} wallet generation successful`)
+        let responseData: any = null
         
         if (platform === 'apple') {
-          // For Apple Wallet, trigger download
-          const blob = await response.blob()
-          const url = URL.createObjectURL(blob)
+          // For Apple Wallet, handle blob response
+          responseData = await response.blob()
+          console.log(`📦 Apple Response: Blob size ${responseData.size} bytes`)
+          
+          const url = URL.createObjectURL(responseData)
           const a = document.createElement('a')
           a.href = url
           a.download = `${apiType === 'stamp' ? 'Stamp' : 'Membership'}_Card_${cardId.substring(0, 8)}.pkpass`
@@ -346,23 +420,53 @@ export default function WalletPreviewPage() {
           document.body.removeChild(a)
           URL.revokeObjectURL(url)
           
-          // Show success alert
-          alert(`✅ Apple Pass generated successfully! Download should start automatically.`)
+          console.log(`✅ Apple Pass: Downloaded ${a.download}`)
+          alert(`✅ Apple Pass generated successfully! Download: ${a.download}`)
+          
         } else if (platform === 'google') {
-          // For Google Wallet, get the save URL
-          const data = await response.json()
-          if (data.saveUrl) {
-            window.open(data.saveUrl, '_blank')
+          // For Google Wallet, handle JSON response
+          responseData = await response.json()
+          console.log(`📦 Google Response:`, responseData)
+          
+          // Check stamp count consistency
+          if (responseData.loyaltyObject?.loyaltyPoints?.balance?.string) {
+            console.log(`🎯 Stamp Count: ${responseData.loyaltyObject.loyaltyPoints.balance.string}`)
+          }
+          
+          // Check theme consistency
+          if (responseData.loyaltyObject?.hexBackgroundColor) {
+            const expectedColor = apiType === 'stamp' ? '#10b981' : '#6366f1'
+            const actualColor = responseData.loyaltyObject.hexBackgroundColor
+            console.log(`🎨 Theme Check: Expected ${expectedColor}, Got ${actualColor}`)
+            
+            if (actualColor !== expectedColor) {
+              console.warn(`⚠️ Theme Mismatch: Expected ${expectedColor} for ${apiType} card, got ${actualColor}`)
+            }
+          }
+          
+          if (responseData.saveUrl) {
+            window.open(responseData.saveUrl, '_blank')
             alert(`✅ Google Pass generated successfully!`)
           } else {
             throw new Error('No save URL returned from Google Wallet API')
           }
+          
         } else {
-          // For PWA, open in new tab
-          const htmlContent = await response.text()
+          // For PWA, handle HTML response
+          responseData = await response.text()
+          console.log(`📦 PWA Response: HTML length ${responseData.length} characters`)
+          
+          // Check for theme consistency in HTML
+          const expectedThemeColor = apiType === 'stamp' ? '#10b981' : '#6366f1'
+          if (responseData.includes(expectedThemeColor)) {
+            console.log(`🎨 PWA Theme Check: ✅ Found expected color ${expectedThemeColor}`)
+          } else {
+            console.warn(`⚠️ PWA Theme Issue: Expected color ${expectedThemeColor} not found in HTML`)
+          }
+          
           const newWindow = window.open('', '_blank')
           if (newWindow) {
-            newWindow.document.write(htmlContent)
+            newWindow.document.write(responseData)
             newWindow.document.close()
             alert(`✅ PWA Pass generated successfully!`)
           } else {
@@ -374,10 +478,21 @@ export default function WalletPreviewPage() {
           timestamp: new Date().toISOString(),
           type: 'stamp',
           success: true,
-          details: { platform, cardType: apiType, action: 'specific_wallet_generated', cardId }
+          details: { 
+            platform, 
+            cardType: apiType, 
+            action: 'specific_wallet_generated', 
+            cardId,
+            detectedPlatform,
+            responseData: platform === 'google' ? responseData : 'Binary/HTML data'
+          }
         })
+        
+        console.log(`✅ ${platform.toUpperCase()} wallet generation completed successfully`)
+        
       } else {
         const errorText = await response.text()
+        console.error(`❌ API Error Response: ${errorText}`)
         throw new Error(`${platform} wallet generation failed: ${response.status} ${response.statusText} - ${errorText}`)
       }
     } catch (error) {
@@ -395,9 +510,9 @@ export default function WalletPreviewPage() {
       })
     }
     
-    // Debounce: wait 1 second before allowing next call
+    // Reset loading state after 1 second
     setTimeout(() => setSessionMarking(false), 1000)
-  }, [sessionMarking])
+  }, [sessionMarking, detectPlatform, debugMode])
 
   // Test wallet generation (legacy function for individual buttons)
   const testWalletGeneration = async (cardId: string, walletType: 'apple' | 'google' | 'pwa') => {
@@ -450,7 +565,7 @@ export default function WalletPreviewPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4">
       <div className="max-w-6xl mx-auto space-y-6">
-        {/* Header */}
+      {/* Header */}
         <Card>
           <CardHeader>
             <CardTitle className="text-3xl font-bold text-center">
@@ -460,6 +575,57 @@ export default function WalletPreviewPage() {
               Test wallet integrations for both Stamp Cards and Membership Cards
             </p>
           </CardHeader>
+        </Card>
+
+        {/* Debug Mode Toggle */}
+        <Card className="border-blue-200 bg-blue-50">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="debug-mode"
+                    checked={debugMode}
+                    onChange={(e) => setDebugMode(e.target.checked)}
+                    className="rounded border-blue-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <label htmlFor="debug-mode" className="text-sm font-medium text-blue-700">
+                    Debug Mode
+                  </label>
+                </div>
+                {debugMode && platformInfo && (
+                  <div className="text-sm text-blue-600">
+                    <span className="font-medium">Platform:</span> {platformInfo.detected.toUpperCase()} 
+                    <span className="ml-2 text-blue-500">({platformInfo.reasoning})</span>
+                  </div>
+                )}
+              </div>
+              {debugMode && (
+                <Button
+                  onClick={() => setPlatformInfo(detectPlatformInfo())}
+                  variant="outline"
+                  size="sm"
+                  className="text-blue-700 border-blue-300 hover:bg-blue-100"
+                >
+                  Refresh Detection
+                </Button>
+              )}
+            </div>
+            {debugMode && platformInfo && (
+              <div className="mt-3 p-3 bg-blue-100 rounded-lg">
+                <div className="text-xs text-blue-800 space-y-1">
+                  <div><span className="font-medium">User Agent:</span> {platformInfo.userAgent}</div>
+                  <div><span className="font-medium">Detection Logic:</span> {platformInfo.reasoning}</div>
+                  <div><span className="font-medium">Expected Wallet:</span> {
+                    platformInfo.detected === 'apple' ? 'Apple Wallet (.pkpass)' :
+                    platformInfo.detected === 'google' ? 'Google Wallet (Save URL)' :
+                    'PWA Wallet (HTML)'
+                  }</div>
+                </div>
+              </div>
+            )}
+          </CardContent>
         </Card>
 
         {/* Error Alert */}
@@ -672,8 +838,8 @@ export default function WalletPreviewPage() {
                                 Expires: {new Date(card.expiry_date).toLocaleDateString()}
                               </div>
                             )}
-                          </div>
-                          
+      </div>
+
                           {/* Generate Wallet Button */}
                           <Button
                             onClick={() => generateWallet(card.id, 'membership')}
@@ -730,20 +896,20 @@ export default function WalletPreviewPage() {
         </Tabs>
 
         {/* Wallet Status */}
-        <Card>
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <CardTitle className="flex items-center gap-2">
-                <Activity className="h-5 w-5" />
-                Environment Status
-              </CardTitle>
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              Environment Status
+            </CardTitle>
               <Button variant="outline" size="sm" onClick={checkWalletStatus}>
-                Refresh Status
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-3 gap-4">
+              Refresh Status
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-3 gap-4">
               <div className="flex items-center gap-2">
                 {walletStatus.apple ? (
                   <CheckCircle className="h-5 w-5 text-green-500" />
@@ -751,7 +917,7 @@ export default function WalletPreviewPage() {
                   <AlertCircle className="h-5 w-5 text-red-500" />
                 )}
                 <span className="text-sm">Apple Wallet</span>
-              </div>
+            </div>
               <div className="flex items-center gap-2">
                 {walletStatus.google ? (
                   <CheckCircle className="h-5 w-5 text-green-500" />
@@ -765,18 +931,18 @@ export default function WalletPreviewPage() {
                 <span className="text-sm">PWA Wallet</span>
               </div>
             </div>
-          </CardContent>
-        </Card>
+        </CardContent>
+      </Card>
 
-        {/* Last Update Status */}
-        {lastUpdate && (
+      {/* Last Update Status */}
+      {lastUpdate && (
           <Card>
             <CardHeader>
               <CardTitle className="text-sm">Last Update</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-2 text-sm">
-                {lastUpdate.success ? (
+              {lastUpdate.success ? (
                   <CheckCircle className="h-4 w-4 text-green-500" />
                 ) : (
                   <AlertCircle className="h-4 w-4 text-red-500" />
@@ -784,21 +950,21 @@ export default function WalletPreviewPage() {
                 <span>
                   {lastUpdate.type} - {new Date(lastUpdate.timestamp).toLocaleTimeString()}
                 </span>
-                {lastUpdate.success ? (
+                  {lastUpdate.success ? (
                   <Badge className="bg-green-100 text-green-700">Success</Badge>
-                ) : (
+                  ) : (
                   <Badge variant="destructive">Failed</Badge>
-                )}
+                  )}
               </div>
               {lastUpdate.details && (
                 <pre className="mt-2 text-xs bg-gray-100 p-2 rounded overflow-auto">
                   {JSON.stringify(lastUpdate.details, null, 2)}
                 </pre>
               )}
-            </CardContent>
-          </Card>
-        )}
-      </div>
+          </CardContent>
+        </Card>
+      )}
+          </div>
     </div>
   )
 }
