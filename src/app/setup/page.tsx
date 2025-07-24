@@ -1,13 +1,20 @@
 'use client'
 
-import { validateEnvVars } from '@/lib/env-check'
+import { useEnvValidation } from '@/lib/env-check'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { CheckCircle, XCircle, AlertCircle, Copy } from 'lucide-react'
 import Link from 'next/link'
+import { useState, useEffect } from 'react'
 
 export default function SetupPage() {
-  const envStatus = validateEnvVars()
+  const envStatus = useEnvValidation()
+  const [mounted, setMounted] = useState(false)
+
+  // Prevent hydration mismatch by only rendering after mount
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text)
@@ -18,8 +25,28 @@ NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
 
-# Optional - For development
-BASE_URL=http://localhost:3000`
+# Base URL Configuration
+# For live website
+BASE_URL=https://www.rewardjar.xyz
+NEXT_PUBLIC_BASE_URL=https://www.rewardjar.xyz
+
+# For local testing
+# BASE_URL=http://localhost:3000
+# NEXT_PUBLIC_BASE_URL=http://localhost:3000`
+
+  // Show loading state during hydration
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto space-y-8">
+          <div className="text-center">
+            <h1 className="text-3xl font-bold text-gray-900">RewardJar Setup</h1>
+            <p className="mt-2 text-gray-600">Loading configuration...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
+import { getAppleWalletBaseUrl } from '@/lib/env'
 import crypto from 'crypto'
 import archiver from 'archiver'
 import forge from 'node-forge'
@@ -11,19 +12,8 @@ import { promisify } from 'util'
 
 // Helper function to get valid webServiceURL for Apple Wallet
 function getValidWebServiceURL(): string {
-  const PRODUCTION_DOMAIN = "https://www.rewardjar.xyz"
-  const baseUrl = process.env.BASE_URL || PRODUCTION_DOMAIN
-  
-  // Apple Wallet requires HTTPS and rejects localhost/IP addresses
-  // If we're using localhost or IP, use the production domain instead
-  if (baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1') || baseUrl.includes('192.168.') || baseUrl.includes('10.0.')) {
-    console.warn('⚠️  Apple Wallet webServiceURL cannot use localhost/IP addresses. Using production domain instead.')
-    return `${PRODUCTION_DOMAIN}/api/wallet/apple/updates`
-  }
-  
-  // Ensure HTTPS
-  const httpsUrl = baseUrl.startsWith('https://') ? baseUrl : `https://${baseUrl.replace('http://', '')}`
-  return `${httpsUrl}/api/wallet/apple/updates`
+  const baseUrl = getAppleWalletBaseUrl()
+  return `${baseUrl}/api/wallet/apple/updates`
 }
 
 export async function GET(
