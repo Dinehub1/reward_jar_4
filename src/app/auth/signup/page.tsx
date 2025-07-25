@@ -11,13 +11,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ArrowLeft, Building, Mail, Lock, CheckCircle } from 'lucide-react'
+import { ArrowLeft, Building, Mail, Lock, CheckCircle, Phone } from 'lucide-react'
 
 // Form validation schema for Business Account Creation (Step 1 of 3-step wizard)
 const businessSignupSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
   password: z.string().min(8, 'Password must be at least 8 characters').max(100, 'Password must be under 100 characters'),
-  businessName: z.string().min(2, 'Business name must be at least 2 characters').max(100, 'Business name must be under 100 characters').optional().or(z.literal(''))
+  businessName: z.string().min(2, 'Business name must be at least 2 characters').max(100, 'Business name must be under 100 characters').optional().or(z.literal('')),
+  contactNumber: z.string().min(8, 'Contact number must be at least 8 digits').max(20, 'Contact number too long').optional().or(z.literal('')),
+  storeNumbers: z.string().min(2, 'Store numbers must be at least 2 characters').max(10, 'Store numbers too long').optional().or(z.literal(''))
 })
 
 type BusinessSignupForm = z.infer<typeof businessSignupSchema>
@@ -34,7 +36,9 @@ export default function BusinessSignupPage() {
     defaultValues: {
       email: '',
       password: '',
-      businessName: ''
+      businessName: '',
+      contactNumber: '',
+      storeNumbers: ''
     }
   })
 
@@ -45,6 +49,12 @@ export default function BusinessSignupPage() {
     let progress = 20 // Base progress for email
     if (data.businessName && data.businessName.trim().length > 0) {
       progress = 40 // Business name provided
+    }
+    if (data.contactNumber && data.contactNumber.trim().length > 0) {
+      progress = 60 // Contact number provided
+    }
+    if (data.storeNumbers && data.storeNumbers.trim().length > 0) {
+      progress = 80 // Store numbers provided
     }
     return progress
   }
@@ -90,6 +100,8 @@ export default function BusinessSignupPage() {
         .insert({
           name: data.businessName?.trim() || data.email, // Default to email if no business name
           contact_email: data.email,
+          contact_number: data.contactNumber?.trim() || null,
+          store_numbers: data.storeNumbers?.trim() || null,
           owner_id: authData.user.id,
           status: 'active',
           profile_progress: profileProgress
@@ -235,6 +247,46 @@ export default function BusinessSignupPage() {
                 )}
                 <p className="text-xs text-gray-500">
                   You can complete this later in your profile
+                </p>
+              </div>
+
+              {/* Contact Number (Optional) */}
+              <div className="space-y-2">
+                <Label htmlFor="contactNumber" className="flex items-center text-sm font-medium">
+                  <Phone className="w-4 h-4 mr-2 text-green-600" />
+                  Contact Number <span className="text-gray-500">(Optional)</span>
+                </Label>
+                <Input
+                  id="contactNumber"
+                  placeholder="e.g., +1234567890"
+                  className="h-11 border-gray-300 focus:border-green-500 focus:ring-green-500"
+                  {...form.register('contactNumber')}
+                />
+                {form.formState.errors.contactNumber && (
+                  <p className="text-sm text-red-600">{form.formState.errors.contactNumber.message}</p>
+                )}
+                <p className="text-xs text-gray-500">
+                  This will be used for communication with your customers
+                </p>
+              </div>
+
+              {/* Store Numbers (Optional) */}
+              <div className="space-y-2">
+                <Label htmlFor="storeNumbers" className="flex items-center text-sm font-medium">
+                  <Building className="w-4 h-4 mr-2 text-green-600" />
+                  Store Numbers <span className="text-gray-500">(Optional)</span>
+                </Label>
+                <Input
+                  id="storeNumbers"
+                  placeholder="e.g., 1, 2, 3"
+                  className="h-11 border-gray-300 focus:border-green-500 focus:ring-green-500"
+                  {...form.register('storeNumbers')}
+                />
+                {form.formState.errors.storeNumbers && (
+                  <p className="text-sm text-red-600">{form.formState.errors.storeNumbers.message}</p>
+                )}
+                <p className="text-xs text-gray-500">
+                  This will be used for tracking inventory across multiple stores
                 </p>
               </div>
 
