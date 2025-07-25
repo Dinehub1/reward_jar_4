@@ -34,6 +34,8 @@ The platform provides complete multi-wallet integration (Apple Wallet, Google Wa
 - Email (required)
 - Password (required) 
 - Business Name (optional - can be completed later)
+- contact number
+- store numbers (2-3 number)
 
 **Backend Processing**:
 ```typescript
@@ -76,6 +78,8 @@ UPDATE businesses SET
   profile_progress = calculated_percentage
 WHERE owner_id = $user_id;
 ```
+
+Currency Selector:Per your request, a symbol-only selector (e.g., ₩, $, €) should be added without conversion functionality.
 
 #### Step 3: Loyalty Card Introduction
 **Route**: `/business/onboarding/cards`
