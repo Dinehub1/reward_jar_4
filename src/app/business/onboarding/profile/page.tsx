@@ -176,7 +176,7 @@ export default function BusinessProfilePage() {
     const location = data.location?.trim()
     const description = data.description?.trim()
     const websiteUrl = data.websiteUrl?.trim()
-    const logoUrl = currentBusiness?.logo_url || logoFile
+    const logoUrl = currentBusiness?.logo_url || logoFile // Check both existing logo and new file
 
     // Field weights as specified
     if (businessName && businessName.length >= 3) progress += 20 // 20%
@@ -205,7 +205,7 @@ export default function BusinessProfilePage() {
     const location = data.location?.trim()
     const description = data.description?.trim()
     const websiteUrl = data.websiteUrl?.trim()
-    const logoUrl = currentBusiness?.logo_url || logoFile
+    const logoUrl = currentBusiness?.logo_url || logoFile // Check both existing logo and new file
 
     if (!businessName || businessName.length < 3) missing.push('Business Name')
     if (!contactEmail || contactEmail.length === 0) missing.push('Contact Email')
@@ -299,7 +299,7 @@ export default function BusinessProfilePage() {
   }, [router, supabase, form])
 
   // MCP Integration for database updates
-  const updateBusinessWithMCP = async (data: BusinessProfileForm, profileProgress: number) => {
+  const updateBusinessWithMCP = async (data: BusinessProfileForm, profileProgress: number, logoUrl: string | null) => {
     try {
       // Since we don't have direct MCP API routes, we'll use Supabase directly
       // but structure it as if using MCP for future migration
@@ -309,6 +309,7 @@ export default function BusinessProfilePage() {
         location: data.location?.trim() || null,
         description: data.description?.trim() || null,
         website_url: data.websiteUrl?.trim() || null,
+        logo_url: logoUrl || null, // Update logo_url
         profile_progress: profileProgress,
         updated_at: new Date().toISOString()
       }
@@ -348,16 +349,47 @@ export default function BusinessProfilePage() {
     setError(null)
 
     try {
-      const profileProgress = calculateProfileProgress(data, business)
-
-      // Use MCP integration for database updates
-      await updateBusinessWithMCP(data, profileProgress)
+      let logoUrl = business.logo_url // Keep existing logo URL if no new file
 
       // Handle logo upload if present
       if (logoFile) {
-        // TODO: Implement logo upload to storage
-        console.log('Logo upload would be implemented here:', logoFile.name)
+        try {
+          // Generate unique filename
+          const fileExt = logoFile.name.split('.').pop()
+          const fileName = `${business.id}-${Date.now()}.${fileExt}`
+          
+          // Upload to Supabase Storage
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('businesslogo')
+            .upload(fileName, logoFile, {
+              cacheControl: '3600',
+              upsert: true
+            })
+
+          if (uploadError) {
+            throw new Error(`Failed to upload logo: ${uploadError.message}`)
+          }
+
+          // Get public URL
+          const { data: urlData } = supabase.storage
+            .from('businesslogo')
+            .getPublicUrl(fileName)
+
+          logoUrl = urlData.publicUrl
+          console.log('✅ Logo uploaded successfully:', logoUrl)
+
+        } catch (uploadErr) {
+          console.error('Logo upload error:', uploadErr)
+          setError('Failed to upload logo. Please try again.')
+          setIsSubmitting(false)
+          return
+        }
       }
+
+      const profileProgress = calculateProfileProgress(data, business)
+
+      // Use MCP integration for database updates (including logo URL)
+      await updateBusinessWithMCP(data, profileProgress, logoUrl)
 
       // Success! Show confirmation and redirect to step 3
       setSuccess(true)
@@ -583,14 +615,16 @@ export default function BusinessProfilePage() {
                       id="logo-upload"
                     />
                     <label htmlFor="logo-upload" className="cursor-pointer">
-                      {logoPreview ? (
+                      {logoPreview || business?.logo_url ? (
                         <div className="space-y-2">
                           <img 
-                            src={logoPreview} 
-                            alt="Logo preview" 
+                            src={logoPreview || business?.logo_url || ''} 
+                            alt="Business logo" 
                             className="mx-auto h-20 w-20 object-cover rounded-lg"
                           />
-                          <p className="text-sm text-green-600">Click to change logo</p>
+                          <p className="text-sm text-green-600">
+                            {logoPreview ? 'Click to change logo' : 'Click to update logo'}
+                          </p>
                         </div>
                       ) : (
                         <div>
