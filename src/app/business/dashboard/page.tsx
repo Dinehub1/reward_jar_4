@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import BusinessLayout from '@/components/layouts/BusinessLayout'
@@ -20,39 +21,58 @@ interface DashboardError {
 }
 
 export default function BusinessDashboard() {
-  const [stats, setStats] = useState<DashboardStats>({
-    totalStampCards: 0,
-    totalCustomers: 0,
-    activeCards: 0
-  })
-  const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState<DashboardStats | null>(null)
   const [error, setError] = useState<DashboardError | null>(null)
-  const [businessName, setBusinessName] = useState('')
-  const [retryCount, setRetryCount] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [user, setUser] = useState<any>(null)
+  const router = useRouter()
   const supabase = createClient()
 
-  const fetchDashboardData = async () => {
+  // Check authentication first
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        
+        if (sessionError) {
+          console.error('Session error:', sessionError)
+          router.push('/auth/login')
+          return
+        }
+        
+        if (!session?.user) {
+          console.log('No authenticated user, redirecting to login')
+          router.push('/auth/login')
+          return
+        }
+
+        console.log('Dashboard: Authenticated user:', session.user.email)
+        setUser(session.user)
+        setIsAuthenticated(true)
+        
+        // Now fetch dashboard data
+        await fetchDashboardData(session.user.id)
+        
+      } catch (err) {
+        console.error('Authentication check failed:', err)
+        router.push('/auth/login')
+      }
+    }
+
+    checkAuth()
+  }, [router, supabase])
+
+  const fetchDashboardData = async (userId: string) => {
     try {
       setLoading(true)
       setError(null)
-
-      // Get session first
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-      if (sessionError) {
-        throw new Error(`Authentication error: ${sessionError.message}`)
-      }
-      
-      if (!session?.user) {
-        throw new Error('No authenticated user found')
-      }
-
-      console.log('Dashboard: Authenticated user:', session.user.email)
 
       // Get user role to ensure they're a business user
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('role_id')
-        .eq('id', session.user.id)
+        .eq('id', userId)
         .single()
 
       if (userError) {
@@ -69,7 +89,7 @@ export default function BusinessDashboard() {
       const { data: business, error: businessError } = await supabase
         .from('businesses')
         .select('name')
-        .eq('owner_id', session.user.id)
+        .eq('owner_id', userId)
         .single()
 
       if (businessError) {
@@ -85,7 +105,7 @@ export default function BusinessDashboard() {
       const { data: businessData } = await supabase
         .from('businesses')
         .select('id')
-        .eq('owner_id', session.user.id)
+        .eq('owner_id', userId)
         .single()
 
       if (!businessData) {
@@ -148,12 +168,26 @@ export default function BusinessDashboard() {
     }
   }
 
-  useEffect(() => {
-    fetchDashboardData()
-  }, [retryCount])
+  const [businessName, setBusinessName] = useState('')
+  const [retryCount, setRetryCount] = useState(0)
 
   const handleRetry = () => {
     setRetryCount(prev => prev + 1)
+  }
+
+  // Show loading while checking authentication
+  if (!isAuthenticated && loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-green-600" />
+          <div className="text-lg font-medium">Checking authentication...</div>
+          <div className="text-sm text-gray-500 mt-1">
+            Please wait while we verify your access
+          </div>
+        </div>
+      </div>
+    )
   }
 
   if (loading) {
@@ -238,7 +272,7 @@ export default function BusinessDashboard() {
               <CreditCard className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalStampCards}</div>
+              <div className="text-2xl font-bold">{stats?.totalStampCards}</div>
               <p className="text-xs text-muted-foreground">
                 Active loyalty programs
               </p>
@@ -251,7 +285,7 @@ export default function BusinessDashboard() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalCustomers}</div>
+              <div className="text-2xl font-bold">{stats?.totalCustomers}</div>
               <p className="text-xs text-muted-foreground">
                 Customers enrolled in your programs
               </p>
@@ -264,7 +298,7 @@ export default function BusinessDashboard() {
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.activeCards}</div>
+              <div className="text-2xl font-bold">{stats?.activeCards}</div>
               <p className="text-xs text-muted-foreground">
                 Cards with enrolled customers
               </p>
@@ -302,7 +336,7 @@ export default function BusinessDashboard() {
         </Card>
 
         {/* Getting Started */}
-        {stats.totalStampCards === 0 && (
+        {stats?.totalStampCards === 0 && (
           <Card className="border-blue-200 bg-blue-50">
             <CardHeader>
               <CardTitle className="text-blue-900">Get Started</CardTitle>

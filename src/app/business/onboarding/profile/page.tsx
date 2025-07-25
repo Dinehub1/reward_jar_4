@@ -360,7 +360,7 @@ export default function BusinessProfilePage() {
           
           // Upload to Supabase Storage
           const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('businesslogo')
+            .from('buinesslogo')
             .upload(fileName, logoFile, {
               cacheControl: '3600',
               upsert: true
@@ -372,7 +372,7 @@ export default function BusinessProfilePage() {
 
           // Get public URL
           const { data: urlData } = supabase.storage
-            .from('businesslogo')
+            .from('buinesslogo')
             .getPublicUrl(fileName)
 
           logoUrl = urlData.publicUrl
