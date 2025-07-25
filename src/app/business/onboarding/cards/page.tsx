@@ -142,7 +142,7 @@ export default function BusinessCardsIntroPage() {
                 </div>
                 <CardTitle className="text-xl font-semibold text-green-700">Stamp Card</CardTitle>
                 <CardDescription className="text-base">
-                  Perfect for cafes, restaurants, retail stores - collect stamps, earn rewards
+                 Ideal for cafes, restaurants, salons, retail stores collect stamps, earn rewards
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -163,13 +163,13 @@ export default function BusinessCardsIntroPage() {
 
                 {/* Sample Card Preview */}
                 <div className="mt-4 p-4 bg-gradient-to-r from-green-500 to-green-600 rounded-lg text-white">
-                  <div className="text-sm font-medium">{business?.name || 'Your Business'}</div>
+                  <div className="text-sm font-medium">{business?.name || 'Your Business Name'}</div>
                   <div className="text-xs opacity-90 mt-1">
-                    {business?.description || 'Delicious coffee and pastries'}
+                    {business?.description || 'Your business description'}
                   </div>
                   <div className="mt-3 text-center">
-                    <div className="text-lg font-bold">7 / 10 stamps</div>
-                    <div className="text-xs opacity-90">3 more for free coffee!</div>
+                    <div className="text-lg font-bold">• • • • • • • ○ ○ ○</div>
+                    <div className="text-xs opacity-90">Collect 10 stamps to earn a reward</div>
                   </div>
                 </div>
               </CardContent>
@@ -195,7 +195,7 @@ export default function BusinessCardsIntroPage() {
                 </div>
                 <CardTitle className="text-xl font-semibold text-indigo-700">Membership Card</CardTitle>
                 <CardDescription className="text-base">
-                  Ideal for gyms, spas, studios - track sessions, manage memberships
+                  Ideal for gyms, spas, coachings, studios, gaming arenas- track sessions, manage memberships
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -216,17 +216,17 @@ export default function BusinessCardsIntroPage() {
 
                 {/* Sample Card Preview */}
                 <div className="mt-4 p-4 bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-lg text-white">
-                  <div className="text-sm font-medium">{business?.name || 'Your Business'}</div>
-                  <div className="text-xs opacity-90 mt-1">Premium Gym Membership</div>
+                  <div className="text-sm font-medium">{business?.name || 'Your Business Name'}</div>
+                  <div className="text-xs opacity-90 mt-1">Monthly Membership</div>
                   <div className="mt-3 text-center">
-                    <div className="text-lg font-bold">12 / 20 sessions</div>
-                    <div className="text-xs opacity-90">8 sessions remaining</div>
+                    <div className="text-lg font-bold">Session Tracking</div>
+                    <div className="text-xs opacity-90">Track member visits and usage</div>
                   </div>
                 </div>
 
                 {/* Coming Soon Badge */}
                 <div className="mt-3 bg-indigo-100 border border-indigo-200 rounded-md p-2 text-center">
-                  <span className="text-xs font-medium text-indigo-800">Full membership features coming soon!</span>
+                  <span className="text-xs font-medium text-indigo-800">Advanced features available</span>
                 </div>
               </CardContent>
             </Card>
