@@ -108,7 +108,7 @@ export default function StampCardsPage() {
 
   const getJoinUrl = (cardId: string) => {
     const baseUrl = window.location.origin
-    return `${baseUrl}/join/${cardId}`
+    return `${baseUrl}/join/${cardId}?guest=true`
   }
 
   const downloadQRCode = (cardId: string) => {

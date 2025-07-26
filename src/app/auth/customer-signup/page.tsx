@@ -35,12 +35,16 @@ function CustomerSignupContent() {
   const supabase = createClient()
 
   const nextUrl = searchParams.get('next')
+  
+  // Get pre-filled data from URL parameters (from guest form)
+  const prefilledName = searchParams.get('name') || ''
+  const prefilledEmail = searchParams.get('email') || ''
 
   const form = useForm<CustomerSignupForm>({
     resolver: zodResolver(customerSignupSchema),
     defaultValues: {
-      name: '',
-      email: '',
+      name: prefilledName,
+      email: prefilledEmail,
       password: ''
     }
   })

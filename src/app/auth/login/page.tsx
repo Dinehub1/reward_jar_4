@@ -6,7 +6,8 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
+import { getAuthStatus } from '@/lib/auth-protection'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -36,10 +37,32 @@ function LoginContent() {
     const errorParam = searchParams.get('error')
     
     if (message) {
-      setSuccessMessage(message)
+      if (message === 'account_created') {
+        setSuccessMessage('Account created successfully! Please sign in.')
+      } else {
+        setSuccessMessage(message)
+      }
     }
-    if (errorParam === 'unauthorized') {
-      setError('You need to be logged in to access this page')
+    if (errorParam) {
+      switch (errorParam) {
+        case 'unauthorized':
+          setError('You need to be logged in to access this page')
+          break
+        case 'insufficient_permissions':
+          setError('You do not have permission to access that page')
+          break
+        case 'auth_failed':
+          setError('Authentication failed. Please try signing in again.')
+          break
+        case 'profile_not_found':
+          setError('User profile not found. Please contact support.')
+          break
+        case 'system_error':
+          setError('A system error occurred. Please try again.')
+          break
+        default:
+          setError('An error occurred. Please try signing in.')
+      }
     }
   }, [searchParams])
 
@@ -51,115 +74,41 @@ function LoginContent() {
     }
   })
 
-  const createFallbackProfile = async (user: { id: string; email?: string }, role: 'business' | 'customer' = 'business') => {
-    try {
-      if (!user.email) {
-        throw new Error('User email is required for profile creation')
-      }
-      
-      // Create user record in users table
-      const { error: userError } = await supabase
-        .from('users')
-        .insert({
-          id: user.id,
-          email: user.email,
-          role_id: role === 'business' ? 2 : 3,
-          created_at: new Date().toISOString()
-        })
-
-      if (userError) {
-        console.error('Error creating user profile:', userError)
-        // Continue if user already exists
-      }
-
-      // For business users, create a basic business profile
-      if (role === 'business') {
-        const { error: businessError } = await supabase
-          .from('businesses')
-          .insert({
-            name: `Business for ${user.email}`,
-            description: 'Auto-created business profile',
-            contact_email: user.email,
-            owner_id: user.id,
-            status: 'active',
-            created_at: new Date().toISOString()
-          })
-
-        if (businessError) {
-          console.error('Error creating business profile:', businessError)
-          // Continue even if business creation fails
-        }
-      }
-
-      // For customer users, create a basic customer profile
-      if (role === 'customer' && user.email) {
-        const { error: customerError } = await supabase
-          .from('customers')
-          .insert({
-            user_id: user.id,
-            name: user.email.split('@')[0], // Use email prefix as name
-            email: user.email,
-            created_at: new Date().toISOString()
-          })
-
-        if (customerError) {
-          console.error('Error creating customer profile:', customerError)
-          // Continue even if customer creation fails
-        }
-      }
-
-      return { role_id: role === 'business' ? 2 : 3 }
-    } catch (error) {
-      console.error('Error in fallback profile creation:', error)
-      return { role_id: 2 } // Default to business role
-    }
-  }
-
   const onSubmit = async (data: LoginForm) => {
     setIsSubmitting(true)
     setError(null)
     setSuccessMessage(null)
 
     try {
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+      console.log('=== LOGIN ATTEMPT START ===')
+      console.log('Email:', data.email)
+
+      // Step 1: Attempt login
+      const { data: loginResult, error: signInError } = await supabase.auth.signInWithPassword({
         email: data.email,
         password: data.password
       })
 
       if (signInError) {
+        console.error('Login error:', signInError)
         throw signInError
       }
 
-      // Check user role after successful login
-      const { data: { user } } = await supabase.auth.getUser()
-      
-      if (!user) {
-        throw new Error('No user found after login')
+      if (!loginResult.user) {
+        throw new Error('No user returned from login')
       }
 
-      // Get user profile to determine role - using correct users table
-      const { data: initialProfile, error: profileError } = await supabase
-        .from('users')
-        .select('role_id')
-        .eq('id', user.id)
-        .single()
-      
-      let profile = initialProfile
+      console.log('✅ Login successful for user:', loginResult.user.id)
 
-      // If profile doesn't exist, create a fallback profile
-      if (profileError || !profile) {
-        console.log('User profile not found, creating fallback profile...')
-        
-        // Try to determine role from search params or default to business
-        const roleParam = searchParams.get('role')
-        const defaultRole = roleParam === 'customer' ? 'customer' : 'business'
-        
-        profile = await createFallbackProfile(user, defaultRole)
-        
-        if (!profile) {
-          throw new Error('Failed to create user profile')
+      // Step 2: Check user role and redirect accordingly
+      console.log('🔍 Checking user role...')
+      const authStatus = await getAuthStatus()
+
+      if (!authStatus.isAuthenticated) {
+        throw new Error('Authentication verification failed after login')
       }
-      }
+
+      console.log('👤 User authenticated with role_id:', authStatus.user?.role_id)
 
       // Show success message
       setSuccessMessage('Login successful! Redirecting...')
@@ -168,18 +117,22 @@ function LoginContent() {
       const nextUrl = searchParams.get('next')
       
       if (nextUrl) {
-        // Redirect to the next URL if provided
+        console.log('🔗 Redirecting to next URL:', nextUrl)
         router.push(decodeURIComponent(nextUrl))
       } else {
-      // Redirect based on role
-        if (profile.role_id === 2) { // Business role
-        router.push('/business/dashboard')
-        } else if (profile.role_id === 3) { // Customer role
-        router.push('/customer/dashboard')
-      } else {
-        throw new Error('Invalid user role')
+        // Redirect based on role
+        if (authStatus.isBusiness) {
+          console.log('🏢 Redirecting to business dashboard')
+          router.push('/business/dashboard')
+        } else if (authStatus.isCustomer) {
+          console.log('👤 Redirecting to customer dashboard')
+          router.push('/customer/dashboard')
+        } else {
+          throw new Error(`Invalid user role: ${authStatus.user?.role_id}`)
         }
       }
+
+      console.log('=== LOGIN SUCCESSFUL ===')
 
     } catch (err) {
       console.error('Login error:', err)
@@ -188,9 +141,11 @@ function LoginContent() {
           setError('Invalid email or password. Please try again.')
         } else if (err.message.includes('Email not confirmed')) {
           setError('Please check your email and click the confirmation link before logging in.')
+        } else if (err.message.includes('Invalid user role')) {
+          setError('Your account role is not properly configured. Please contact support.')
         } else {
           setError(err.message)
-      }
+        }
       } else {
         setError('An unexpected error occurred. Please try again.')
       }
@@ -200,127 +155,140 @@ function LoginContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-6">
-        {/* Header */}
-        <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold text-gray-900">Welcome Back</h1>
-          <p className="text-gray-600">Sign in to your RewardJar account</p>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <div className="text-center">
+          <h2 className="mt-6 text-3xl font-bold text-gray-900">
+            Welcome Back
+          </h2>
+          <p className="mt-2 text-sm text-gray-600">
+            Sign in to your RewardJar account
+          </p>
         </div>
 
-        {/* Success Message */}
-        {successMessage && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-2">
-            <CheckCircle className="h-5 w-5 text-green-600" />
-            <p className="text-green-800 text-sm">{successMessage}</p>
+        {/* Error and Success Messages */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-md p-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <AlertCircle className="h-5 w-5 text-red-400" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
+            </div>
           </div>
         )}
 
-        {/* Error Message */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-2">
-            <AlertCircle className="h-5 w-5 text-red-600" />
-            <p className="text-red-800 text-sm">{error}</p>
-        </div>
+        {successMessage && (
+          <div className="bg-green-50 border border-green-200 rounded-md p-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <CheckCircle className="h-5 w-5 text-green-400" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-green-700">{successMessage}</p>
+              </div>
+            </div>
+          </div>
         )}
 
-        {/* Login Form */}
-        <Card className="shadow-lg">
+        <Card>
           <CardHeader>
-            <CardTitle className="text-xl">Sign In</CardTitle>
+            <CardTitle>Sign In</CardTitle>
             <CardDescription>
               Enter your email and password to access your account
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              {/* Email Field */}
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Enter your email"
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Mail className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="Enter your email"
                     className="pl-10"
-                  {...form.register('email')}
-                />
+                    {...form.register('email')}
+                  />
                 </div>
                 {form.formState.errors.email && (
-                  <p className="text-red-600 text-sm">{form.formState.errors.email.message}</p>
+                  <p className="text-sm text-red-600">{form.formState.errors.email.message}</p>
                 )}
               </div>
 
-              {/* Password Field */}
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Enter your password"
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Lock className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Enter your password"
                     className="pl-10"
-                  {...form.register('password')}
-                />
+                    {...form.register('password')}
+                  />
                 </div>
                 {form.formState.errors.password && (
-                  <p className="text-red-600 text-sm">{form.formState.errors.password.message}</p>
+                  <p className="text-sm text-red-600">{form.formState.errors.password.message}</p>
                 )}
               </div>
 
-              {/* Submit Button */}
-              <Button
-                type="submit"
-                className="w-full" 
+              <Button 
+                type="submit" 
+                className="w-full"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? 'Signing in...' : 'Sign In'}
+                {isSubmitting ? 'Signing In...' : 'Sign In'}
               </Button>
             </form>
 
-            {/* Sign Up Links */}
-            <div className="mt-6 text-center space-y-2">
+            <div className="mt-6 text-center">
               <p className="text-sm text-gray-600">
-                Don&apos;t have an account?
-              </p>
-              <div className="flex flex-col space-y-2">
-                <Link
-                  href="/auth/signup"
-                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                >
+                Don&apos;t have an account?{' '}
+                <Link href="/auth/signup" className="text-blue-600 hover:text-blue-500 font-medium">
                   Sign up as Business
                 </Link>
-                <Link
-                  href="/auth/customer-signup"
-                  className="text-green-600 hover:text-green-800 text-sm font-medium"
-                >
+              </p>
+            </div>
+
+            <div className="mt-4 text-center">
+              <p className="text-sm text-gray-600">
+                Looking for customer access?{' '}
+                <Link href="/auth/customer-signup" className="text-green-600 hover:text-green-500 font-medium">
                   Sign up as Customer
                 </Link>
-              </div>
+              </p>
             </div>
           </CardContent>
         </Card>
 
-        {/* Back to Home */}
         <div className="text-center">
-          <Link 
-            href="/" 
-            className="inline-flex items-center text-gray-600 hover:text-gray-800 text-sm"
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
+          <Link href="/" className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700">
+            <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Home
           </Link>
         </div>
       </div>
     </div>
   )
-} 
+}
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="text-lg font-medium text-gray-900">Loading...</div>
+        </div>
+      </div>
+    }>
       <LoginContent />
     </Suspense>
   )

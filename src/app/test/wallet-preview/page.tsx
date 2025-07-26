@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -52,7 +52,7 @@ interface PlatformInfo {
   reasoning: string
 }
 
-export default function WalletPreviewPage() {
+function WalletPreviewPageContent() {
   const [selectedTab, setSelectedTab] = useState<'loyalty' | 'membership'>('loyalty')
   const [testCards, setTestCards] = useState<TestCard[]>([])
   const [walletStatus, setWalletStatus] = useState<WalletStatus>({
@@ -966,5 +966,17 @@ export default function WalletPreviewPage() {
       )}
           </div>
     </div>
+  )
+}
+
+export default function WalletPreviewPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg">Loading wallet preview...</div>
+      </div>
+    }>
+      <WalletPreviewPageContent />
+    </Suspense>
   )
 }

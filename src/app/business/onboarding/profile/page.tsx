@@ -449,7 +449,7 @@ export default function BusinessProfilePage() {
               </div>
               <h2 className="text-2xl font-bold text-gray-900 mb-2">Profile Updated!</h2>
               <p className="text-gray-600 mb-4">
-                Great! Let's create your first loyalty card...
+                Great! Let&apos;s create your first loyalty card...
               </p>
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600 mx-auto"></div>
             </CardContent>

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase-server'
+import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
 
 // Validation schema - supports both stamp cards and membership cards
@@ -250,7 +250,7 @@ export async function POST(request: NextRequest) {
         totalStamps: cardData.total_stamps,
         rewardDescription: cardData.reward_description,
         currentStamps: 0
-      }
+      } as any
     } else {
       response.card = {
         ...response.card,
@@ -259,7 +259,7 @@ export async function POST(request: NextRequest) {
         durationDays: cardData.duration_days,
         sessionsUsed: 0,
         expiryDate: expiryDate?.toISOString()
-      }
+      } as any
     }
 
     return NextResponse.json(response)

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase-server'
+import { createClient } from '@/lib/supabase/server'
 import validateUUID from 'uuid-validate'
 
 // Type definitions for membership card data

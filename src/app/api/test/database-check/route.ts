@@ -1,35 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase-server'
+import { createServiceClient } from '@/lib/supabase/server'
 
 export async function GET(_request: NextRequest) {
   try {
     console.log('🔍 Testing Supabase database connectivity...')
     
-    const supabase = await createClient()
+    // Use service role client to bypass RLS for testing
+    const supabase = createServiceClient()
     
-    // Simple test query to check connectivity
-    const { data, error } = await supabase
-      .from('businesses')
-      .select('id, name')
-      .limit(1)
+    // Comprehensive database check
+    const [businessResult, userResult, stampCardResult, customerCardResult] = await Promise.all([
+      supabase.from('businesses').select('id, name').limit(3),
+      supabase.from('users').select('count'),
+      supabase.from('stamp_cards').select('count'),
+      supabase.from('customer_cards').select('membership_type, count')
+    ])
     
-    if (error) {
-      console.error('❌ Database query error:', error)
+    if (businessResult.error) {
+      console.error('❌ Business query error:', businessResult.error)
       return NextResponse.json({
         status: 'error',
-        message: 'Database query failed',
-        error: error.message,
-        code: error.code,
-        details: error.details
+        message: 'Business table query failed',
+        error: businessResult.error.message,
+        code: businessResult.error.code
       }, { status: 500 })
     }
     
-    console.log('✅ Database query successful:', data)
+    console.log('✅ Database queries successful')
     
     return NextResponse.json({
       status: 'success',
       message: 'Database connectivity verified',
-      data: data,
+      data: {
+        businesses: businessResult.data,
+        statistics: {
+          users: userResult.data?.[0]?.count || 0,
+          stamp_cards: stampCardResult.data?.[0]?.count || 0,
+          customer_cards: customerCardResult.data?.length || 0
+        }
+      },
       timestamp: new Date().toISOString()
     })
     

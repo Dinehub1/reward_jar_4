@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { redirect } from 'next/navigation'
 
 export interface User {
@@ -15,17 +15,15 @@ export interface AuthResult {
 }
 
 /**
- * Check authentication and get user role
- * Returns authentication status and user info
+ * Check authentication and get user role (CLIENT-SIDE VERSION)
+ * This version works in client components and uses fetch to call our API
  */
 export async function checkAuth(): Promise<AuthResult> {
-  const supabase = createClient()
-  
   try {
-    // Get current session
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    // Use our auth status API which handles server-side logic
+    const response = await fetch('/api/auth/status')
     
-    if (sessionError || !session?.user) {
+    if (!response.ok) {
       return {
         user: null,
         isAuthenticated: false,
@@ -33,34 +31,26 @@ export async function checkAuth(): Promise<AuthResult> {
         isCustomer: false
       }
     }
-
-    // Get user role from database
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id, email, role_id')
-      .eq('id', session.user.id)
-      .single()
-
-    if (userError || !userData) {
-      // If user doesn't exist in users table, sign them out
-      await supabase.auth.signOut()
-      return {
-        user: null,
-        isAuthenticated: false,
-        isBusiness: false,
-        isCustomer: false
-      }
-    }
-
+    
+    const result = await response.json()
+    
+    // Handle new API response format
+    const isAuthenticated = result.authenticated || false
+    const userRole = result.role
+    const user = result.user ? {
+      ...result.user,
+      role_id: userRole
+    } : null
+    
     return {
-      user: userData,
-      isAuthenticated: true,
-      isBusiness: userData.role_id === 2,
-      isCustomer: userData.role_id === 3
+      user: user,
+      isAuthenticated: isAuthenticated,
+      isBusiness: userRole === 2,
+      isCustomer: userRole === 3
     }
 
   } catch (error) {
-    console.error('Auth check error:', error)
+    console.error('Auth: Check failed:', error)
     return {
       user: null,
       isAuthenticated: false,
@@ -71,65 +61,53 @@ export async function checkAuth(): Promise<AuthResult> {
 }
 
 /**
- * Protect route for business users only
+ * Require business authentication for protected routes
  * Redirects to login if not authenticated or not a business user
  */
-export async function requireBusinessAuth(redirectTo?: string): Promise<User> {
+export async function requireBusinessAuth(): Promise<User> {
   const auth = await checkAuth()
   
   if (!auth.isAuthenticated) {
-    const loginUrl = redirectTo 
-      ? `/auth/login?next=${encodeURIComponent(redirectTo)}`
-      : '/auth/login'
-    redirect(loginUrl)
-  }
-  
-  if (!auth.isBusiness) {
     redirect('/auth/login?error=unauthorized')
   }
   
+  if (!auth.isBusiness) {
+    redirect('/auth/login?error=insufficient_permissions')
+  }
+  
   return auth.user!
 }
 
 /**
- * Protect route for customer users only
- * Redirects to customer-specific login if not authenticated or not a customer
+ * Require customer authentication for protected routes
+ * Redirects to login if not authenticated or not a customer
  */
-export async function requireCustomerAuth(redirectTo?: string): Promise<User> {
+export async function requireCustomerAuth(): Promise<User> {
   const auth = await checkAuth()
   
   if (!auth.isAuthenticated) {
-    const loginUrl = redirectTo 
-      ? `/auth/login?next=${encodeURIComponent(redirectTo)}&role=customer`
-      : '/auth/login?role=customer'
-    redirect(loginUrl)
+    redirect('/auth/login?error=unauthorized')
   }
   
   if (!auth.isCustomer) {
-    redirect('/auth/login?role=customer&error=unauthorized')
+    redirect('/auth/login?error=insufficient_permissions')
   }
   
   return auth.user!
 }
 
 /**
- * Get auth status for client components
- * This is for use in client components where we can't use server-side redirects
+ * Get authentication status without redirecting
+ * Useful for API routes and conditional rendering
  */
 export async function getAuthStatus(): Promise<AuthResult> {
   return await checkAuth()
 }
 
 /**
- * Sign out and redirect to home page
+ * Sign out user and clear session
  */
-export async function signOut() {
+export async function signOut(): Promise<void> {
   const supabase = createClient()
-  const { error } = await supabase.auth.signOut()
-  
-  if (error) {
-    console.error('Sign out error:', error)
-  }
-  
-  redirect('/')
+  await supabase.auth.signOut()
 } 

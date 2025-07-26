@@ -9,7 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import jwt from 'jsonwebtoken'
-import { createServiceClient } from '@/lib/supabase-server'
+import { createServiceClient } from '@/lib/supabase/server'
 import QRCode from 'qrcode'
 
 // Disable all caching - generate fresh tokens every time

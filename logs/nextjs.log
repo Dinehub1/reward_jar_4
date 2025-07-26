@@ -1,0 +1,106 @@
+
+> rewardjar_4.0@0.1.0 dev
+> next dev
+
+   ▲ Next.js 15.3.5
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.29.83:3000
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 8.7s
+ ○ Compiling /api/health ...
+ ✓ Compiled /api/health in 10.1s (361 modules)
+ GET /api/health 200 in 11249ms
+ ○ Compiling /api/health/env ...
+ ✓ Compiled /api/health/env in 5.1s (510 modules)
+🔍 Starting environment validation...
+✅ Environment validation completed: 69% (9/13)
+ GET /api/health/env 200 in 5674ms
+ ○ Compiling /api/test/database-check ...
+ ✓ Compiled /api/test/database-check in 4.3s (621 modules)
+🔍 Testing Supabase database connectivity...
+✅ Database query successful: []
+ GET /api/test/database-check 200 in 5798ms
+ ○ Compiling /api/auth/status ...
+ ✓ Compiled /api/auth/status in 1685ms (623 modules)
+=== AUTH STATUS CHECK ===
+Auth Status: No authenticated user
+ GET /api/auth/status 200 in 2153ms
+ ○ Compiling /api/health/wallet ...
+ ✓ Compiled /api/health/wallet in 2s (625 modules)
+ GET /api/health/wallet 200 in 2409ms
+ ○ Compiling /join/[cardId] ...
+ ✓ Compiled /join/[cardId] in 20.8s (1300 modules)
+ ✓ Compiled in 5.4s (450 modules)
+ GET /join/faccf70b-eb79-45c7-ba0e-fcf9fe4a8498?guest=true 200 in 30029ms
+ ○ Compiling /api/business/dashboard ...
+ ✓ Compiled /api/business/dashboard in 2.8s (1286 modules)
+=== BUSINESS DASHBOARD API START ===
+Dashboard API: Authentication failed: Auth session missing!
+ GET /api/business/dashboard 401 in 3595ms
+ ○ Compiling /api/dev-seed ...
+ ✓ Compiled /api/dev-seed in 1513ms (1288 modules)
+ GET /api/dev-seed 200 in 2897ms
+ POST /api/test/database-check 405 in 120ms
+ POST /api/test/database-check 405 in 43ms
+🔍 Testing Supabase database connectivity...
+✅ Database query successful: []
+ GET /api/test/database-check 200 in 319ms
+ GET /join/faccf70b-eb79-45c7-ba0e-fcf9fe4a8498?guest=true 200 in 1610ms
+ ○ Compiling /api/wallet/apple/[customerCardId] ...
+ ✓ Compiled /api/wallet/apple/[customerCardId] in 9.2s (1409 modules)
+🍎 Generating Apple Wallet for card ID: faccf70b-eb79-45c7-ba0e-fcf9fe4a8498
+❌ Customer card not found: {
+  code: 'PGRST116',
+  details: 'The result contains 0 rows',
+  hint: null,
+  message: 'JSON object requested, multiple (or no) rows returned'
+}
+ HEAD /api/wallet/apple/faccf70b-eb79-45c7-ba0e-fcf9fe4a8498 404 in 14743ms
+ ○ Compiling /api/health/env ...
+ ✓ Compiled /api/health/env in 971ms (1105 modules)
+🔍 Starting environment validation...
+✅ Environment validation completed: 69% (9/13)
+ GET /api/health/env 200 in 1209ms
+ GET /api/dev-seed 200 in 403ms
+ ✓ Compiled in 1790ms (450 modules)
+ ○ Compiling /api/test/database-check ...
+ ✓ Compiled /api/test/database-check in 1324ms (199 modules)
+🔍 Testing Supabase database connectivity...
+✅ Database queries successful
+ GET /api/test/database-check 200 in 2316ms
+ ○ Compiling /join/[cardId] ...
+ ✓ Compiled /join/[cardId] in 865ms (702 modules)
+ GET /join/faccf70b-eb79-45c7-ba0e-fcf9fe4a8498 200 in 3153ms
+ ○ Compiling /api/dev-seed ...
+ ✓ Compiled /api/dev-seed in 898ms (704 modules)
+Error generating demo cards: SyntaxError: Unexpected end of JSON input
+    at JSON.parse (<anonymous>)
+    at async POST (src/app/api/dev-seed/route.ts:140:17)
+  138 |     lastGenerationTime = now
+  139 |
+> 140 |     const body = await request.json()
+      |                 ^
+  141 |     const { createAll = false, scenario, count = 1 } = body
+  142 |
+  143 |     // Check for existing cards to prevent duplicates
+ POST /api/dev-seed 500 in 2625ms
+ ○ Compiling /api/wallet/apple/[customerCardId] ...
+ ✓ Compiled /api/wallet/apple/[customerCardId] in 4.9s (971 modules)
+🍎 Generating Apple Wallet for card ID: 8e78f3d8-ed50-4a2a-b4e6-91e30d158e95
+❌ Customer card not found: {
+  code: 'PGRST116',
+  details: 'The result contains 0 rows',
+  hint: null,
+  message: 'JSON object requested, multiple (or no) rows returned'
+}
+ HEAD /api/wallet/apple/8e78f3d8-ed50-4a2a-b4e6-91e30d158e95 404 in 6889ms
+🍎 Generating Apple Wallet for card ID: 8e78f3d8-ed50-4a2a-b4e6-91e30d158e95
+❌ Customer card not found: {
+  code: 'PGRST116',
+  details: 'The result contains 0 rows',
+  hint: null,
+  message: 'JSON object requested, multiple (or no) rows returned'
+}
+ GET /api/wallet/apple/8e78f3d8-ed50-4a2a-b4e6-91e30d158e95 404 in 209ms

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase-server'
+import { createClient } from '@/lib/supabase/server'
 import { getAppleWalletBaseUrl } from '@/lib/env'
 import crypto from 'crypto'
 import archiver from 'archiver'

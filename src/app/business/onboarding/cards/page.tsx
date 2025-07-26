@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { checkAuth } from '@/lib/auth-protection'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -316,7 +316,7 @@ export default function BusinessCardsIntroPage() {
 
         {/* Benefits Preview */}
         <div className="text-center">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">What You'll Get</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">What You&apos;ll Get</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
             <div className="flex items-center justify-center">
               <Users className="h-4 w-4 mr-2 text-green-600" />
