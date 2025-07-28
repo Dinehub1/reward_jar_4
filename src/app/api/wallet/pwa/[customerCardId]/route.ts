@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server'
 import QRCode from 'qrcode'
 
 export async function GET(
@@ -8,7 +8,8 @@ export async function GET(
 ) {
   try {
     const resolvedParams = await params
-    const supabase = await createClient()
+    // Use service role client to bypass RLS for wallet generation
+    const supabase = createServiceClient()
     const customerCardId = resolvedParams.customerCardId
 
     console.log('Generating PWA Wallet for card ID:', customerCardId)

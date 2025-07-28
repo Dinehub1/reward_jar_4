@@ -89,7 +89,7 @@ export default function BusinessDashboard() {
     generate_qr: false,
     view_customer_data: false
   })
-  const [showCreateDropdown, setShowCreateDropdown] = useState(false)
+
 
   const [session, setSession] = useState<any>(null)
   const [business, setBusiness] = useState<any>(null)
@@ -130,19 +130,7 @@ export default function BusinessDashboard() {
     checkAuth()
   }, [router, supabase])
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (showCreateDropdown) {
-        setShowCreateDropdown(false)
-      }
-    }
-
-    if (showCreateDropdown) {
-      document.addEventListener('click', handleClickOutside)
-      return () => document.removeEventListener('click', handleClickOutside)
-    }
-  }, [showCreateDropdown])
+  
 
   const fetchDashboardData = useCallback(async (userId: string) => {
     try {
@@ -544,64 +532,41 @@ export default function BusinessDashboard() {
           </Card>
         </div>
 
-        {/* Create Card CTA */}
-        <Card>
+        {/* Admin-Managed Cards Banner */}
+        <Card className="border-blue-200 bg-blue-50">
           <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
+            <CardTitle className="flex items-center text-blue-800">
+              <AlertCircle className="w-5 h-5 mr-2" />
+              Card Management
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="relative">
-                <Button
-                  onClick={() => setShowCreateDropdown(!showCreateDropdown)}
-                  className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
-                  disabled={managerMode && !managerPermissions.add_stamps}
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Loyalty Card
-                  <ChevronDown className="w-4 h-4 ml-2" />
-                </Button>
-                
-                {showCreateDropdown && (
-                  <div className="absolute top-full mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-                    <Link href="/business/stamp-cards/new" className="block">
-                      <div className="p-3 hover:bg-gray-50 border-b">
-                        <div className="font-medium text-gray-900">🎫 Stamp Card</div>
-                        <div className="text-sm text-gray-500">For repeat customers and rewards</div>
-                      </div>
-                    </Link>
-                    <Link href="/business/memberships/new" className="block">
-                      <div className="p-3 hover:bg-gray-50">
-                        <div className="font-medium text-gray-900">💳 Membership Card</div>
-                        <div className="text-sm text-gray-500">For sessions and premium services</div>
-                      </div>
-              </Link>
-                  </div>
-                )}
-              </div>
+            <div className="text-blue-700 mb-4">
+              <p className="font-medium">Cards are created and managed by RewardJar Admins.</p>
+              <p className="text-sm mt-1">Contact support if you'd like to update or request a card for your business.</p>
+            </div>
 
-              <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2">
               <Link href="/business/stamp-cards">
-                  <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" className="bg-white border-blue-300 text-blue-700 hover:bg-blue-100">
                   <CreditCard className="w-4 h-4 mr-2" />
-                    Manage Cards
+                  Manage Cards
                 </Button>
               </Link>
               <Link href="/business/analytics">
-                  <Button variant="outline" size="sm">
-                    <BarChart3 className="w-4 h-4 mr-2" />
-                    Analytics
-                  </Button>
-                </Link>
-                {!managerMode && (
-                  <Link href="/business/profile">
-                    <Button variant="outline" size="sm">
-                      <Settings className="w-4 h-4 mr-2" />
-                      Settings
+                <Button variant="outline" size="sm" className="bg-white border-blue-300 text-blue-700 hover:bg-blue-100">
+                  <BarChart3 className="w-4 h-4 mr-2" />
+                  Analytics
                 </Button>
               </Link>
-                )}
-              </div>
+              {!managerMode && (
+                <Link href="/business/profile">
+                  <Button variant="outline" size="sm" className="bg-white border-blue-300 text-blue-700 hover:bg-blue-100">
+                    <Settings className="w-4 h-4 mr-2" />
+                    Settings
+                  </Button>
+                </Link>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -706,12 +671,11 @@ export default function BusinessDashboard() {
             </CardHeader>
             <CardContent>
               <p className="text-blue-800 mb-4">
-                Welcome to RewardJar! Create your first loyalty card to start building customer loyalty and driving revenue.
+                Welcome to RewardJar! Our admin team will help you set up your first loyalty card to start building customer loyalty and driving revenue.
               </p>
-              <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => setShowCreateDropdown(true)}>
-                  <Plus className="w-4 h-4 mr-2" />
-                Create Your First Card
-                </Button>
+              <p className="text-blue-700 text-sm">
+                Contact support to request your first card setup. Cards are created and managed centrally by RewardJar Admins for consistency.
+              </p>
             </CardContent>
           </Card>
         )}

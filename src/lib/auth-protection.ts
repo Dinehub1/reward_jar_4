@@ -10,6 +10,7 @@ export interface User {
 export interface AuthResult {
   user: User | null
   isAuthenticated: boolean
+  isAdmin: boolean
   isBusiness: boolean
   isCustomer: boolean
 }
@@ -27,6 +28,7 @@ export async function checkAuth(): Promise<AuthResult> {
       return {
         user: null,
         isAuthenticated: false,
+        isAdmin: false,
         isBusiness: false,
         isCustomer: false
       }
@@ -45,6 +47,7 @@ export async function checkAuth(): Promise<AuthResult> {
     return {
       user: user,
       isAuthenticated: isAuthenticated,
+      isAdmin: userRole === 1,
       isBusiness: userRole === 2,
       isCustomer: userRole === 3
     }
@@ -54,10 +57,29 @@ export async function checkAuth(): Promise<AuthResult> {
     return {
       user: null,
       isAuthenticated: false,
+      isAdmin: false,
       isBusiness: false,
       isCustomer: false
     }
   }
+}
+
+/**
+ * Require admin authentication for protected routes
+ * Redirects to login if not authenticated or not an admin user
+ */
+export async function requireAdminAuth(): Promise<User> {
+  const auth = await checkAuth()
+  
+  if (!auth.isAuthenticated) {
+    redirect('/auth/login?error=unauthorized')
+  }
+  
+  if (!auth.isAdmin) {
+    redirect('/auth/login?error=insufficient_permissions')
+  }
+  
+  return auth.user!
 }
 
 /**

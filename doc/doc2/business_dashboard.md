@@ -7,7 +7,7 @@
 
 ## 📋 Overview
 
-RewardJar 4.0 is a comprehensive digital loyalty platform that enables businesses to create and manage **loyalty cards** with two distinct types:
+RewardJar 4.0 is a comprehensive digital loyalty platform where businesses manage **loyalty cards** created by RewardJar Admins, with two distinct types:
 
 - **Stamp Cards**: Retention-focused, stamp-based loyalty system for repeat customer engagement
 - **Membership Cards**: Upselling-focused, session-based system for premium services (gyms, spas, etc.)
@@ -24,6 +24,8 @@ The platform provides complete multi-wallet integration (Apple Wallet, Google Wa
 ---
 
 ## 🚀 Business Onboarding Journey
+
+**Note**: Card creation is now handled centrally by RewardJar Admins to ensure consistency and quality across all loyalty programs. Businesses focus on managing existing cards, stamps, sessions, and customer engagement.
 
 ### 3-Step Onboarding Wizard
 
@@ -85,24 +87,24 @@ Currency Selector:Per your request, a symbol-only selector (e.g., ₩, $, €) s
 **Route**: `/business/onboarding/cards`
 
 **Content**:
-- **Educational Section**: Explains difference between stamp cards vs. membership  cards
+- **Educational Section**: Explains difference between stamp cards vs. membership cards
 - **Sample Previews**: Live preview of both card types with business name/logo
-- **CTA Button**: "Create Your First Loyalty Card" with dropdown selection
+- **Admin Contact Message**: Information about requesting cards from RewardJar Admins
 
-**Card Type Selection**:
+**Card Type Information**:
 ```typescript
 const cardTypes = [
   {
     type: 'stamp',
     title: 'Stamp Card',
     description: 'Perfect for cafes, restaurants, retail - collect stamps, earn rewards',
-    route: '/business/stamp-cards/new'
+    adminManaged: true
   },
   {
     type: 'membership', 
     title: 'Membership Card',
     description: 'Ideal for gyms, spas, studios - track sessions, manage memberships',
-    route: '/business/memberships/new'
+    adminManaged: true
   }
 ];
 ```
@@ -123,7 +125,7 @@ const profileModal = {
   title: "Complete your profile to start your customer loyalty journey and boost revenue today!",
   content: "Sample card preview with current business details",
   actions: ["Complete Profile", "Skip for Now"],
-  restrictions: "None - card creation allowed regardless of completion"
+  restrictions: "None - businesses can manage existing cards and request new ones from admins"
 };
 ```
 
@@ -140,6 +142,8 @@ const subscriptionModal = {
 ---
 
 ## 🏢 Business Dashboard (`/business/dashboard`)
+
+**Business Role**: Businesses now focus on managing existing loyalty programs rather than creating new cards. This ensures consistency and quality across the platform while allowing businesses to concentrate on customer engagement and analytics.
 
 ### Layout & Navigation
 
@@ -232,7 +236,19 @@ const revenueImpact = {
 
 **Visual Component**: Funnel chart showing New → Repeat → Rewards/Upsells progression
 
-#### 5. Quick Stats Dashboard
+#### 5. Business Management Focus
+**Core Functions**: Businesses concentrate on operational aspects of loyalty programs
+```typescript
+const businessFunctions = {
+  stampManagement: "Add stamps to customer cards with bill amount tracking",
+  sessionTracking: "Mark membership sessions and monitor usage",
+  customerEngagement: "View customer data and engagement metrics",
+  analytics: "Access detailed performance and revenue analytics",
+  support: "Request new cards or updates through admin support system"
+};
+```
+
+#### 6. Quick Stats Dashboard
 ```typescript
 const quickStats = {
   totalLoyaltyCards: {
@@ -250,23 +266,14 @@ const quickStats = {
 };
 ```
 
-#### 6. Create Loyalty Card CTA
-**Primary Button**: "Create Loyalty Card" with dropdown
+#### 6. Admin-Managed Card System
+**Informational Banner**: Cards are created and managed by RewardJar Admins
 ```typescript
-const createCardDropdown = [
-  {
-    type: "stamp",
-    title: "Stamp Card", 
-    subtitle: "For repeat customers and rewards",
-    route: "/business/stamp-cards/new"
-  },
-  {
-    type: "membership",
-    title: "Membership Card",
-    subtitle: "For sessions and premium services", 
-    route: "/business/memberships/new"
-  }
-];
+const adminManagedBanner = {
+  message: "Cards are created and managed by RewardJar Admins.",
+  subMessage: "Contact support if you'd like to update or request a card.",
+  purpose: "Ensures consistency and quality across all loyalty programs"
+};
 ```
 
 #### 7. Recent Cards Management
@@ -314,7 +321,7 @@ const managerMode = {
     "Generate QR codes for locations"
   ],
   restrictions: [
-    "Cannot create new loyalty cards",
+    "Cannot request new cards (admin-only function)",
     "Cannot modify business profile",
     "Cannot access financial analytics"
   ]
@@ -598,7 +605,7 @@ const profileCompletionModal = {
     title: "Complete your profile to start your customer loyalty journey and boost revenue today!",
     preview: "Live sample card with current business details",
     actions: ["Complete Profile", "Skip for Now"],
-    emphasis: "No restrictions - card creation always allowed"
+    emphasis: "No restrictions - businesses can manage existing cards and request new ones from admins"
   }
 };
 ```
@@ -625,12 +632,13 @@ const billAmountModal = {
 };
 ```
 
-#### Card Creation Modal
+#### Card Request System
 ```typescript
-const cardCreationModal = {
-  features: ["Live preview as user types", "Logo placement preview", "Sample customer view"],
-  validation: "Real-time validation with helpful error messages",
-  templates: "Pre-built templates for different business types"
+const cardRequestSystem = {
+  process: "Businesses contact support to request new cards",
+  adminReview: "RewardJar Admins create cards with business input",
+  benefits: ["Consistent design quality", "Platform optimization", "Professional templates"],
+  businessInput: "Business provides requirements, branding, and program details"
 };
 ```
 
@@ -698,7 +706,7 @@ const businessAPIEndpoints = [
   "GET /api/business/dashboard - Dashboard data",
   "GET /api/business/analytics - Analytics data", 
   "POST /api/business/profile - Update profile",
-  "POST /api/business/cards/create - Create loyalty card",
+  "GET /api/business/cards - View existing cards",
   "GET /api/business/customers - Customer list",
   "POST /api/stamp/add - Add stamps with bill amount",
   "GET /api/business/revenue - Revenue analytics"

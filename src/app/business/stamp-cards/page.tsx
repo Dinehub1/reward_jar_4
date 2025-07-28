@@ -147,19 +147,23 @@ export default function StampCardsPage() {
     <BusinessLayout>
       <div className="space-y-8">
         {/* Header */}
-        <div className="flex justify-between items-center">
+        <div className="space-y-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Stamp Cards</h1>
             <p className="text-gray-600 mt-2">
               Manage your loyalty programs and track customer engagement
             </p>
           </div>
-          <Link href="/business/stamp-cards/new">
-            <Button className="bg-blue-600 hover:bg-blue-700">
-              <Plus className="w-4 h-4 mr-2" />
-              Create New Card
-            </Button>
-          </Link>
+          
+          {/* Admin-Managed Cards Banner */}
+          <Card className="border-blue-200 bg-blue-50">
+            <CardContent className="pt-6">
+              <div className="text-blue-700">
+                <p className="font-medium">Cards are created and managed by RewardJar Admins.</p>
+                <p className="text-sm mt-1">Contact support if you'd like to update or request a new stamp card.</p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Stats Overview */}
@@ -215,14 +219,8 @@ export default function StampCardsPage() {
               <Target className="h-12 w-12 text-gray-400 mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">No stamp cards yet</h3>
               <p className="text-gray-600 text-center mb-6 max-w-md">
-                Create your first loyalty program to start engaging customers and driving repeat business.
+                Contact support to request your first stamp card. Our admin team will help you set up your loyalty program.
               </p>
-              <Link href="/business/stamp-cards/new">
-                <Button className="bg-blue-600 hover:bg-blue-700">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Your First Card
-                </Button>
-              </Link>
             </CardContent>
           </Card>
         ) : (
@@ -309,13 +307,7 @@ export default function StampCardsPage() {
               <CardTitle>Quick Actions</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Link href="/business/stamp-cards/new">
-                  <Button variant="outline" className="w-full justify-start">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Create New Card
-                  </Button>
-                </Link>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Link href="/business/analytics">
                   <Button variant="outline" className="w-full justify-start">
                     <Target className="w-4 h-4 mr-2" />

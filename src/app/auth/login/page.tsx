@@ -121,7 +121,10 @@ function LoginContent() {
         router.push(decodeURIComponent(nextUrl))
       } else {
         // Redirect based on role
-        if (authStatus.isBusiness) {
+        if (authStatus.isAdmin) {
+          console.log('🔧 Redirecting to admin dashboard')
+          router.push('/admin')
+        } else if (authStatus.isBusiness) {
           console.log('🏢 Redirecting to business dashboard')
           router.push('/business/dashboard')
         } else if (authStatus.isCustomer) {

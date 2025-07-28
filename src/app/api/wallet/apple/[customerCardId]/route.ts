@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server'
 import { getAppleWalletBaseUrl } from '@/lib/env'
 import crypto from 'crypto'
 import archiver from 'archiver'
@@ -22,7 +22,8 @@ export async function GET(
 ) {
   try {
     const resolvedParams = await params
-    const supabase = await createClient()
+    // Use service role client to bypass RLS for wallet generation
+    const supabase = createServiceClient()
     const customerCardId = resolvedParams.customerCardId
 
     console.log('🍎 Generating Apple Wallet for card ID:', customerCardId)
@@ -437,7 +438,7 @@ export async function POST(
     }
 
     const resolvedParams = await params
-    const supabase = await createClient()
+    const supabase = createServiceClient()
     const customerCardId = resolvedParams.customerCardId
     const url = new URL(request.url)
     const requestedType = url.searchParams.get('type') // 'stamp' or 'membership'

@@ -172,9 +172,9 @@ graph TD
 ```
 /business/dashboard         # Business overview (both card types)
 /business/stamp-cards       # stamp card management
-/business/stamp-cards/new   # Create new stamp card
+/admin/cards/stamp/new   # Create new stamp card
 /business/memberships       # Membership card management (NEW)
-/business/memberships/new   # Create new membership card (NEW)
+/admin/cards/membership/new   # Create new membership card (NEW)
 /business/analytics         # Usage statistics (both card types)
 ```
 

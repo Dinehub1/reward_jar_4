@@ -104,3 +104,276 @@ Error generating demo cards: SyntaxError: Unexpected end of JSON input
   message: 'JSON object requested, multiple (or no) rows returned'
 }
  GET /api/wallet/apple/8e78f3d8-ed50-4a2a-b4e6-91e30d158e95 404 in 209ms
+ ○ Compiling /auth/login ...
+ ✓ Compiled /auth/login in 11.5s (1147 modules)
+ ✓ Compiled in 3.1s (529 modules)
+ ✓ Compiled in 779ms (529 modules)
+ ○ Compiling /api/wallet/apple/[customerCardId] ...
+ ✓ Compiled /api/wallet/apple/[customerCardId] in 1214ms (466 modules)
+🍎 Generating Apple Wallet for card ID: 8e78f3d8-ed50-4a2a-b4e6-91e30d158e95
+✅ Fetched customer card: {
+  id: '8e78f3d8-ed50-4a2a-b4e6-91e30d158e95',
+  current_stamps: 1,
+  membership_type: 'loyalty',
+  sessions_used: 0,
+  total_sessions: null,
+  cost: null,
+  expiry_date: null,
+  created_at: '2025-07-15T19:05:02.494916+00:00',
+  updated_at: '2025-07-16T19:22:28.510015+00:00',
+  stamp_cards: {
+    id: '6b79ddcb-79fa-4b03-837e-b8ac7bedb335',
+    name: 'Pizza Club',
+    businesses: { name: 'Pizza Palace', description: 'Authentic Italian pizza' },
+    total_stamps: 5,
+    reward_description: 'Free pizza after 5 purchases'
+  }
+}
+Starting PKPass generation...
+Generated 6 icon files
+Generated pass.json: 2786 bytes
+Generated manifest.json with 7 files
+Certificate validation passed: {
+  passExpires: '2026-08-15T13:42:37.000Z',
+  wwdrExpires: '2030-12-10T00:00:00.000Z'
+}
+Running OpenSSL command for PKCS#7 signature...
+Created PKCS#7 signature using OpenSSL: 3191 bytes
+Generated signature: 3191 bytes
+Finalizing PKPass archive...
+PKPass archive created successfully
+✅ PKPass generated successfully: { size: 5486, sizeKB: '5.4' }
+ HEAD /api/wallet/apple/8e78f3d8-ed50-4a2a-b4e6-91e30d158e95 200 in 4111ms
+ ○ Compiling /api/wallet/google/[customerCardId] ...
+ ✓ Compiled /api/wallet/google/[customerCardId] in 5s (1129 modules)
+🎫 Generating Google Wallet pass for card: 8e78f3d8-ed50-4a2a-b4e6-91e30d158e95
+📋 Card type detected: Stamp Cards
+🏷️ Setting Google Wallet title to: "Stamp Cards"
+🔐 Signing JWT with RS256 algorithm for Google Wallet
+🔍 Processing private key format...
+✅ Private key validated successfully
+🔐 Signing JWT with RS256...
+✅ JWT signed successfully
+ HEAD /api/wallet/google/8e78f3d8-ed50-4a2a-b4e6-91e30d158e95 200 in 7147ms
+ ○ Compiling /api/wallet/pwa/[customerCardId] ...
+ ✓ Compiled /api/wallet/pwa/[customerCardId] in 1699ms (1117 modules)
+Generating PWA Wallet for card ID: 8e78f3d8-ed50-4a2a-b4e6-91e30d158e95
+Fetched customer card: {
+  id: '8e78f3d8-ed50-4a2a-b4e6-91e30d158e95',
+  current_stamps: 1,
+  membership_type: 'loyalty',
+  sessions_used: 0,
+  total_sessions: null,
+  cost: null,
+  expiry_date: null,
+  created_at: '2025-07-15T19:05:02.494916+00:00',
+  stamp_cards: {
+    id: '6b79ddcb-79fa-4b03-837e-b8ac7bedb335',
+    name: 'Pizza Club',
+    businesses: { name: 'Pizza Palace', description: 'Authentic Italian pizza' },
+    total_stamps: 5,
+    reward_description: 'Free pizza after 5 purchases'
+  }
+}
+Card Type: Loyalty
+Stamp Card: {
+  id: '6b79ddcb-79fa-4b03-837e-b8ac7bedb335',
+  name: 'Pizza Club',
+  total_stamps: 5,
+  reward_description: 'Free pizza after 5 purchases'
+}
+Business: { name: 'Pizza Palace', description: 'Authentic Italian pizza' }
+ HEAD /api/wallet/pwa/8e78f3d8-ed50-4a2a-b4e6-91e30d158e95 200 in 4408ms
+ ○ Compiling /join/[cardId] ...
+ ✓ Compiled /join/[cardId] in 3.6s (1103 modules)
+ GET /join/8e78f3d8-ed50-4a2a-b4e6-91e30d158e95?guest=true 200 in 5071ms
+ GET /join/8e78f3d8-ed50-4a2a-b4e6-91e30d158e95 200 in 214ms
+🍎 Generating Apple Wallet for card ID: 8e78f3d8-ed50-4a2a-b4e6-91e30d158e95
+❌ Customer card not found: {
+  message: 'TypeError: fetch failed',
+  details: 'TypeError: fetch failed\n' +
+    '    at node:internal/deps/undici/undici:13502:13\n' +
+    '    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n' +
+    '    at async GET (webpack-internal:///(rsc)/./src/app/api/wallet/apple/[customerCardId]/route.ts:49:47)\n' +
+    '    at async AppRouteRouteModule.do (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:26:34112)\n' +
+    '    at async AppRouteRouteModule.handle (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:26:41338)\n' +
+    '    at async doRender (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:1518:42)\n' +
+    '    at async DevServer.renderToResponseWithComponentsImpl (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:1920:28)\n' +
+    '    at async DevServer.renderPageComponent (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:2408:24)\n' +
+    '    at async DevServer.renderToResponseImpl (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:2445:32)\n' +
+    '    at async DevServer.pipeImpl (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:1008:25)\n' +
+    '    at async NextNodeServer.handleCatchallRenderRequest (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/next-server.js:305:17)\n' +
+    '    at async DevServer.handleRequestImpl (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:900:17)\n' +
+    '    at async /Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/dev/next-dev-server.js:371:20\n' +
+    '    at async Span.traceAsyncFn (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/trace/trace.js:157:20)\n' +
+    '    at async DevServer.handleRequest (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/dev/next-dev-server.js:368:24)\n' +
+    '    at async invokeRender (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/lib/router-server.js:237:21)\n' +
+    '    at async handleRequest (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/lib/router-server.js:428:24)\n' +
+    '    at async requestHandlerImpl (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/lib/router-server.js:452:13)\n' +
+    '    at async Server.requestListener (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/lib/start-server.js:158:13)',
+  hint: '',
+  code: ''
+}
+ GET /api/wallet/apple/8e78f3d8-ed50-4a2a-b4e6-91e30d158e95 404 in 1377ms
+🎫 Generating Google Wallet pass for card: 8e78f3d8-ed50-4a2a-b4e6-91e30d158e95
+📋 Card type detected: Stamp Cards
+🏷️ Setting Google Wallet title to: "Stamp Cards"
+🔐 Signing JWT with RS256 algorithm for Google Wallet
+🔍 Processing private key format...
+✅ Private key validated successfully
+🔐 Signing JWT with RS256...
+✅ JWT signed successfully
+ GET /api/wallet/google/8e78f3d8-ed50-4a2a-b4e6-91e30d158e95 200 in 1154ms
+Generating PWA Wallet for card ID: 8e78f3d8-ed50-4a2a-b4e6-91e30d158e95
+Fetched customer card: {
+  id: '8e78f3d8-ed50-4a2a-b4e6-91e30d158e95',
+  current_stamps: 1,
+  membership_type: 'loyalty',
+  sessions_used: 0,
+  total_sessions: null,
+  cost: null,
+  expiry_date: null,
+  created_at: '2025-07-15T19:05:02.494916+00:00',
+  stamp_cards: {
+    id: '6b79ddcb-79fa-4b03-837e-b8ac7bedb335',
+    name: 'Pizza Club',
+    businesses: { name: 'Pizza Palace', description: 'Authentic Italian pizza' },
+    total_stamps: 5,
+    reward_description: 'Free pizza after 5 purchases'
+  }
+}
+Card Type: Loyalty
+Stamp Card: {
+  id: '6b79ddcb-79fa-4b03-837e-b8ac7bedb335',
+  name: 'Pizza Club',
+  total_stamps: 5,
+  reward_description: 'Free pizza after 5 purchases'
+}
+Business: { name: 'Pizza Palace', description: 'Authentic Italian pizza' }
+ GET /api/wallet/pwa/8e78f3d8-ed50-4a2a-b4e6-91e30d158e95 200 in 585ms
+ ○ Compiling /api/test/database-check ...
+ ✓ Compiled /api/test/database-check in 5.7s (604 modules)
+🔍 Testing Supabase database connectivity...
+✅ Database queries successful
+ GET /api/test/database-check 200 in 7006ms
+ ○ Compiling /api/health/env ...
+ ✓ Compiled /api/health/env in 3.8s (737 modules)
+🔍 Starting environment validation...
+✅ Environment validation completed: 69% (9/13)
+ GET /api/health/env 200 in 4086ms
+🍎 Generating Apple Wallet for card ID: 8e78f3d8-ed50-4a2a-b4e6-91e30d158e95
+✅ Fetched customer card: {
+  id: '8e78f3d8-ed50-4a2a-b4e6-91e30d158e95',
+  current_stamps: 1,
+  membership_type: 'loyalty',
+  sessions_used: 0,
+  total_sessions: null,
+  cost: null,
+  expiry_date: null,
+  created_at: '2025-07-15T19:05:02.494916+00:00',
+  updated_at: '2025-07-16T19:22:28.510015+00:00',
+  stamp_cards: {
+    id: '6b79ddcb-79fa-4b03-837e-b8ac7bedb335',
+    name: 'Pizza Club',
+    businesses: { name: 'Pizza Palace', description: 'Authentic Italian pizza' },
+    total_stamps: 5,
+    reward_description: 'Free pizza after 5 purchases'
+  }
+}
+Starting PKPass generation...
+Generated 6 icon files
+Generated pass.json: 2786 bytes
+Generated manifest.json with 7 files
+Certificate validation passed: {
+  passExpires: '2026-08-15T13:42:37.000Z',
+  wwdrExpires: '2030-12-10T00:00:00.000Z'
+}
+Running OpenSSL command for PKCS#7 signature...
+Created PKCS#7 signature using OpenSSL: 3191 bytes
+Generated signature: 3191 bytes
+Finalizing PKPass archive...
+PKPass archive created successfully
+✅ PKPass generated successfully: { size: 5486, sizeKB: '5.4' }
+ GET /api/wallet/apple/8e78f3d8-ed50-4a2a-b4e6-91e30d158e95 200 in 1105ms
+🍎 Generating Apple Wallet for card ID: 8e78f3d8-ed50-4a2a-b4e6-91e30d158e95
+✅ Fetched customer card: {
+  id: '8e78f3d8-ed50-4a2a-b4e6-91e30d158e95',
+  current_stamps: 1,
+  membership_type: 'loyalty',
+  sessions_used: 0,
+  total_sessions: null,
+  cost: null,
+  expiry_date: null,
+  created_at: '2025-07-15T19:05:02.494916+00:00',
+  updated_at: '2025-07-16T19:22:28.510015+00:00',
+  stamp_cards: {
+    id: '6b79ddcb-79fa-4b03-837e-b8ac7bedb335',
+    name: 'Pizza Club',
+    businesses: { name: 'Pizza Palace', description: 'Authentic Italian pizza' },
+    total_stamps: 5,
+    reward_description: 'Free pizza after 5 purchases'
+  }
+}
+Starting PKPass generation...
+Generated 6 icon files
+Generated pass.json: 2786 bytes
+Generated manifest.json with 7 files
+Certificate validation passed: {
+  passExpires: '2026-08-15T13:42:37.000Z',
+  wwdrExpires: '2030-12-10T00:00:00.000Z'
+}
+Running OpenSSL command for PKCS#7 signature...
+Created PKCS#7 signature using OpenSSL: 3191 bytes
+Generated signature: 3191 bytes
+Finalizing PKPass archive...
+PKPass archive created successfully
+✅ PKPass generated successfully: { size: 5484, sizeKB: '5.4' }
+ GET /api/wallet/apple/8e78f3d8-ed50-4a2a-b4e6-91e30d158e95 200 in 530ms
+🍎 Generating Apple Wallet for card ID: 8e78f3d8-ed50-4a2a-b4e6-91e30d158e95
+✅ Fetched customer card: {
+  id: '8e78f3d8-ed50-4a2a-b4e6-91e30d158e95',
+  current_stamps: 1,
+  membership_type: 'loyalty',
+  sessions_used: 0,
+  total_sessions: null,
+  cost: null,
+  expiry_date: null,
+  created_at: '2025-07-15T19:05:02.494916+00:00',
+  updated_at: '2025-07-16T19:22:28.510015+00:00',
+  stamp_cards: {
+    id: '6b79ddcb-79fa-4b03-837e-b8ac7bedb335',
+    name: 'Pizza Club',
+    businesses: { name: 'Pizza Palace', description: 'Authentic Italian pizza' },
+    total_stamps: 5,
+    reward_description: 'Free pizza after 5 purchases'
+  }
+}
+Starting PKPass generation...
+Generated 6 icon files
+Generated pass.json: 2786 bytes
+Generated manifest.json with 7 files
+Certificate validation passed: {
+  passExpires: '2026-08-15T13:42:37.000Z',
+  wwdrExpires: '2030-12-10T00:00:00.000Z'
+}
+Running OpenSSL command for PKCS#7 signature...
+Created PKCS#7 signature using OpenSSL: 3191 bytes
+Generated signature: 3191 bytes
+Finalizing PKPass archive...
+PKPass archive created successfully
+✅ PKPass generated successfully: { size: 5487, sizeKB: '5.4' }
+ GET /api/wallet/apple/8e78f3d8-ed50-4a2a-b4e6-91e30d158e95 200 in 736ms
+ ○ Compiling /auth/login ...
+ ✓ Compiled /auth/login in 3.9s (632 modules)
+ ⨯ [TypeError: Cannot read properties of undefined (reading 'clientModules')] {
+  page: '/auth/login'
+}
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 5.2s (1480 modules)
+ ○ Compiling / ...
+ ✓ Compiled / in 1653ms (1505 modules)
+ GET / 200 in 2741ms
+ GET /auth/login 200 in 100ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 1985ms (1508 modules)
+ GET /_next/static/chunks/app/auth/login/page.js 404 in 2753ms

@@ -615,8 +615,8 @@ graph TD
     D --> F[Complete Profile - 77% Average]
     F --> E
     E --> G{Create Card Type?}
-    G -->|Stamp| H[/business/stamp-cards/new]
-    G -->|Membership| I[/business/memberships/new]
+    G -->|Stamp| H[/admin/cards/stamp/new]
+    G -->|Membership| I[/admin/cards/membership/new]
     H --> J[Generate QR Codes]
     I --> K[Generate QR Codes]
     J --> L[Analytics: ₩730,000 Revenue]

@@ -216,7 +216,7 @@ export default function MembershipsPage() {
     <BusinessLayout>
       <div className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6 overflow-hidden">
         {/* Header */}
-        <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
+        <div className="space-y-4">
           <div className="min-w-0 flex-1">
             <h1 className="text-xl md:text-2xl font-bold text-gray-900 flex items-center">
               <Building className="w-5 md:w-6 h-5 md:h-6 mr-2 text-indigo-600 flex-shrink-0" />
@@ -227,24 +227,24 @@ export default function MembershipsPage() {
             </p>
           </div>
           
+          {/* Admin-Managed Cards Banner */}
+          <Card className="border-blue-200 bg-blue-50">
+            <CardContent className="pt-6">
+              <div className="text-blue-700">
+                <p className="font-medium">Cards are created and managed by RewardJar Admins.</p>
+                <p className="text-sm mt-1">Contact support if you'd like to update or request a new membership card.</p>
+              </div>
+            </CardContent>
+          </Card>
+          
           {/* Manager Mode Toggle */}
-          <div className="flex flex-col space-y-3 lg:flex-row lg:items-center lg:space-y-0 lg:space-x-4">
+          <div className="flex justify-end">
             <ManagerModeToggle
               userId={session?.user?.id || ''}
               businessId={business?.id}
               onToggle={handleManagerToggle}
               className="w-full lg:w-auto lg:justify-end"
             />
-            
-            {/* Create Button - Hidden in manager mode */}
-            {!managerMode && (
-              <Link href="/business/memberships/new" className="w-full lg:w-auto">
-                <Button className="bg-indigo-600 hover:bg-indigo-700 w-full lg:w-auto">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create New Membership
-                </Button>
-              </Link>
-            )}
           </div>
         </div>
 
@@ -277,18 +277,8 @@ export default function MembershipsPage() {
                 <Building className="mx-auto h-12 w-12 text-gray-400" />
                 <h3 className="mt-2 text-sm font-medium text-gray-900">No membership cards</h3>
                 <p className="mt-1 text-sm text-gray-500">
-                  Get started by creating your first membership program.
+                  Contact support to request your first membership card. Our admin team will help you set up your membership program.
                 </p>
-                {!managerMode && (
-                  <div className="mt-6">
-                    <Link href="/business/memberships/new">
-                      <Button className="bg-indigo-600 hover:bg-indigo-700">
-                        <Plus className="w-4 h-4 mr-2" />
-                        Create Membership Card
-                      </Button>
-                    </Link>
-                  </div>
-                )}
               </div>
             </CardContent>
           </Card>
