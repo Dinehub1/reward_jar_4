@@ -215,11 +215,36 @@ CREATE POLICY IF NOT EXISTS "Users can view and update their own data" ON users
 CREATE POLICY IF NOT EXISTS "Business owners manage their business" ON businesses
   FOR ALL USING (owner_id = auth.uid());
 
--- Stamp cards are managed by business owners
-CREATE POLICY IF NOT EXISTS "Business owners manage their stamp cards" ON stamp_cards
-  FOR ALL USING (
+-- Admin-only card creation policy (UPDATED for RewardJar 4.0)
+CREATE POLICY IF NOT EXISTS "Admin only card creation" ON stamp_cards
+  FOR INSERT WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM users 
+      WHERE id = auth.uid() AND role_id = 1
+    )
+  );
+
+-- Business owners can view and update their assigned stamp cards (but not create)
+CREATE POLICY IF NOT EXISTS "Business owners view their stamp cards" ON stamp_cards
+  FOR SELECT USING (
     business_id IN (
       SELECT id FROM businesses WHERE owner_id = auth.uid()
+    )
+  );
+
+CREATE POLICY IF NOT EXISTS "Business owners update their stamp cards" ON stamp_cards
+  FOR UPDATE USING (
+    business_id IN (
+      SELECT id FROM businesses WHERE owner_id = auth.uid()
+    )
+  );
+
+-- Admin can manage all stamp cards
+CREATE POLICY IF NOT EXISTS "Admin manages all stamp cards" ON stamp_cards
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM users 
+      WHERE id = auth.uid() AND role_id = 1
     )
   );
 
@@ -238,11 +263,36 @@ CREATE POLICY IF NOT EXISTS "Customer cards access" ON customer_cards
     )
   );
 
--- RLS policies for membership cards
-CREATE POLICY IF NOT EXISTS "membership_cards_business_access" ON membership_cards
-  FOR ALL USING (
+-- Admin-only membership card creation policy (UPDATED for RewardJar 4.0)
+CREATE POLICY IF NOT EXISTS "Admin only membership card creation" ON membership_cards
+  FOR INSERT WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM users 
+      WHERE id = auth.uid() AND role_id = 1
+    )
+  );
+
+-- Business owners can view and update their assigned membership cards (but not create)
+CREATE POLICY IF NOT EXISTS "Business owners view their membership cards" ON membership_cards
+  FOR SELECT USING (
     business_id IN (
       SELECT id FROM businesses WHERE owner_id = auth.uid()
+    )
+  );
+
+CREATE POLICY IF NOT EXISTS "Business owners update their membership cards" ON membership_cards
+  FOR UPDATE USING (
+    business_id IN (
+      SELECT id FROM businesses WHERE owner_id = auth.uid()
+    )
+  );
+
+-- Admin can manage all membership cards
+CREATE POLICY IF NOT EXISTS "Admin manages all membership cards" ON membership_cards
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM users 
+      WHERE id = auth.uid() AND role_id = 1
     )
   );
 
@@ -734,4 +784,55 @@ AND contype = 'c';
 └── MCP Integration: ✅ Operational (direct DB access)
 ```
 
-This enhanced Supabase setup supports the complete RewardJar 4.0 functionality including dual card types (loyalty + gym memberships), intelligent session tracking, multi-wallet integration, and real-time synchronization. 
+This enhanced Supabase setup supports the complete RewardJar 4.0 functionality including dual card types (loyalty + gym memberships), intelligent session tracking, multi-wallet integration, real-time synchronization, and **admin-only card creation for improved consistency and quality control**.
+
+---
+
+## 10. Admin-Only Card Creation Enforcement
+
+### RLS Policy Summary ✅ IMPLEMENTED
+
+The database now enforces admin-only card creation through Row Level Security policies:
+
+#### Card Creation Restrictions
+```sql
+-- Only admin users (role_id = 1) can create stamp cards
+CREATE POLICY "Admin only card creation" ON stamp_cards
+  FOR INSERT WITH CHECK (
+    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role_id = 1)
+  );
+
+-- Only admin users (role_id = 1) can create membership cards  
+CREATE POLICY "Admin only membership card creation" ON membership_cards
+  FOR INSERT WITH CHECK (
+    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role_id = 1)
+  );
+```
+
+#### Business Access Rights
+- ✅ **View**: Business owners can view their assigned cards
+- ✅ **Update**: Business owners can update card details (name, description)
+- ❌ **Create**: Only admins can create new cards
+- ❌ **Delete**: Only admins can delete cards
+
+#### Validation Commands
+```sql
+-- Test admin card creation permission
+INSERT INTO stamp_cards (business_id, name, total_stamps, reward_description)
+VALUES ('business-uuid', 'Test Card', 10, 'Free coffee');
+-- Expected: Success for admin users, denied for business users
+
+-- Verify RLS policies are active
+SELECT schemaname, tablename, policyname, permissive, roles
+FROM pg_policies 
+WHERE tablename IN ('stamp_cards', 'membership_cards')
+AND policyname LIKE '%Admin%'
+ORDER BY tablename, policyname;
+```
+
+### Benefits of Admin-Only Creation
+1. **Quality Control**: Professional review of all loyalty programs
+2. **Consistency**: Standardized card designs and reward structures  
+3. **Error Prevention**: Eliminates common business setup mistakes
+4. **Optimization**: Data-driven recommendations for reward structures
+5. **Support**: Direct admin support for complex loyalty programs 

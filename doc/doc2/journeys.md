@@ -199,7 +199,29 @@ const customerProfile = {
 
 ---
 
-## 🏢 Business Journey
+## 🏢 Business Journey (Updated - Admin-Managed Cards)
+
+### Business Flow Changes ✅ UPDATED
+
+**Card Management**: All card creation is now handled by administrators. Businesses focus on customer management and analytics.
+
+```mermaid
+graph TD
+    A[Business Login] --> B[/business/dashboard]
+    B --> C[View Assigned Cards]
+    C --> D[Generate QR Codes]
+    D --> E[Customer Management]
+    E --> F[Add Stamps/Sessions]
+    F --> G[Revenue Analytics]
+    G --> H[Customer Support]
+    H --> I[Request New Cards from Admin]
+```
+
+**Key Changes**:
+- ❌ **Removed**: Card creation capabilities (`/business/cards/new` routes deprecated)
+- ✅ **Enhanced**: Customer management and analytics focus
+- ✅ **Improved**: Streamlined operations for assigned cards
+- ✅ **Added**: Admin request system for new cards
 
 ### Enhanced Dashboard Features
 
@@ -308,23 +330,49 @@ const analyticsTabsStructure = {
 
 ### Full System Access
 
-#### Admin Dashboard Structure
+#### Admin Dashboard Structure (Updated with Card Management)
 ```typescript
 const adminDashboard = {
   routes: {
     main: "/admin",
+    cards: "/admin/cards", // NEW: Centralized card management
+    cardCreation: {
+      stamp: "/admin/cards/stamp/new",
+      membership: "/admin/cards/membership/new"
+    },
+    cardDetails: {
+      stamp: "/admin/cards/stamp/[cardId]",
+      membership: "/admin/cards/membership/[cardId]"
+    },
     businesses: "/admin/businesses",
     customers: "/admin/customers", 
     support: "/admin/support",
     analytics: "/admin/analytics"
   },
   permissions: {
-    level: "Full system access",
+    level: "Full system access + Card Creation Authority",
     dataAccess: "All business and customer data",
     modifications: "Can edit/delete any record",
+    cardManagement: "Exclusive card creation and assignment rights",
     support: "Manual operations and overrides"
   }
 };
+```
+
+#### Card Creation Workflow (NEW)
+```mermaid
+graph TD
+    A[Admin Login] --> B[/admin/cards]
+    B --> C{Create New Card?}
+    C -->|Stamp Card| D[/admin/cards/stamp/new]
+    C -->|Membership Card| E[/admin/cards/membership/new]
+    D --> F[Select Target Business]
+    E --> F
+    F --> G[Configure Card Details]
+    G --> H[Create & Assign Card]
+    H --> I[Notify Business Owner]
+    I --> J[Business Receives Card]
+    J --> K[Business Generates QR Codes]
 ```
 
 #### Support Operations

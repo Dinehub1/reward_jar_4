@@ -614,13 +614,10 @@ graph TD
     C -->|>=60%| E[Full Dashboard Access]
     D --> F[Complete Profile - 77% Average]
     F --> E
-    E --> G{Create Card Type?}
-    G -->|Stamp| H[/admin/cards/stamp/new]
-    G -->|Membership| I[/admin/cards/membership/new]
-    H --> J[Generate QR Codes]
-    I --> K[Generate QR Codes]
-    J --> L[Analytics: ₩730,000 Revenue]
-    K --> L
+    E --> G[View Assigned Cards]
+    G --> H[Generate QR Codes]
+    H --> I[Manage Customers]
+    I --> J[Analytics: ₩730,000 Revenue]
 ```
 
 ### Admin Support Journey
@@ -628,15 +625,58 @@ graph TD
 ```mermaid
 graph TD
     A[Admin Login] --> B[/admin/dashboard]
-    B --> C[Business Management]
-    C --> D[347 Active Businesses]
-    D --> E[System Analytics]
-    E --> F[439 Customer Cards]
-    F --> G[Support Operations]
-    G --> H[Manual Stamp Addition]
-    G --> I[Reward Redemption]
-    G --> J[Bill Amount Updates]
+    B --> C[Card Creation Center]
+    C --> D[Create Stamp/Membership Cards]
+    D --> E[Assign to Business]
+    E --> F[Notify Business Owner]
+    F --> G[Business Management]
+    G --> H[347 Active Businesses]
+    H --> I[System Analytics]
+    I --> J[439 Customer Cards]
+    J --> K[Support Operations]
+    K --> L[Manual Stamp Addition]
+    K --> M[Reward Redemption]
+    K --> N[Bill Amount Updates]
 ```
+
+---
+
+## 🎯 Card Creation Flow (Admin-Only)
+
+### Centralized Card Management ✅ PRODUCTION READY
+
+**Card Creation Process**: All stamp cards and membership cards are now created exclusively by RewardJar administrators to ensure consistency, quality, and optimal user experience.
+
+```mermaid
+graph TD
+    A[Business Requests Card] --> B[Admin Reviews Request]
+    B --> C[Admin Creates Card via /admin/cards]
+    C --> D[Admin Assigns to Business]
+    D --> E[Business Receives Notification]
+    E --> F[Business Generates QR Codes]
+    F --> G[Customers Join via QR]
+```
+
+### Benefits of Admin-Only Creation:
+- **Consistency**: Standardized card designs and reward structures
+- **Quality Control**: Professional review of all loyalty programs
+- **Error Prevention**: Eliminates common business setup mistakes
+- **Optimization**: Data-driven recommendations for reward structures
+- **Support**: Direct admin support for complex loyalty programs
+
+### Legacy Business Creation (Deprecated)
+Previous versions allowed businesses to create their own cards. This has been moved to admin-only for the following reasons:
+- Reduced setup errors and inconsistencies
+- Better reward structure optimization
+- Improved customer experience consistency
+- Centralized quality control and support
+
+### Admin Card Creation Routes:
+- `/admin/cards` - View all cards across all businesses
+- `/admin/cards/stamp/new` - Create new stamp cards
+- `/admin/cards/membership/new` - Create new membership cards
+- `/admin/cards/stamp/[cardId]` - Detailed stamp card management
+- `/admin/cards/membership/[cardId]` - Detailed membership card management
 
 ---
 
