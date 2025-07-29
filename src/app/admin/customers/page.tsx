@@ -55,113 +55,79 @@ interface Customer {
 }
 
 async function getCustomers() {
-  const supabase = createAdminClient()
-  
-  try {
-    const { data: customers, error } = await supabase
-      .from('customers')
-      .select(`
-        *,
-        customer_cards(
-          id,
-          current_stamps,
-          sessions_used,
-          stamp_card_id,
-          membership_card_id,
-          stamp_cards(
-            name,
-            businesses(name)
-          ),
-          membership_cards(
-            name,
-            businesses(name)
-          )
-        )
-      `)
-      .order('created_at', { ascending: false })
-      .limit(50)
+  console.log('👥 CUSTOMERS PAGE - Starting customer data fetch via API...')
 
-    if (error) {
-      console.error('Error fetching customers:', error)
-      return []
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/admin/all-data`, {
+      cache: 'no-store'
+    })
+
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status}`)
     }
 
-    // Process customers and add flags
-    return customers?.map(customer => {
-      const cardCount = customer.customer_cards?.length || 0
-      const rewardCount = customer.rewards?.length || 0
-      const sessionCount = customer.session_usage?.reduce((total: number, card: any) => 
-        total + (card.session_usage?.length || 0), 0) || 0
+    const data = await response.json()
 
-      // Calculate flags
-      const createdDate = new Date(customer.created_at)
-      const isNewCustomer = (Date.now() - createdDate.getTime()) < (7 * 24 * 60 * 60 * 1000) // 7 days
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to fetch customers')
+    }
 
-      return {
-        ...customer,
-        _count: {
-          customer_cards: cardCount,
-          rewards: rewardCount,
-          session_usage: sessionCount
-        },
-        _flags: {
-          hasRecentErrors: false, // TODO: Implement error tracking
-          hasAbnormalActivity: sessionCount > 50, // Flag if > 50 sessions
-          isNewCustomer
-        }
+    const customers = data.data.customers || []
+    console.log('✅ CUSTOMERS PAGE - Fetched customers via API:', customers.length)
+
+    // Process customers to match expected interface
+    return customers.map((customer: any) => ({
+      ...customer,
+      customer_cards: [], // Simplified for now
+      _count: {
+        customer_cards: customer.total_cards || 0,
+        rewards: 0,
+        session_usage: customer.total_stamps || 0
+      },
+      _flags: {
+        hasRecentErrors: false,
+        hasAbnormalActivity: customer.total_stamps > 20,
+        isNewCustomer: (Date.now() - new Date(customer.created_at).getTime()) < (7 * 24 * 60 * 60 * 1000)
       }
-    }) || []
+    }))
   } catch (error) {
-    console.error('Error in getCustomers:', error)
+    console.error('❌ CUSTOMERS PAGE - Error fetching customers:', error)
     return []
   }
 }
 
 async function getCustomerStats() {
-  const supabase = createAdminClient()
-  
+  console.log('📈 CUSTOMERS PAGE - Starting customer stats fetch via API...')
+
   try {
-    const [
-      { count: totalCustomers },
-      { count: activeCustomers },
-      { count: newThisWeek },
-      { data: recentCustomers },
-      { data: topCustomers }
-    ] = await Promise.all([
-      supabase.from('customers').select('*', { count: 'exact', head: true }),
-      supabase
-        .from('customers')
-        .select('*', { count: 'exact', head: true })
-        .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()),
-      supabase
-        .from('customers')
-        .select('*', { count: 'exact', head: true })
-        .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()),
-      supabase
-        .from('customers')
-        .select('name, email, created_at')
-        .order('created_at', { ascending: false })
-        .limit(5),
-      supabase
-        .from('customers')
-        .select(`
-          name,
-          email,
-          customer_cards(count)
-        `)
-        .order('created_at', { ascending: false })
-        .limit(5)
-    ])
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/admin/all-data`, {
+      cache: 'no-store'
+    })
+
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status}`)
+    }
+
+    const data = await response.json()
+
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to fetch customer stats')
+    }
+
+    const metrics = data.data.metrics.customers
+    const customers = data.data.customers || []
+    
+    console.log('✅ CUSTOMERS PAGE - Customer stats via API:', metrics)
 
     return {
-      totalCustomers: totalCustomers || 0,
-      activeCustomers: activeCustomers || 0,
-      newThisWeek: newThisWeek || 0,
-      recentCustomers: recentCustomers || [],
-      topCustomers: topCustomers || []
+      totalCustomers: metrics.totalCustomers,
+      activeCustomers: metrics.activeCustomers,
+      newThisWeek: metrics.newThisWeek,
+      recentCustomers: customers.slice(0, 5),
+      topCustomers: customers.slice(0, 5)
     }
   } catch (error) {
-    console.error('Error fetching customer stats:', error)
+    console.error('❌ CUSTOMERS PAGE - Error fetching customer stats:', error)
     return {
       totalCustomers: 0,
       activeCustomers: 0,

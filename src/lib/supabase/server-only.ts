@@ -16,9 +16,28 @@ import { cookies } from 'next/headers'
 export async function createClient() {
   const cookieStore = await cookies()
   
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  
+  if (!supabaseUrl) {
+    throw new Error('NEXT_PUBLIC_SUPABASE_URL is required')
+  }
+  
+  // Use service role key if available, otherwise fall back to anon key
+  const apiKey = serviceRoleKey || anonKey
+  
+  if (!apiKey) {
+    throw new Error('Either SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_ANON_KEY is required')
+  }
+  
+  if (!serviceRoleKey) {
+    console.warn('⚠️ SERVER-ONLY CLIENT - Using anon key (limited access)')
+  }
+  
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    supabaseUrl,
+    apiKey,
     {
       cookies: {
         get(name: string) {

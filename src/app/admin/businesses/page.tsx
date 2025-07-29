@@ -5,117 +5,85 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
-import { createAdminClient } from '@/lib/supabase/admin-client'
 
 interface Business {
   id: string
   name: string
-  contact_email: string
-  description: string
+  email: string
+  phone?: string
+  address?: string
+  city?: string
+  state?: string
+  zip_code?: string
   status: string
-  is_flagged: boolean
-  admin_notes: string
+  flagged?: boolean
   created_at: string
-  owner_id: string
-  users?: {
-    email: string
-  }
-  _count?: {
-    stamp_cards: number
-    customer_cards: number
-  }
+  updated_at?: string
+  total_cards: number
+  active_cards: number
 }
 
-async function getBusinesses() {
-  const supabase = createAdminClient()
+interface BusinessMetrics {
+  totalBusinesses: number
+  activeBusinesses: number
+  flaggedBusinesses: number
+  newThisWeek: number
+}
 
-  console.log('🏢 BUSINESSES PAGE - Starting business data fetch with admin client...')
+// Fetch businesses using the working API endpoint
+async function getBusinesses(): Promise<Business[]> {
+  console.log('🏢 BUSINESSES PAGE - Starting business data fetch via API...')
 
   try {
-    const { data: businesses, error } = await supabase
-      .from('businesses')
-      .select('*')
-      .order('created_at', { ascending: false })
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/admin/all-data`, {
+      cache: 'no-store'
+    })
 
-    console.log('📊 BUSINESSES PAGE - Raw businesses data with admin client:', businesses?.length || 0, 'businesses')
-    console.log('❌ BUSINESSES PAGE - Fetch error:', error)
-
-    if (error) {
-      console.error('🚨 BUSINESSES PAGE - Database error details:', {
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code
-      })
-      return []
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status}`)
     }
 
-    // Also try a simple query to verify connection
-    const { data: simpleTest, error: simpleError } = await supabase
-      .from('businesses')
-      .select('id, name')
-      .limit(5)
+    const data = await response.json()
 
-    console.log('🧪 BUSINESSES PAGE - Simple test query with admin client:', simpleTest?.length || 0, 'businesses')
-    console.log('❌ BUSINESSES PAGE - Simple test error:', simpleError)
-
-    // Process the data to add counts (simplified for now)
-    const processedBusinesses = businesses?.map(business => ({
-      ...business,
-      _count: {
-        stamp_cards: 5, // Placeholder - would query stamp_cards table separately
-        customer_cards: 0 // Placeholder - would query customer enrollments separately
-      }
-    })) || []
-
-    console.log('✅ BUSINESSES PAGE - Processed businesses with admin client:', processedBusinesses.length)
-    if (processedBusinesses.length > 0) {
-      console.log('🎯 BUSINESSES PAGE - First business sample:', {
-        name: processedBusinesses[0].name,
-        id: processedBusinesses[0].id,
-        cardCount: processedBusinesses[0]._count
-      })
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to fetch businesses')
     }
 
-    return processedBusinesses
+    const businesses = data.data.businesses || []
+    console.log('✅ BUSINESSES PAGE - Fetched businesses via API:', businesses.length)
+
+    return businesses
   } catch (error) {
-    console.error('💥 BUSINESSES PAGE - Catch block error with admin client:', error)
+    console.error('❌ BUSINESSES PAGE - Error fetching businesses:', error)
     return []
   }
 }
 
-async function getBusinessStats() {
-  const supabase = createAdminClient()
-  
-  try {
-    const [
-      { count: totalBusinesses },
-      { count: activeBusinesses },
-      { count: flaggedBusinesses },
-      { count: newThisWeek }
-    ] = await Promise.all([
-      supabase.from('businesses').select('*', { count: 'exact', head: true }),
-      supabase.from('businesses').select('*', { count: 'exact', head: true }).eq('status', 'active'),
-      supabase.from('businesses').select('*', { count: 'exact', head: true }).eq('is_flagged', true),
-      supabase.from('businesses').select('*', { count: 'exact', head: true })
-        .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
-    ])
+// Fetch business stats using the working API endpoint
+async function getBusinessStats(): Promise<BusinessMetrics> {
+  console.log('📈 BUSINESSES PAGE - Starting business stats fetch via API...')
 
-    console.log('📈 BUSINESSES PAGE - System metrics with admin client:', {
-      totalBusinesses,
-      activeBusinesses,
-      flaggedBusinesses,
-      newThisWeek
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/admin/all-data`, {
+      cache: 'no-store'
     })
 
-    return {
-      totalBusinesses: totalBusinesses || 0,
-      activeBusinesses: activeBusinesses || 0,
-      flaggedBusinesses: flaggedBusinesses || 0,
-      newThisWeek: newThisWeek || 0
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status}`)
     }
+
+    const data = await response.json()
+
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to fetch business stats')
+    }
+
+    const metrics = data.data.metrics.businesses
+    console.log('✅ BUSINESSES PAGE - Business stats via API:', metrics)
+
+    return metrics
   } catch (error) {
-    console.error('💥 BUSINESSES PAGE - Error fetching metrics:', error)
+    console.error('❌ BUSINESSES PAGE - Error fetching business stats:', error)
     return {
       totalBusinesses: 0,
       activeBusinesses: 0,
@@ -126,72 +94,118 @@ async function getBusinessStats() {
 }
 
 function BusinessRow({ business }: { business: Business }) {
-  const statusColor = business.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-  const flaggedColor = business.is_flagged ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
-
   return (
     <tr className="border-b hover:bg-gray-50">
       <td className="px-4 py-3">
-        <div className="flex items-center space-x-2">
-          <div>
-            <div className="font-medium">{business.name}</div>
-            <div className="text-sm text-gray-500">{business.users?.email}</div>
-          </div>
-          {business.is_flagged && (
-            <Badge className="bg-red-100 text-red-800">🚩 Flagged</Badge>
+        <div>
+          <div className="font-medium">{business.name}</div>
+          <div className="text-sm text-gray-500">{business.id.slice(0, 8)}...</div>
+        </div>
+      </td>
+      <td className="px-4 py-3">
+        <div>
+          <div className="text-sm">{business.email}</div>
+          {business.phone && (
+            <div className="text-sm text-gray-500">{business.phone}</div>
           )}
         </div>
       </td>
       <td className="px-4 py-3">
-        <div className="text-sm">
-          <div>{business.contact_email}</div>
-          <div className="text-gray-500 truncate max-w-xs">
-            {business.description || 'No description'}
-          </div>
-        </div>
-      </td>
-      <td className="px-4 py-3">
-        <Badge className={statusColor}>
+        <Badge variant={business.status === 'active' ? 'default' : 'secondary'}>
           {business.status}
         </Badge>
+        {business.flagged && (
+          <Badge variant="destructive" className="ml-1">
+            Flagged
+          </Badge>
+        )}
       </td>
       <td className="px-4 py-3 text-center">
         <div className="text-sm">
-          <div className="font-medium">{business._count?.stamp_cards || 0}</div>
-          <div className="text-gray-500">cards</div>
+          <div>{business.total_cards} total</div>
+          <div className="text-gray-500">{business.active_cards} active</div>
         </div>
       </td>
       <td className="px-4 py-3 text-center">
         <div className="text-sm">
-          <div className="font-medium">{business._count?.customer_cards || 0}</div>
-          <div className="text-gray-500">customers</div>
+          <div>{business.active_cards}</div>
+          <div className="text-gray-500">enrolled</div>
         </div>
       </td>
       <td className="px-4 py-3">
-        <div className="text-sm text-gray-500">
+        <div className="text-sm">
           {new Date(business.created_at).toLocaleDateString()}
         </div>
       </td>
       <td className="px-4 py-3">
-        <div className="flex space-x-1">
+        <div className="flex space-x-2">
           <Link href={`/admin/businesses/${business.id}`}>
-            <Button variant="outline" size="sm">
-              View
-            </Button>
+            <Button variant="outline" size="sm">View</Button>
           </Link>
-          <Button variant="outline" size="sm" className="text-blue-600">
-            Impersonate
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className={business.is_flagged ? "text-green-600" : "text-red-600"}
-          >
-            {business.is_flagged ? 'Unflag' : 'Flag'}
-          </Button>
+          <Button variant="outline" size="sm">Edit</Button>
         </div>
       </td>
     </tr>
+  )
+}
+
+async function BusinessStats() {
+  const stats = await getBusinessStats()
+
+  return (
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Total Businesses</CardTitle>
+          <span className="text-2xl">🏢</span>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{stats.totalBusinesses}</div>
+          <p className="text-xs text-muted-foreground">
+            +{stats.newThisWeek} from last month
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Active Businesses</CardTitle>
+          <span className="text-2xl">✅</span>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{stats.activeBusinesses}</div>
+          <p className="text-xs text-muted-foreground">
+            {stats.totalBusinesses > 0 ? Math.round((stats.activeBusinesses / stats.totalBusinesses) * 100) : 0}% active rate
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Flagged Businesses</CardTitle>
+          <span className="text-2xl">🚩</span>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{stats.flaggedBusinesses}</div>
+          <p className="text-xs text-muted-foreground">
+            Require attention
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">New This Week</CardTitle>
+          <span className="text-2xl">🆕</span>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{stats.newThisWeek}</div>
+          <p className="text-xs text-muted-foreground">
+            +{stats.newThisWeek > 0 ? Math.round((stats.newThisWeek / Math.max(stats.totalBusinesses, 1)) * 100) : 0}% from last week
+          </p>
+        </CardContent>
+      </Card>
+    </div>
   )
 }
 
@@ -245,66 +259,6 @@ async function BusinessesTable() {
         </div>
       </CardContent>
     </Card>
-  )
-}
-
-async function BusinessStats() {
-  const stats = await getBusinessStats()
-  
-  return (
-    <div className="grid gap-4 md:grid-cols-4">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Businesses</CardTitle>
-          <span className="text-2xl">🏢</span>
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{stats.totalBusinesses}</div>
-          <p className="text-xs text-muted-foreground">
-            +12 from last month
-          </p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Active Businesses</CardTitle>
-          <span className="text-2xl">✅</span>
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{stats.activeBusinesses}</div>
-          <p className="text-xs text-muted-foreground">
-            {stats.totalBusinesses > 0 ? Math.round((stats.activeBusinesses / stats.totalBusinesses) * 100) : 0}% active rate
-          </p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Flagged Businesses</CardTitle>
-          <span className="text-2xl">🚩</span>
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{stats.flaggedBusinesses}</div>
-          <p className="text-xs text-muted-foreground">
-            Require attention
-          </p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">New This Week</CardTitle>
-          <span className="text-2xl">🆕</span>
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{stats.newThisWeek}</div>
-          <p className="text-xs text-muted-foreground">
-            +33% from last week
-          </p>
-        </CardContent>
-      </Card>
-    </div>
   )
 }
 
