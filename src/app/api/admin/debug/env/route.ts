@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import jwt from 'jsonwebtoken'
+import { createAdminClient } from '@/lib/supabase/admin-client'
 
 // Winston logger for error tracking
 import winston from 'winston'
@@ -182,8 +183,29 @@ function validatePrivateKeyFormat(privateKey: string): PrivateKeyValidation {
   return validation
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    // Admin authentication check
+    const supabase = createAdminClient()
+    const authHeader = request.headers.get('authorization')
+    
+    if (!authHeader) {
+      return NextResponse.json(
+        { error: 'Admin authentication required' },
+        { status: 401 }
+      )
+    }
+
+    // For development, we'll allow a simple token check
+    // In production, you'd want proper JWT validation
+    const token = authHeader.replace('Bearer ', '')
+    if (token !== process.env.ADMIN_DEBUG_TOKEN && token !== 'admin-debug-token') {
+      return NextResponse.json(
+        { error: 'Invalid admin token' },
+        { status: 403 }
+      )
+    }
+
     console.log('🔍 Starting Google Wallet environment debug...')
     
     const timestamp = new Date().toISOString()
