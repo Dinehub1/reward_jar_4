@@ -1,24 +1,25 @@
-import { Suspense } from 'react'
-import Link from 'next/link'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
-import { createAdminClient } from '@/lib/supabase/admin-client'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { 
+  Building2, 
+  Users, 
+  CreditCard, 
+  AlertTriangle, 
+  Activity,
+  BarChart3,
+  TrendingUp,
+  Calendar
+} from 'lucide-react'
 
-// Icons (using emoji for simplicity)
+// Icons for the dashboard
 const icons = {
-  businesses: '🏢',
-  customers: '👥',
-  cards: '🎴',
-  alerts: '🚨',
-  support: '🛠️',
-  sandbox: '🧪',
-  analytics: '📊',
-  activity: '⚡',
-  growth: '📈',
-  revenue: '💰'
+  businesses: <Building2 className="h-4 w-4" />,
+  customers: <Users className="h-4 w-4" />,
+  cards: <CreditCard className="h-4 w-4" />,
+  alerts: <AlertTriangle className="h-4 w-4" />,
+  analytics: <BarChart3 className="h-4 w-4" />,
+  activity: <Activity className="h-4 w-4" />
 }
 
 interface AdminStats {
@@ -34,44 +35,32 @@ interface AdminStats {
 interface Business {
   id: string
   name: string
-  contact_email: string
+  email: string
   created_at: string
-  is_flagged?: boolean
 }
 
+// Fetch dashboard stats using the working API endpoint
 async function getAdminDashboardStats(): Promise<AdminStats> {
-  const supabase = createAdminClient()
-  
   console.log('🔍 ADMIN DASHBOARD - Starting getAdminDashboardStats()...')
   
   try {
-    // Fetch all counts in parallel using exact count
-    const [
-      { count: totalBusinesses },
-      { count: totalCustomers },
-      { count: totalCards },
-      { count: totalStampCards },
-      { count: totalMembershipCards }
-    ] = await Promise.all([
-      supabase.from('businesses').select('*', { count: 'exact', head: true }),
-      supabase.from('customers').select('*', { count: 'exact', head: true }),
-      supabase.from('customer_cards').select('*', { count: 'exact', head: true }),
-      supabase.from('stamp_cards').select('*', { count: 'exact', head: true }),
-      supabase.from('membership_cards').select('*', { count: 'exact', head: true })
-    ])
-
-    const stats: AdminStats = {
-      totalBusinesses: totalBusinesses || 0,
-      totalCustomers: totalCustomers || 0,
-      totalCards: totalCards || 0,
-      totalStampCards: totalStampCards || 0,
-      totalMembershipCards: totalMembershipCards || 0,
-      flaggedBusinesses: 0, // Will implement later
-      recentActivity: 0 // Will implement later
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/admin/dashboard-stats`, {
+      cache: 'no-store' // Ensure fresh data
+    })
+    
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status}`)
     }
-
+    
+    const data = await response.json()
+    
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to fetch dashboard stats')
+    }
+    
+    const stats = data.data.stats
     console.log('✅ ADMIN DASHBOARD - getAdminDashboardStats() results:', stats)
-
+    
     return stats
   } catch (error) {
     console.error('💥 ADMIN DASHBOARD - Error in getAdminDashboardStats():', error)
@@ -89,26 +78,29 @@ async function getAdminDashboardStats(): Promise<AdminStats> {
   }
 }
 
+// Fetch businesses using the working API endpoint
 async function getAllBusinesses(): Promise<Business[]> {
-  const supabase = createAdminClient()
-  
   console.log('🔍 ADMIN DASHBOARD - Starting getAllBusinesses()...')
   
   try {
-    const { data: businesses, error } = await supabase
-      .from('businesses')
-      .select('id, name, contact_email, created_at, is_flagged')
-      .order('created_at', { ascending: false })
-      .limit(10) // Limit for dashboard display
-
-    if (error) {
-      console.error('💥 ADMIN DASHBOARD - Error in getAllBusinesses():', error)
-      return []
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/admin/dashboard-stats`, {
+      cache: 'no-store'
+    })
+    
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status}`)
     }
-
-    console.log('✅ ADMIN DASHBOARD - getAllBusinesses() results:', businesses?.length || 0, 'businesses')
-
-    return businesses || []
+    
+    const data = await response.json()
+    
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to fetch businesses')
+    }
+    
+    const businesses = data.data.recentBusinesses || []
+    console.log('✅ ADMIN DASHBOARD - getAllBusinesses() results:', businesses.length, 'businesses')
+    
+    return businesses
   } catch (error) {
     console.error('💥 ADMIN DASHBOARD - Error in getAllBusinesses():', error)
     return []
@@ -186,7 +178,7 @@ function DashboardCards({ stats }: { stats: AdminStats }) {
 
 // Businesses Table Component
 function BusinessesTable({ businesses }: { businesses: Business[] }) {
-  console.log('🏢 BUSINESSES TABLE - Rendering with businesses:', businesses?.length || 0)
+  console.log('🏢 BUSINESSES TABLE - Rendering with businesses:', businesses?.length)
 
   return (
     <Card>
@@ -199,102 +191,26 @@ function BusinessesTable({ businesses }: { businesses: Business[] }) {
       </CardHeader>
       <CardContent>
         {businesses && businesses.length > 0 ? (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {businesses.slice(0, 5).map((business) => (
-              <div key={business.id} className="flex justify-between items-center p-2 border rounded">
+              <div key={business.id} className="flex items-center justify-between">
                 <div>
-                  <span className="font-medium">{business.name || 'Unknown Business'}</span>
-                  <div className="text-xs text-muted-foreground">
-                    {business.contact_email || 'No email'}
-                  </div>
+                  <p className="font-medium">{business.name}</p>
+                  <p className="text-sm text-muted-foreground">{business.email}</p>
                 </div>
-                <div className="flex items-center space-x-2">
-                  {business.is_flagged && (
-                    <Badge variant="destructive">Flagged</Badge>
-                  )}
-                  <Badge variant="outline">
-                    {business.created_at ? new Date(business.created_at).toLocaleDateString() : 'Unknown date'}
-                  </Badge>
-                </div>
+                <Badge variant="outline">
+                  {new Date(business.created_at).toLocaleDateString()}
+                </Badge>
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-muted-foreground">No businesses found</p>
+          <div className="text-center py-4">
+            <p className="text-muted-foreground">No recent businesses found</p>
+          </div>
         )}
       </CardContent>
     </Card>
-  )
-}
-
-function QuickActions() {
-  const actions = [
-    {
-      title: 'Manage Businesses',
-      description: 'View, edit, and control all business accounts',
-      href: '/admin/businesses',
-      icon: icons.businesses,
-      color: 'bg-blue-500'
-    },
-    {
-      title: 'View All Cards',
-      description: 'Manage stamp cards and membership cards',
-      href: '/admin/cards',
-      icon: icons.cards,
-      color: 'bg-green-500'
-    },
-    {
-      title: 'Customer Monitoring',
-      description: 'Track customer activity and detect anomalies',
-      href: '/admin/customers',
-      icon: icons.customers,
-      color: 'bg-purple-500'
-    },
-    {
-      title: 'System Alerts',
-      description: 'Monitor automated flags and anomalies',
-      href: '/admin/alerts',
-      icon: icons.alerts,
-      color: 'bg-red-500'
-    },
-    {
-      title: 'Support Tools',
-      description: 'Manual overrides and customer support',
-      href: '/admin/support',
-      icon: icons.support,
-      color: 'bg-orange-500'
-    },
-    {
-      title: 'Testing Sandbox',
-      description: 'Global preview mode for cards and flows',
-      href: '/admin/sandbox',
-      icon: icons.sandbox,
-      color: 'bg-cyan-500'
-    }
-  ]
-
-  return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {actions.map((action) => (
-        <Link key={action.href} href={action.href}>
-          <Card className="hover:shadow-md transition-shadow cursor-pointer">
-            <CardHeader>
-              <div className="flex items-center space-x-2">
-                <div className={`w-10 h-10 rounded-lg ${action.color} flex items-center justify-center text-white text-xl`}>
-                  {action.icon}
-                </div>
-                <div>
-                  <CardTitle className="text-lg">{action.title}</CardTitle>
-                  <CardDescription className="text-sm">
-                    {action.description}
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-          </Card>
-        </Link>
-      ))}
-    </div>
   )
 }
 
@@ -302,7 +218,7 @@ function QuickActions() {
 async function DashboardContent() {
   console.log('🚀 DASHBOARD CONTENT - Starting data fetch...')
   
-  // Fetch data using the expected function names
+  // Fetch data using the working API endpoint
   const stats = await getAdminDashboardStats()
   const businesses = await getAllBusinesses()
   
@@ -351,82 +267,30 @@ async function DashboardContent() {
   )
 }
 
+// Main Admin Dashboard Page
 export default async function AdminDashboard() {
   console.log('🚀 ADMIN DASHBOARD - Main component rendering...')
 
   return (
     <AdminLayout>
       <div className="space-y-6">
-        {/* Header */}
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground">
             Centralized control center for RewardJar 4.0 platform
           </p>
         </div>
 
-        {/* Tabs for different views */}
-        <Tabs defaultValue="overview" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="actions">Quick Actions</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="overview" className="space-y-4">
-            <Suspense fallback={
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                {[1, 2, 3, 4].map(i => (
-                  <Card key={i}>
-                    <CardHeader>
-                      <CardTitle>Loading...</CardTitle>
-            </CardHeader>
-            <CardContent>
-                      <div className="text-2xl font-bold">-</div>
-            </CardContent>
-          </Card>
-                ))}
-              </div>
-            }>
-              <DashboardContent />
-            </Suspense>
-          </TabsContent>
-          
-          <TabsContent value="actions" className="space-y-4">
-            <QuickActions />
-          </TabsContent>
-        </Tabs>
-
-        {/* System Status */}
-          <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <span>{icons.analytics}</span>
-              <span>System Status</span>
-            </CardTitle>
-            </CardHeader>
-            <CardContent>
-            <div className="grid gap-2 md:grid-cols-3">
-              <div className="flex items-center space-x-2">
-                <Badge variant="outline" className="bg-green-50 text-green-700 dark:bg-green-900 dark:text-green-300">
-                  ✅ Database
-                </Badge>
-                <span className="text-sm text-muted-foreground">Operational</span>
+        <div className="flex space-x-2 border-b">
+          <button className="px-4 py-2 text-sm font-medium border-b-2 border-blue-500">
+            Overview
+          </button>
+          <button className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground">
+            Quick Actions
+          </button>
         </div>
-              <div className="flex items-center space-x-2">
-                <Badge variant="outline" className="bg-green-50 text-green-700 dark:bg-green-900 dark:text-green-300">
-                  ✅ Wallets
-                </Badge>
-                <span className="text-sm text-muted-foreground">Apple, Google, PWA</span>
-                      </div>
-              <div className="flex items-center space-x-2">
-                <Badge variant="outline" className="bg-green-50 text-green-700 dark:bg-green-900 dark:text-green-300">
-                  ✅ APIs
-                </Badge>
-                <span className="text-sm text-muted-foreground">All endpoints</span>
-              </div>
-              </div>
-            </CardContent>
-          </Card>
+
+        <DashboardContent />
       </div>
     </AdminLayout>
   )

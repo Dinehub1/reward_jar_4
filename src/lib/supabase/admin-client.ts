@@ -20,8 +20,8 @@ export function createAdminClient() {
   }
   
   if (!serviceRoleKey) {
-    console.error('⚠️ SUPABASE_SERVICE_ROLE_KEY not found, using anon key (limited access)')
-    // Fallback to anon key for development
+    console.warn('⚠️ SUPABASE_SERVICE_ROLE_KEY not found - admin client may have limited access')
+    // Use anon key as fallback for development
     const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     if (!anonKey) {
       throw new Error('Neither SUPABASE_SERVICE_ROLE_KEY nor NEXT_PUBLIC_SUPABASE_ANON_KEY is available')
