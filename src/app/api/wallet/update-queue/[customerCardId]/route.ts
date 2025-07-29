@@ -35,7 +35,7 @@ export async function POST(
     // Verify customer card exists
     const { data: customerCard, error: cardError } = await supabase
       .from('customer_cards')
-      .select('id, membership_type')
+      .select('id, stamp_card_id, membership_card_id')
       .eq('id', customerCardId)
       .single()
 
@@ -63,7 +63,7 @@ export async function POST(
             metadata: {
               testMode,
               queuedAt: new Date().toISOString(),
-              cardType: customerCard.membership_type,
+              cardType: customerCard.stamp_card_id ? 'stamp' : 'membership',
               source: 'qr_scan_simulation'
             }
           })

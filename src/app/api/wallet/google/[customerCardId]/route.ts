@@ -8,7 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server-only'
+import { createAdminClient } from '@/lib/supabase/admin-client'
 
 export async function GET(
   request: NextRequest,
@@ -20,24 +20,40 @@ export async function GET(
 
     console.log('🎫 Generating Google Wallet pass for card:', customerCardId)
 
-    // Get customer card data with business and card information
-    const supabase = await createClient()
+    // Get customer card data with unified schema
+    const supabase = createAdminClient()
 
     const { data: customerCard, error } = await supabase
       .from('customer_cards')
       .select(`
-        *,
+        id,
+        current_stamps,
+        sessions_used,
+        stamp_card_id,
+        membership_card_id,
+        expiry_date,
         customers!inner (
           id,
           name,
           email
         ),
-        stamp_cards!inner (
+        stamp_cards (
           id,
           name,
           total_stamps,
           reward_description,
-          businesses!inner (
+          businesses (
+            id,
+            name,
+            description
+          )
+        ),
+        membership_cards (
+          id,
+          name,
+          total_sessions,
+          cost,
+          businesses (
             id,
             name,
             description
@@ -52,21 +68,51 @@ export async function GET(
       return NextResponse.json({ error: 'Customer card not found' }, { status: 404 })
     }
 
+    // Determine card type from unified schema
+    const isStampCard = customerCard.stamp_card_id !== null
+    const isMembershipCard = customerCard.membership_card_id !== null
+
+    if (!isStampCard && !isMembershipCard) {
+      return NextResponse.json(
+        { error: 'Invalid customer card: no card type found' },
+        { status: 400 }
+      )
+    }
+
+    // Get card data based on type
+    let cardData: any
+    let businessData: any
+
+    if (isStampCard) {
+      cardData = customerCard.stamp_cards
+      businessData = cardData?.businesses
+    } else {
+      cardData = customerCard.membership_cards
+      businessData = cardData?.businesses
+    }
+
+    if (!cardData || !businessData) {
+      return NextResponse.json(
+        { error: 'Card template or business data not found' },
+        { status: 404 }
+      )
+    }
+
     console.log('✅ Fetched customer card:', {
       id: customerCard.id,
-      membership_type: customerCard.membership_type,
+      isStampCard,
+      isMembershipCard,
       current_stamps: customerCard.current_stamps,
       sessions_used: customerCard.sessions_used
     })
 
-    // Determine card type and set appropriate title and theme
-    const isGymMembership = customerCard.membership_type === 'gym'
-    const cardTitle = isGymMembership ? 'Membership Cards' : 'Loyalty Cards'
+    // Set appropriate title and theme
+    const cardTitle = isMembershipCard ? 'Membership Cards' : 'Stamp Cards'
     
     console.log('🏷️ Setting Google Wallet title to:', `"${cardTitle}"`)
 
     // Generate Google Wallet class and object IDs
-    const classId = isGymMembership 
+    const classId = isMembershipCard 
       ? `${process.env.GOOGLE_CLASS_ID}.membership.rewardjar`
       : `${process.env.GOOGLE_CLASS_ID}.loyalty.rewardjar`
     
@@ -84,7 +130,7 @@ export async function GET(
         contentDescription: {
           defaultValue: {
             language: 'en-US',
-            value: `${(customerCard.stamp_cards as any).businesses.name} ${cardTitle}`
+            value: `${businessData.name} ${cardTitle}`
           }
         }
       },
@@ -92,32 +138,32 @@ export async function GET(
         {
           id: 'business_name',
           header: 'Business',
-          body: (customerCard.stamp_cards as any).businesses.name
+          body: businessData.name
         },
         {
           id: 'card_name',
           header: 'Program',
-          body: (customerCard.stamp_cards as any).name
+          body: cardData.name
         },
         {
           id: 'reward_description',
-          header: isGymMembership ? 'Benefits' : 'Reward',
-          body: (customerCard.stamp_cards as any).reward_description
+          header: isMembershipCard ? 'Benefits' : 'Reward',
+          body: isMembershipCard ? `${cardData.total_sessions} sessions for ₩${cardData.cost}` : cardData.reward_description
         }
       ],
       loyaltyPoints: {
-        label: isGymMembership ? 'Sessions Used' : 'Stamps Collected',
+        label: isMembershipCard ? 'Sessions Used' : 'Stamps Collected',
         balance: {
-          string: isGymMembership 
-            ? `${customerCard.sessions_used || 0}/${customerCard.total_sessions || 0}`
-            : `${customerCard.current_stamps || 0}/${(customerCard.stamp_cards as any).total_stamps}`
+          string: isMembershipCard 
+            ? `${customerCard.sessions_used || 0}/${cardData.total_sessions || 0}`
+            : `${customerCard.current_stamps || 0}/${cardData.total_stamps}`
         }
       },
       accountName: (customerCard.customers as any).name,
       accountId: customerCard.id,
       barcode: {
         type: 'QR_CODE',
-        value: `${process.env.NEXT_PUBLIC_BASE_URL}/join/${(customerCard.stamp_cards as any).id}`,
+        value: `${process.env.NEXT_PUBLIC_BASE_URL}/join/${cardData.id}`,
         alternateText: customerCard.id
       },
       locations: [
@@ -126,7 +172,7 @@ export async function GET(
           longitude: -122.4194
         }
       ],
-      hexBackgroundColor: isGymMembership ? '#6366f1' : '#10b981', // Indigo for gym, green for loyalty
+      hexBackgroundColor: isMembershipCard ? '#6366f1' : '#10b981', // Indigo for membership, green for stamp
       logoImage: {
         sourceUri: {
           uri: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=100&h=100&fit=crop'

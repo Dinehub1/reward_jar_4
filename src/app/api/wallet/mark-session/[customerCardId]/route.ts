@@ -28,7 +28,8 @@ export async function POST(
       .select(`
         id,
         current_stamps,
-        membership_type,
+        stamp_card_id,
+        membership_card_id,
         sessions_used,
         total_sessions,
         cost,
@@ -101,7 +102,7 @@ export async function POST(
     }
 
     // Determine card type and appropriate action
-    const isMembership = customerCard.membership_type === 'gym' || customerCard.membership_type === 'membership'
+    const isMembership = customerCard.membership_card_id !== null
     let actualUsageType = usageType
 
     // Auto-detect usage type if not specified
@@ -111,7 +112,7 @@ export async function POST(
 
     console.log('🔍 Card analysis:', {
       isMembership,
-      membershipType: customerCard.membership_type,
+      cardType: isMembership ? 'membership' : 'stamp',
       actualUsageType,
       currentStamps: customerCard.current_stamps,
       totalStamps: stampCardData.total_stamps,

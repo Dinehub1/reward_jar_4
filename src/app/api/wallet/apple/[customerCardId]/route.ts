@@ -28,16 +28,15 @@ export async function GET(
 
     console.log('🍎 Generating Apple Wallet for card ID:', customerCardId)
 
-    // Get customer card with stamp card details and membership info
+    // Get customer card with unified schema
     const { data: customerCard, error } = await supabase
       .from('customer_cards')
       .select(`
         id,
         current_stamps,
-        membership_type,
         sessions_used,
-        total_sessions,
-        cost,
+        stamp_card_id,
+        membership_card_id,
         expiry_date,
         created_at,
         updated_at,
@@ -46,6 +45,16 @@ export async function GET(
           name,
           total_stamps,
           reward_description,
+          businesses (
+            name,
+            description
+          )
+        ),
+        membership_cards (
+          id,
+          name,
+          total_sessions,
+          cost,
           businesses (
             name,
             description
@@ -65,33 +74,37 @@ export async function GET(
 
     console.log('✅ Fetched customer card:', customerCard)
 
-    // Handle data structure properly - stamp_cards is an object from Supabase joins
-    const stampCardData = (customerCard.stamp_cards as unknown) as {
-      id: string
-      total_stamps: number
-      name: string
-      reward_description: string
-      businesses: {
-        name: string
-        description: string
-      }
-    }
+    // Determine card type from unified schema
+    const isStampCard = customerCard.stamp_card_id !== null
+    const isMembershipCard = customerCard.membership_card_id !== null
 
-    const businessData = stampCardData?.businesses as {
-      name: string
-      description: string
-    }
-
-    if (!stampCardData) {
-      console.error('❌ Stamp card data missing')
+    if (!isStampCard && !isMembershipCard) {
+      console.error('❌ Invalid customer card: no card type found')
       return NextResponse.json(
-        { error: 'Stamp card data not found' },
-        { status: 404 }
+        { error: 'Invalid customer card: no card type found' },
+        { status: 400 }
       )
     }
 
-    // Determine card type and calculate appropriate progress
-    const isMembershipCard = customerCard.membership_type === 'membership'
+    // Get card data based on type
+    let cardData: any
+    let businessData: any
+
+    if (isStampCard) {
+      cardData = customerCard.stamp_cards
+      businessData = cardData?.businesses
+    } else {
+      cardData = customerCard.membership_cards
+      businessData = cardData?.businesses
+    }
+
+    if (!cardData) {
+      console.error('❌ Card template data missing')
+      return NextResponse.json(
+        { error: 'Card template not found' },
+        { status: 404 }
+      )
+    }
     let progress: number
     let isCompleted: boolean
     let remaining: number
@@ -102,7 +115,7 @@ export async function GET(
     if (isMembershipCard) {
       // Handle membership card logic
       const sessionsUsed = customerCard.sessions_used || 0
-      const totalSessions = customerCard.total_sessions || 20
+      const totalSessions = cardData.total_sessions || 20
       progress = (sessionsUsed / totalSessions) * 100
       isCompleted = sessionsUsed >= totalSessions
       remaining = Math.max(0, totalSessions - sessionsUsed)
@@ -117,11 +130,11 @@ export async function GET(
         remainingLabel = "Status"
       }
     } else {
-      // Handle loyalty card logic
-      progress = (customerCard.current_stamps / stampCardData.total_stamps) * 100
-      isCompleted = customerCard.current_stamps >= stampCardData.total_stamps
-      remaining = Math.max(0, stampCardData.total_stamps - customerCard.current_stamps)
-      primaryValue = `${customerCard.current_stamps}/${stampCardData.total_stamps}`
+      // Handle stamp card logic
+      progress = (customerCard.current_stamps / cardData.total_stamps) * 100
+      isCompleted = customerCard.current_stamps >= cardData.total_stamps
+      remaining = Math.max(0, cardData.total_stamps - customerCard.current_stamps)
+      primaryValue = `${customerCard.current_stamps}/${cardData.total_stamps}`
       progressLabel = "Stamps Collected"
       remainingLabel = isCompleted ? "Status" : "Remaining"
     }
@@ -133,7 +146,7 @@ export async function GET(
       serialNumber: customerCardId,
       teamIdentifier: process.env.APPLE_TEAM_IDENTIFIER,
       organizationName: "RewardJar",
-      description: `${stampCardData.name} - ${businessData.name}`,
+      description: `${cardData.name} - ${businessData.name}`,
       logoText: "RewardJar",
       backgroundColor: isMembershipCard ? "rgb(99, 102, 241)" : "rgb(16, 185, 129)", // indigo for gym, green for loyalty
       foregroundColor: "rgb(255, 255, 255)",
@@ -453,16 +466,15 @@ export async function POST(
       )
     }
 
-    // Get customer card with stamp card details and membership info
+    // Get customer card with unified schema
     const { data: customerCard, error } = await supabase
       .from('customer_cards')
       .select(`
         id,
         current_stamps,
-        membership_type,
         sessions_used,
-        total_sessions,
-        cost,
+        stamp_card_id,
+        membership_card_id,
         expiry_date,
         created_at,
         stamp_cards (
@@ -470,6 +482,16 @@ export async function POST(
           name,
           total_stamps,
           reward_description,
+          businesses (
+            name,
+            description
+          )
+        ),
+        membership_cards (
+          id,
+          name,
+          total_sessions,
+          cost,
           businesses (
             name,
             description
@@ -487,31 +509,41 @@ export async function POST(
       )
     }
 
-    console.log('📊 Apple Wallet - Customer card data:', {
-      id: customerCard.id,
-      membership_type: customerCard.membership_type,
-      current_stamps: customerCard.current_stamps,
-      sessions_used: customerCard.sessions_used,
-      total_sessions: customerCard.total_sessions
-    })
+    // Determine card type from unified schema
+    const isStampCard = customerCard.stamp_card_id !== null
+    const isMembershipCard = customerCard.membership_card_id !== null
 
-    // Determine card type - either from query param or database
-    let cardType = requestedType
-    if (!cardType) {
-      // Auto-detect from database if not specified
-      cardType = customerCard.membership_type === 'loyalty' ? 'stamp' : 'membership'
-    }
-
-    // Validate card type compatibility
-    if (cardType === 'stamp' && customerCard.membership_type !== 'loyalty') {
+    if (!isStampCard && !isMembershipCard) {
       return NextResponse.json(
-        { error: 'Card type mismatch: requested stamp card but database shows membership type' },
+        { error: 'Invalid customer card: no card type found' },
         { status: 400 }
       )
     }
-    if (cardType === 'membership' && customerCard.membership_type !== 'membership') {
+
+    console.log('📊 Apple Wallet - Customer card data:', {
+      id: customerCard.id,
+      isStampCard,
+      isMembershipCard,
+      current_stamps: customerCard.current_stamps,
+      sessions_used: customerCard.sessions_used
+    })
+
+    // Determine card type - either from query param or auto-detect
+    let cardType = requestedType
+    if (!cardType) {
+      cardType = isStampCard ? 'stamp' : 'membership'
+    }
+
+    // Validate card type compatibility
+    if (cardType === 'stamp' && !isStampCard) {
       return NextResponse.json(
-        { error: 'Card type mismatch: requested membership card but database shows loyalty type' },
+        { error: 'Card type mismatch: requested stamp card but customer card is membership type' },
+        { status: 400 }
+      )
+    }
+    if (cardType === 'membership' && !isMembershipCard) {
+      return NextResponse.json(
+        { error: 'Card type mismatch: requested membership card but customer card is stamp type' },
         { status: 400 }
       )
     }

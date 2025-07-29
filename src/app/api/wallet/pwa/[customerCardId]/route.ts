@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server-only'
+import { createAdminClient } from '@/lib/supabase/admin-client'
 import { NextRequest, NextResponse } from 'next/server'
 import QRCode from 'qrcode'
 
@@ -9,25 +9,41 @@ export async function GET(
   try {
     const resolvedParams = await params
     const customerCardId = resolvedParams.customerCardId
-    const supabase = await createClient()
+    const supabase = createAdminClient()
 
     console.log('📱 Generating PWA wallet for card:', customerCardId)
 
     const { data: customerCard, error } = await supabase
       .from('customer_cards')
       .select(`
-        *,
+        id,
+        current_stamps,
+        sessions_used,
+        stamp_card_id,
+        membership_card_id,
+        expiry_date,
         customers!inner (
           id,
           name,
           email
         ),
-        stamp_cards!inner (
+        stamp_cards (
           id,
           name,
           total_stamps,
           reward_description,
-          businesses!inner (
+          businesses (
+            id,
+            name,
+            description
+          )
+        ),
+        membership_cards (
+          id,
+          name,
+          total_sessions,
+          cost,
+          businesses (
             id,
             name,
             description
@@ -42,18 +58,48 @@ export async function GET(
       return NextResponse.json({ error: 'Customer card not found' }, { status: 404 })
     }
 
+    // Determine card type from unified schema
+    const isStampCard = customerCard.stamp_card_id !== null
+    const isMembershipCard = customerCard.membership_card_id !== null
+
+    if (!isStampCard && !isMembershipCard) {
+      return NextResponse.json(
+        { error: 'Invalid customer card: no card type found' },
+        { status: 400 }
+      )
+    }
+
+    // Get card data based on type
+    let cardData: any
+    let businessData: any
+
+    if (isStampCard) {
+      cardData = customerCard.stamp_cards
+      businessData = cardData?.businesses
+    } else {
+      cardData = customerCard.membership_cards
+      businessData = cardData?.businesses
+    }
+
+    if (!cardData || !businessData) {
+      return NextResponse.json(
+        { error: 'Card template or business data not found' },
+        { status: 404 }
+      )
+    }
+
     console.log('✅ Fetched customer card for PWA:', {
       id: customerCard.id,
-      membership_type: customerCard.membership_type,
+      isStampCard,
+      isMembershipCard,
       current_stamps: customerCard.current_stamps,
       sessions_used: customerCard.sessions_used
     })
 
     // Determine card type and styling
-    const isGymMembership = customerCard.membership_type === 'gym'
-    const cardTitle = isGymMembership ? 'Membership Card' : 'Loyalty Card'
-    const primaryColor = isGymMembership ? '#6366f1' : '#10b981'
-    const secondaryColor = isGymMembership ? '#4f46e5' : '#059669'
+    const cardTitle = isMembershipCard ? 'Membership Card' : 'Stamp Card'
+    const primaryColor = isMembershipCard ? '#6366f1' : '#10b981'
+    const secondaryColor = isMembershipCard ? '#4f46e5' : '#059669'
 
     // Generate PWA HTML
     const html = `
@@ -62,8 +108,8 @@ export async function GET(
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>${(customerCard.stamp_cards as any).name} - ${cardTitle}</title>
-        <meta name="description" content="${(customerCard.stamp_cards as any).businesses.name} ${cardTitle}">
+        <title>${cardData.name} - ${cardTitle}</title>
+        <meta name="description" content="${businessData.name} ${cardTitle}">
         
         <!-- PWA Manifest -->
         <link rel="manifest" href="/api/wallet/pwa/${customerCardId}/manifest">
