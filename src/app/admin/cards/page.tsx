@@ -1,351 +1,573 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useRouter } from 'next/navigation'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import Link from 'next/link'
+import { AdminLayout } from '@/components/layouts/AdminLayout'
+import LivePreviewBuilder from '@/components/wallet/LivePreviewBuilder'
+import { createClient } from '@/lib/supabase'
+import { 
+  Plus, 
+  Search, 
+  Filter, 
+  Eye, 
+  Edit, 
+  Trash2, 
+  Users, 
+  Activity,
+  TrendingUp,
+  Star,
+  Clock,
+  Building
+} from 'lucide-react'
 
-interface CardData {
+interface StampCard {
   id: string
   name: string
-  type: 'stamp' | 'membership'
-  business_name: string
-  business_id: string
+  total_stamps: number
+  reward_description: string
+  status: 'active' | 'inactive' | 'draft'
   created_at: string
-  total_stamps?: number
-  total_sessions?: number
-  reward_description?: string
-  status: string
+  businesses: {
+    id: string
+    name: string
+  }
+  customer_cards: Array<{
+    id: string
+    current_stamps: number
+    customers: {
+      name: string
+      email: string
+    }
+  }>
+}
+
+interface MembershipCard {
+  id: string
+  name: string
+  total_sessions: number
+  cost: number
+  duration_days: number
+  status: 'active' | 'inactive' | 'draft'
+  created_at: string
+  businesses: {
+    id: string
+    name: string
+  }
+  customer_cards: Array<{
+    id: string
+    sessions_used: number
+    expiry_date: string
+    customers: {
+      name: string
+      email: string
+    }
+  }>
 }
 
 export default function AdminCardsPage() {
-  const [cards, setCards] = useState<CardData[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const router = useRouter()
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [authLoading, setAuthLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState<'stamp' | 'membership'>('stamp')
   const [searchTerm, setSearchTerm] = useState('')
-  const [cardTypeFilter, setCardTypeFilter] = useState('all')
-  const [metrics, setMetrics] = useState({
-    totalCards: 0,
-    stampCards: 0,
-    membershipCards: 0,
-    totalCustomers: 0
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'draft'>('all')
+  const [isLoading, setIsLoading] = useState(false)
+  const [previewCard, setPreviewCard] = useState<any>(null)
+  
+  const [stampCards, setStampCards] = useState<StampCard[]>([])
+  const [membershipCards, setMembershipCards] = useState<MembershipCard[]>([])
+  const [stats, setStats] = useState({
+    totalStampCards: 0,
+    totalMembershipCards: 0,
+    totalCustomers: 0,
+    activeCards: 0
   })
 
+  // Admin authentication check
   useEffect(() => {
-    fetchCardsData()
-  }, [])
+    async function checkAdminAuth() {
+      try {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        
+        if (!user) {
+          router.push('/auth/login')
+          return
+        }
 
-  const fetchCardsData = async () => {
-    try {
-      setLoading(true)
-      console.log('🎴 CARDS PAGE - Fetching cards data...')
-      
-      // Fetch from our comprehensive admin API
-      const response = await fetch('/api/admin/panel-data')
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        const { data: userData } = await supabase
+          .from('users')
+          .select('role_id')
+          .eq('id', user.id)
+          .single()
+
+        if (userData?.role_id !== 1) {
+          router.push('/')
+          return
+        }
+
+        setIsAdmin(true)
+      } catch (error) {
+        console.error('Auth check failed:', error)
+        router.push('/auth/login')
+      } finally {
+        setAuthLoading(false)
       }
-      
-      const data = await response.json()
-      
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to fetch cards data')
-      }
-
-      console.log('📊 CARDS PAGE - Received data:', {
-        stampCards: data.data.stampCards?.length || 0,
-        membershipCards: data.data.membershipCards?.length || 0,
-        metrics: data.metrics
-      })
-
-      // Combine stamp cards and membership cards into unified format
-      const allCards: CardData[] = [
-        ...(data.data.stampCards || []).map((card: any) => ({
-          id: card.id,
-          name: card.name,
-          type: 'stamp' as const,
-          business_name: card.businesses?.name || 'Unknown Business',
-          business_id: card.business_id,
-          created_at: card.created_at,
-          total_stamps: card.total_stamps,
-          reward_description: card.reward_description,
-          status: card.status || 'active'
-        })),
-        ...(data.data.membershipCards || []).map((card: any) => ({
-          id: card.id,
-          name: card.name,
-          type: 'membership' as const,
-          business_name: card.businesses?.name || 'Unknown Business',
-          business_id: card.business_id,
-          created_at: card.created_at,
-          total_sessions: card.total_sessions,
-          status: card.status || 'active'
-        }))
-      ]
-
-      console.log('✅ CARDS PAGE - Processed cards:', allCards.length)
-
-      setCards(allCards)
-      setMetrics({
-        totalCards: allCards.length,
-        stampCards: data.data.stampCards?.length || 0,
-        membershipCards: data.data.membershipCards?.length || 0,
-        totalCustomers: data.metrics.totalCustomers || 0
-      })
-      setError(null)
-    } catch (err) {
-      console.error('💥 CARDS PAGE - Error:', err)
-      setError(err instanceof Error ? err.message : 'Failed to fetch cards data')
-    } finally {
-      setLoading(false)
     }
-  }
 
-  const filteredCards = cards.filter(card => {
+    checkAdminAuth()
+  }, [router])
+
+  // Load cards data
+  useEffect(() => {
+    if (!isAdmin) return
+
+    async function loadCards() {
+      setIsLoading(true)
+      try {
+        const supabase = createClient()
+
+        // Load stamp cards
+        const { data: stampCardsData } = await supabase
+          .from('stamp_cards')
+          .select(`
+            id,
+            name,
+            total_stamps,
+            reward_description,
+            status,
+            created_at,
+            businesses!inner(id, name),
+            customer_cards(
+              id,
+              current_stamps,
+              customers!inner(name, email)
+            )
+          `)
+          .order('created_at', { ascending: false })
+
+        // Load membership cards
+        const { data: membershipCardsData } = await supabase
+          .from('membership_cards')
+          .select(`
+            id,
+            name,
+            total_sessions,
+            cost,
+            duration_days,
+            status,
+            created_at,
+            businesses!inner(id, name),
+            customer_cards(
+              id,
+              sessions_used,
+              expiry_date,
+              customers!inner(name, email)
+            )
+          `)
+          .order('created_at', { ascending: false })
+
+        if (stampCardsData) {
+          setStampCards(stampCardsData as StampCard[])
+        }
+
+        if (membershipCardsData) {
+          setMembershipCards(membershipCardsData as MembershipCard[])
+        }
+
+        // Calculate stats
+        const totalCustomers = new Set([
+          ...(stampCardsData?.flatMap(card => card.customer_cards.map(cc => cc.customers.email)) || []),
+          ...(membershipCardsData?.flatMap(card => card.customer_cards.map(cc => cc.customers.email)) || [])
+        ]).size
+
+        setStats({
+          totalStampCards: stampCardsData?.length || 0,
+          totalMembershipCards: membershipCardsData?.length || 0,
+          totalCustomers,
+          activeCards: (stampCardsData?.filter(c => c.status === 'active').length || 0) + 
+                      (membershipCardsData?.filter(c => c.status === 'active').length || 0)
+        })
+
+      } catch (error) {
+        console.error('Error loading cards:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadCards()
+  }, [isAdmin])
+
+  const filteredStampCards = stampCards.filter(card => {
     const matchesSearch = card.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         card.business_name.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesType = cardTypeFilter === 'all' || card.type === cardTypeFilter
-    return matchesSearch && matchesType
+                         card.businesses.name.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesStatus = statusFilter === 'all' || card.status === statusFilter
+    return matchesSearch && matchesStatus
   })
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background dark:bg-gray-900 p-6">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight text-foreground">Card Management</h1>
-              <p className="text-muted-foreground">Manage all loyalty and membership cards</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center justify-center py-12">
-            <div className="text-center">
-              <div className="text-4xl mb-4">⏳</div>
-              <h3 className="text-lg font-semibold mb-2">Loading cards...</h3>
-              <p className="text-muted-foreground">Fetching card data from database</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
+  const filteredMembershipCards = membershipCards.filter(card => {
+    const matchesSearch = card.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         card.businesses.name.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesStatus = statusFilter === 'all' || card.status === statusFilter
+    return matchesSearch && matchesStatus
+  })
+
+  const handlePreviewCard = (card: StampCard | MembershipCard, type: 'stamp' | 'membership') => {
+    const cardData = {
+      id: card.id,
+      name: card.name,
+      business_name: card.businesses.name,
+      card_type: type,
+      theme: {
+        background: type === 'stamp' ? '#4F46E5' : '#DC2626',
+        primaryColor: type === 'stamp' ? '#4F46E5' : '#DC2626',
+        secondaryColor: type === 'stamp' ? '#E0E7FF' : '#FEE2E2',
+        textColor: '#FFFFFF',
+        font: 'Inter'
+      },
+      values: type === 'stamp' ? {
+        stamps_used: 0,
+        total_stamps: (card as StampCard).total_stamps
+      } : {
+        sessions_used: 0,
+        total_sessions: (card as MembershipCard).total_sessions,
+        cost: (card as MembershipCard).cost
+      },
+      reward_description: card.reward_description || (type === 'membership' ? 
+        `${(card as MembershipCard).total_sessions} sessions for $${(card as MembershipCard).cost}` : 
+        'Complete your card for rewards!')
+    }
+    setPreviewCard(cardData)
   }
 
-  if (error) {
+  if (authLoading || !isAdmin) {
     return (
-      <div className="min-h-screen bg-background dark:bg-gray-900 p-6">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight text-foreground">Card Management</h1>
-              <p className="text-muted-foreground">Manage all loyalty and membership cards</p>
-            </div>
-          </div>
-          
-          <Card className="border-red-200 dark:border-red-800">
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <div className="text-6xl mb-4">❌</div>
-              <h3 className="text-lg font-semibold mb-2 text-red-600 dark:text-red-400">Error Loading Cards</h3>
-              <p className="text-muted-foreground text-center mb-4">{error}</p>
-              <Button onClick={fetchCardsData} variant="outline">
-                Try Again
-              </Button>
-            </CardContent>
-          </Card>
+      <div className="min-h-screen bg-background p-4 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-2 text-muted-foreground">Checking admin access...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-background dark:bg-gray-900 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">Card Management</h1>
-            <p className="text-muted-foreground">Manage all loyalty and membership cards</p>
-          </div>
-          <div className="flex space-x-2">
-            <Button asChild>
-              <Link href="/admin/cards/stamp/new">
-                <span className="mr-2">🎯</span>
-                New Stamp Card
-              </Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link href="/admin/cards/membership/new">
-                <span className="mr-2">🎗️</span>
-                New Membership Card
-              </Link>
+    <AdminLayout>
+      <div className="min-h-screen bg-background p-6">
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold">Card Management</h1>
+              <p className="text-muted-foreground">Create and manage loyalty and membership cards</p>
+            </div>
+            <Button 
+              onClick={() => router.push('/admin/cards/new')}
+              className="flex items-center gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Create New Card
             </Button>
           </div>
-        </div>
 
-        {/* Metrics Cards */}
-        <div className="grid gap-4 md:grid-cols-4">
-          <Card className="dark:bg-gray-800 dark:border-gray-700">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Cards</CardTitle>
-              <span className="text-2xl">🎴</span>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{metrics.totalCards}</div>
-              <p className="text-xs text-muted-foreground">All card templates</p>
-            </CardContent>
-          </Card>
-          <Card className="dark:bg-gray-800 dark:border-gray-700">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Stamp Cards</CardTitle>
-              <span className="text-2xl">🎯</span>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600 dark:text-green-400">{metrics.stampCards}</div>
-              <p className="text-xs text-muted-foreground">Loyalty stamp cards</p>
-            </CardContent>
-          </Card>
-          <Card className="dark:bg-gray-800 dark:border-gray-700">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Membership Cards</CardTitle>
-              <span className="text-2xl">🎗️</span>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{metrics.membershipCards}</div>
-              <p className="text-xs text-muted-foreground">Premium memberships</p>
-            </CardContent>
-          </Card>
-          <Card className="dark:bg-gray-800 dark:border-gray-700">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Customers</CardTitle>
-              <span className="text-2xl">👥</span>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">{metrics.totalCustomers}</div>
-              <p className="text-xs text-muted-foreground">Registered customers</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <Input
-            placeholder="Search cards or businesses..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-sm dark:bg-gray-800 dark:border-gray-700"
-          />
-          <Tabs value={cardTypeFilter} onValueChange={setCardTypeFilter} className="w-full sm:w-auto">
-            <TabsList className="dark:bg-gray-800">
-              <TabsTrigger value="all">All Cards</TabsTrigger>
-              <TabsTrigger value="stamp">Stamp Cards</TabsTrigger>
-              <TabsTrigger value="membership">Membership Cards</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
-
-        {/* Cards List */}
-        {filteredCards.length === 0 ? (
-          <Card className="dark:bg-gray-800 dark:border-gray-700">
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <div className="text-6xl mb-4">📋</div>
-              <h3 className="text-lg font-semibold mb-2">No cards found</h3>
-              <p className="text-muted-foreground text-center">
-                {cards.length === 0 
-                  ? "No cards have been created yet." 
-                  : "No cards match your current filters."}
-              </p>
-              {cards.length === 0 && (
-                <div className="mt-4 flex space-x-2">
-                  <Button asChild>
-                    <Link href="/admin/cards/stamp/new">Create Stamp Card</Link>
-                  </Button>
-                  <Button asChild variant="outline">
-                    <Link href="/admin/cards/membership/new">Create Membership Card</Link>
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid gap-4">
-            {filteredCards.map((card) => (
-              <Card key={card.id} className="dark:bg-gray-800 dark:border-gray-700">
-                <CardContent className="flex items-center justify-between p-6">
-                  <div className="flex items-center space-x-4">
-                    <div className="text-2xl">
-                      {card.type === 'stamp' ? '🎯' : '🎗️'}
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-foreground">{card.name}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {card.business_name}
-                      </p>
-                      {card.type === 'stamp' && card.total_stamps && (
-                        <p className="text-xs text-muted-foreground">
-                          {card.total_stamps} stamps required • {card.reward_description}
-                        </p>
-                      )}
-                      {card.type === 'membership' && card.total_sessions && (
-                        <p className="text-xs text-muted-foreground">
-                          {card.total_sessions} sessions included
-                        </p>
-                      )}
-                    </div>
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <Star className="h-5 w-5 text-blue-600" />
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge variant={card.status === 'active' ? 'default' : 'secondary'}>
-                      {card.status}
-                    </Badge>
-                    <Badge variant="outline">
-                      {new Date(card.created_at).toLocaleDateString()}
-                    </Badge>
-                    <Button asChild size="sm" variant="outline">
-                      <Link href={`/admin/cards/${card.type}/${card.id}`}>
-                        Manage
-                      </Link>
-                    </Button>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Stamp Cards</p>
+                    <p className="text-2xl font-bold">{stats.totalStampCards}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                    <Clock className="h-5 w-5 text-red-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Membership Cards</p>
+                    <p className="text-2xl font-bold">{stats.totalMembershipCards}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                    <Users className="h-5 w-5 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Customers</p>
+                    <p className="text-2xl font-bold">{stats.totalCustomers}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <Activity className="h-5 w-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Active Cards</p>
+                    <p className="text-2xl font-bold">{stats.activeCards}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Cards List */}
+            <div className="lg:col-span-2 space-y-4">
+              {/* Search and Filters */}
+              <Card>
+                <CardContent className="p-4 space-y-4">
+                  <div className="flex gap-4">
+                    <div className="flex-1 relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search cards..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                    <select
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value as any)}
+                      className="px-3 py-2 border border-input rounded-md bg-background"
+                    >
+                      <option value="all">All Status</option>
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                      <option value="draft">Draft</option>
+                    </select>
                   </div>
                 </CardContent>
               </Card>
-            ))}
-          </div>
-        )}
 
-        {/* Summary */}
-        <Card className="dark:bg-gray-800 dark:border-gray-700">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <span>📊</span>
-              <span>Summary</span>
-            </CardTitle>
-            <CardDescription>Card management overview</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{filteredCards.length}</div>
-                <p className="text-sm text-muted-foreground">Showing cards</p>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                  {filteredCards.filter(c => c.type === 'stamp').length}
-                </div>
-                <p className="text-sm text-muted-foreground">Stamp cards</p>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                  {filteredCards.filter(c => c.type === 'membership').length}
-                </div>
-                <p className="text-sm text-muted-foreground">Membership cards</p>
-              </div>
+              {/* Tabs for Card Types */}
+              <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)}>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="stamp" className="flex items-center gap-2">
+                    <Star className="h-4 w-4" />
+                    Stamp Cards ({filteredStampCards.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="membership" className="flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    Membership Cards ({filteredMembershipCards.length})
+                  </TabsTrigger>
+                </TabsList>
+
+                {/* Stamp Cards Tab */}
+                <TabsContent value="stamp" className="space-y-4">
+                  {isLoading ? (
+                    <div className="text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                      <p className="mt-2 text-muted-foreground">Loading stamp cards...</p>
+                    </div>
+                  ) : filteredStampCards.length === 0 ? (
+                    <Card>
+                      <CardContent className="p-8 text-center">
+                        <Star className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold mb-2">No stamp cards found</h3>
+                        <p className="text-muted-foreground mb-4">
+                          {searchTerm ? 'No cards match your search criteria.' : 'Create your first stamp card to get started.'}
+                        </p>
+                        {!searchTerm && (
+                          <Button onClick={() => router.push('/admin/cards/new')}>
+                            Create Stamp Card
+                          </Button>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="space-y-3">
+                      {filteredStampCards.map((card) => (
+                        <Card key={card.id} className="hover:shadow-md transition-shadow">
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <h3 className="font-semibold">{card.name}</h3>
+                                  <Badge variant={card.status === 'active' ? 'default' : 
+                                               card.status === 'draft' ? 'secondary' : 'destructive'}>
+                                    {card.status}
+                                  </Badge>
+                                </div>
+                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                  <div className="flex items-center gap-1">
+                                    <Building className="h-3 w-3" />
+                                    {card.businesses.name}
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <Star className="h-3 w-3" />
+                                    {card.total_stamps} stamps required
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <Users className="h-3 w-3" />
+                                    {card.customer_cards.length} customers
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handlePreviewCard(card, 'stamp')}
+                                >
+                                  <Eye className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => router.push(`/admin/cards/stamp/${card.id}`)}
+                                >
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </TabsContent>
+
+                {/* Membership Cards Tab */}
+                <TabsContent value="membership" className="space-y-4">
+                  {isLoading ? (
+                    <div className="text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                      <p className="mt-2 text-muted-foreground">Loading membership cards...</p>
+                    </div>
+                  ) : filteredMembershipCards.length === 0 ? (
+                    <Card>
+                      <CardContent className="p-8 text-center">
+                        <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold mb-2">No membership cards found</h3>
+                        <p className="text-muted-foreground mb-4">
+                          {searchTerm ? 'No cards match your search criteria.' : 'Create your first membership card to get started.'}
+                        </p>
+                        {!searchTerm && (
+                          <Button onClick={() => router.push('/admin/cards/new')}>
+                            Create Membership Card
+                          </Button>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="space-y-3">
+                      {filteredMembershipCards.map((card) => (
+                        <Card key={card.id} className="hover:shadow-md transition-shadow">
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <h3 className="font-semibold">{card.name}</h3>
+                                  <Badge variant={card.status === 'active' ? 'default' : 
+                                               card.status === 'draft' ? 'secondary' : 'destructive'}>
+                                    {card.status}
+                                  </Badge>
+                                </div>
+                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                  <div className="flex items-center gap-1">
+                                    <Building className="h-3 w-3" />
+                                    {card.businesses.name}
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <Clock className="h-3 w-3" />
+                                    {card.total_sessions} sessions
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <TrendingUp className="h-3 w-3" />
+                                    ${card.cost}
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <Users className="h-3 w-3" />
+                                    {card.customer_cards.length} members
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handlePreviewCard(card, 'membership')}
+                                >
+                                  <Eye className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => router.push(`/admin/cards/membership/${card.id}`)}
+                                >
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
             </div>
-          </CardContent>
-        </Card>
+
+            {/* Live Preview Panel */}
+            <div className="lg:col-span-1">
+              {previewCard ? (
+                <div className="sticky top-6">
+                  <LivePreviewBuilder
+                    cardData={previewCard}
+                    isEditable={false}
+                    showControls={false}
+                  />
+                  <div className="mt-4">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setPreviewCard(null)}
+                      className="w-full"
+                    >
+                      Close Preview
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Card className="sticky top-6">
+                  <CardContent className="p-8 text-center">
+                    <Eye className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">Live Preview</h3>
+                    <p className="text-muted-foreground">
+                      Click the preview button on any card to see how it will look in different wallets.
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+    </AdminLayout>
   )
 } 

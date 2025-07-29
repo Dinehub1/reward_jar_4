@@ -1,899 +1,550 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
-import { useRouter, useParams, useSearchParams } from 'next/navigation'
-import { createClient } from '@/lib/supabase'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useState, useEffect } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { QrCode, CreditCard, User, ArrowRight, Loader2, AlertCircle, Mail, UserIcon, Gift, Smartphone, Apple, Star, Trophy, ExternalLink, LogIn } from 'lucide-react'
-import Link from 'next/link'
-import Image from 'next/image'
+import { Badge } from '@/components/ui/badge'
+import { createClient } from '@/lib/supabase'
+import { Apple, Chrome, Globe, Smartphone, Star, Gift, Clock, Users } from 'lucide-react'
 
-interface StampCard {
+interface CardInfo {
   id: string
   name: string
-  total_stamps: number
   reward_description: string
-  membership_type?: 'loyalty' | 'gym'
-  status?: string
   business: {
     id: string
     name: string
-    logo_url: string | null
+    description?: string
   }
+  card_type: 'stamp' | 'membership'
+  total_stamps?: number
+  total_sessions?: number
+  cost?: number
+  duration_days?: number
 }
 
-interface CustomerCard {
-  id: string
-  current_stamps: number
-  sessions_used: number
-  total_sessions: number
-  membership_type: 'loyalty' | 'gym'
-  stamp_card: StampCard
-}
-
-interface CustomerForm {
-  name: string
-  email: string
-}
-
-// Device detection utility
-const getDeviceType = () => {
-  if (typeof window === 'undefined') return 'web'
-  const userAgent = navigator.userAgent.toLowerCase()
-  if (/iphone|ipod|ipad/.test(userAgent)) return 'ios'
-  if (/android/.test(userAgent)) return 'android'
-  return 'web'
-}
-
-// Notification and feedback system placeholders
-const triggerStampNotification = (stampData: { billAmount?: number; currentStamps: number; totalStamps: number; businessName: string }) => {
-  console.log('🔔 Stamp Notification Triggered:', {
-    message: `Stamp added! ${stampData.totalStamps - stampData.currentStamps} more needed for reward`,
-    billAmount: stampData.billAmount,
-    businessName: stampData.businessName,
-    geofence: '1km radius (configurable)',
-    type: 'stamp_added'
-  })
-  // Future: Implement push notification API call
-}
-
-const triggerRewardNotification = (rewardData: { businessName: string; rewardDescription: string }) => {
-  console.log('🎉 Reward Notification Triggered:', {
-    message: 'Reward unlocked! Visit to redeem',
-    businessName: rewardData.businessName,
-    reward: rewardData.rewardDescription,
-    geofence: '1km radius (configurable)',
-    type: 'reward_available'
-  })
-  // Future: Implement push notification API call
+interface DeviceInfo {
+  type: 'ios' | 'android' | 'desktop'
+  userAgent: string
+  supportsAppleWallet: boolean
+  supportsGoogleWallet: boolean
 }
 
 export default function JoinCardPage() {
-  const [customerCard, setCustomerCard] = useState<CustomerCard | null>(null)
-  const [stampCard, setStampCard] = useState<StampCard | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [userRole, setUserRole] = useState<number | null>(null)
-  const [userId, setUserId] = useState<string | null>(null)
-  const [logoError, setLogoError] = useState(false)
-  const [customerForm, setCustomerForm] = useState<CustomerForm>({ name: '', email: '' })
-  const [submittingForm, setSubmittingForm] = useState(false)
-  const [formSuccess, setFormSuccess] = useState(false)
-  const [deviceType, setDeviceType] = useState<'ios' | 'android' | 'web'>('web')
-  const router = useRouter()
   const params = useParams()
-  const searchParams = useSearchParams()
-  const supabase = createClient()
-  
+  const router = useRouter()
   const cardId = params.cardId as string
-  const autoJoin = searchParams.get('autoJoin') === 'true'
-  const isGuestMode = searchParams.get('guest') === 'true'
-  const walletType = searchParams.get('wallet') as 'apple' | 'google' | 'pwa' | null
+  
+  const [step, setStep] = useState(1) // 1: Loading, 2: Card Info, 3: Registration, 4: Wallet Selection, 5: Success
+  const [cardInfo, setCardInfo] = useState<CardInfo | null>(null)
+  const [deviceInfo, setDeviceInfo] = useState<DeviceInfo | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [isRegistering, setIsRegistering] = useState(false)
+  const [customerCardId, setCustomerCardId] = useState<string | null>(null)
 
-  // Detect device type on mount
+  // Registration form data
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: ''
+  })
+
+  // Detect device and load card info
   useEffect(() => {
-    setDeviceType(getDeviceType())
-  }, [])
-
-  // Construct logo URL from Supabase storage
-  const getLogoUrl = (business: { id: string; logo_url: string | null }) => {
-    if (!business.logo_url) return null
-    
-    // Check if it's already a full URL (legacy support)
-    if (business.logo_url.startsWith('http')) {
-      return business.logo_url
-    }
-    
-    // Construct URL from Supabase storage bucket
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    return `${supabaseUrl}/storage/v1/object/public/business-logos/${business.id}/${business.logo_url}`
-  }
-
-  // Get theme colors based on card type
-  const getThemeColors = (cardType: string = 'loyalty') => {
-    if (cardType === 'gym' || cardType === 'membership') {
-      return {
-        gradient: 'from-indigo-50 to-indigo-100',
-        iconBg: 'bg-indigo-100',
-        iconColor: 'text-indigo-600',
-        buttonBg: 'bg-indigo-600 hover:bg-indigo-700',
-        borderColor: 'border-indigo-600',
-        textColor: 'text-indigo-600',
-        accentColor: 'text-indigo-600',
-        progressBg: 'bg-indigo-200',
-        progressFill: 'bg-indigo-600'
-      }
-    }
-    // Default to green theme for loyalty cards
-    return {
-      gradient: 'from-green-50 to-emerald-100',
-      iconBg: 'bg-green-100',
-      iconColor: 'text-green-600',
-      buttonBg: 'bg-green-600 hover:bg-green-700',
-      borderColor: 'border-green-600',
-      textColor: 'text-green-600',
-      accentColor: 'text-green-600',
-      progressBg: 'bg-green-200',
-      progressFill: 'bg-green-600'
-    }
-  }
-
-  // Check if reward is eligible for redemption
-  const isRewardEligible = () => {
-    if (customerCard && customerCard.membership_type === 'loyalty') {
-      return customerCard.current_stamps >= customerCard.stamp_card.total_stamps
-    }
-    if (customerCard && customerCard.membership_type === 'gym') {
-      return customerCard.sessions_used >= customerCard.total_sessions
-    }
-    return false
-  }
-
-  // Calculate progress percentage
-  const getProgressPercentage = () => {
-    if (customerCard && customerCard.membership_type === 'loyalty') {
-      return Math.min((customerCard.current_stamps / customerCard.stamp_card.total_stamps) * 100, 100)
-    }
-    if (customerCard && customerCard.membership_type === 'gym') {
-      return Math.min((customerCard.sessions_used / customerCard.total_sessions) * 100, 100)
-    }
-    return 0
-  }
-
-  // Handle customer form submission for guest users
-  const handleGuestFormSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!customerForm.name.trim() || !customerForm.email.trim()) {
-      setError('Please fill in all fields')
-      return
-    }
-
-    setSubmittingForm(true)
-    setError(null)
-
-    try {
-      // For guest mode, we'll validate the data and redirect to signup
-      setFormSuccess(true)
-      
-      // Redirect to customer signup with pre-filled data
-      setTimeout(() => {
-        router.push(`/auth/customer-signup?name=${encodeURIComponent(customerForm.name)}&email=${encodeURIComponent(customerForm.email)}&next=${encodeURIComponent(`/join/${cardId}?autoJoin=true`)}`)
-      }, 2000)
-
-    } catch (err) {
-      console.error('Guest form submission error:', err)
-      setError(err instanceof Error ? err.message : 'Failed to submit information')
-    } finally {
-      setSubmittingForm(false)
-    }
-  }, [customerForm, cardId, router])
-
-  // Handle joining the card (for authenticated customers)
-  const handleJoinCard = useCallback(async () => {
-    if (!isAuthenticated || userRole !== 3) {
-      // Redirect to login if not authenticated
-      router.push(`/auth/login?role=customer&next=${encodeURIComponent(`/join/${cardId}?autoJoin=true`)}`)
-      return
-    }
-
-    setLoading(true)
-    try {
-      const targetStampCardId = customerCard?.stamp_card?.id || stampCard?.id
-      if (!targetStampCardId) {
-        throw new Error('No valid stamp card found to join')
-      }
-
-      const response = await fetch('/api/customer/card/join', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          stampCardId: targetStampCardId
-        })
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to join card')
-      }
-
-      const result = await response.json()
-      
-      // Trigger notification for successful join
-      if (stampCard || customerCard?.stamp_card) {
-        const card = stampCard || customerCard!.stamp_card
-        triggerStampNotification({
-          currentStamps: 0,
-          totalStamps: card.total_stamps,
-          businessName: card.business.name,
-          billAmount: 0
-        })
-      }
-      
-      // Redirect to customer card view
-      router.push(`/customer/card/${result.customerCardId || cardId}`)
-    } catch (err) {
-      console.error('Error joining card:', err)
-      setError(err instanceof Error ? err.message : 'Failed to join card')
-    } finally {
-      setLoading(false)
-    }
-  }, [isAuthenticated, userRole, cardId, customerCard, stampCard, router])
-
-  // Handle wallet integration
-  const handleWalletIntegration = useCallback(async (type: 'apple' | 'google' | 'pwa') => {
-    if (!isAuthenticated) {
-      // Redirect to login for wallet actions
-      router.push(`/auth/login?role=customer&next=${encodeURIComponent(`/join/${cardId}?wallet=${type}`)}`)
-      return
-    }
-
-    const targetCardId = customerCard?.id || cardId
-    
-    try {
-      if (type === 'apple') {
-        window.location.href = `/api/wallet/apple/${targetCardId}`
-      } else if (type === 'google') {
-        window.location.href = `/api/wallet/google/${targetCardId}`
-      } else if (type === 'pwa') {
-        window.location.href = `/api/wallet/pwa/${targetCardId}`
-      }
-    } catch (err) {
-      console.error('Wallet integration error:', err)
-      setError('Failed to add to wallet. Please try again.')
-    }
-  }, [isAuthenticated, customerCard, cardId, router])
-
-  // Enhanced card fetching - ALWAYS try to show card preview according to journeys.md
-  const fetchCardData = useCallback(async () => {
-    if (!cardId) return { customerCard: null, stampCard: null }
-
-    console.log('🔍 Fetching card data for cardId:', cardId)
-
-    try {
-      // Strategy 1: Try to fetch as customer_card_id (existing customer card)
+    async function initialize() {
       try {
-        const { data: customerCardData, error: customerCardError } = await supabase
-          .from('customer_cards')
-          .select(`
-            id,
-            current_stamps,
-            sessions_used,
-            total_sessions,
-            membership_type,
-            stamp_cards!inner (
-              id,
-              name,
-              total_stamps,
-              reward_description,
-              status,
-              businesses!inner (
-                id,
-                name,
-                logo_url
-              )
-            )
-          `)
-          .eq('id', cardId)
-          .single()
+        // Detect device
+        const userAgent = navigator.userAgent
+        const isIOS = /iPad|iPhone|iPod/.test(userAgent)
+        const isAndroid = /Android/.test(userAgent)
+        
+        setDeviceInfo({
+          type: isIOS ? 'ios' : isAndroid ? 'android' : 'desktop',
+          userAgent,
+          supportsAppleWallet: isIOS,
+          supportsGoogleWallet: isAndroid || !isIOS
+        })
 
-        if (!customerCardError && customerCardData) {
-          console.log('✅ Found customer card:', customerCardData.id)
-          const stampCardData = customerCardData.stamp_cards
-          const business = Array.isArray(stampCardData.businesses) 
-            ? stampCardData.businesses[0] 
-            : stampCardData.businesses
-
-          const customerCard: CustomerCard = {
-            id: customerCardData.id,
-            current_stamps: customerCardData.current_stamps || 0,
-            sessions_used: customerCardData.sessions_used || 0,
-            total_sessions: customerCardData.total_sessions || 0,
-            membership_type: customerCardData.membership_type || 'loyalty',
-            stamp_card: {
-              id: stampCardData.id,
-              name: stampCardData.name,
-              total_stamps: stampCardData.total_stamps,
-              reward_description: stampCardData.reward_description,
-              membership_type: customerCardData.membership_type || 'loyalty',
-              status: stampCardData.status,
-              business: business || { id: '', name: 'Unknown Business', logo_url: null }
-            }
-          }
-
-          return { customerCard, stampCard: null }
-        }
-      } catch (err) {
-        console.log('❌ Customer card fetch failed:', err)
-      }
-
-      // Strategy 2: Try to fetch as stamp_card_id (direct stamp card access for guest preview)
-      try {
-        const { data: stampCardData, error: stampCardError } = await supabase
+        // Load card information
+        const supabase = createClient()
+        
+        // Try stamp cards first
+        let { data: stampCard } = await supabase
           .from('stamp_cards')
           .select(`
             id,
             name,
-            total_stamps,
             reward_description,
-            status,
-            businesses!inner (
-              id,
-              name,
-              logo_url
-            )
+            total_stamps,
+            businesses!inner(id, name, description)
           `)
           .eq('id', cardId)
-          .single()
-
-        if (!stampCardError && stampCardData) {
-          console.log('✅ Found stamp card:', stampCardData.id)
-          const business = Array.isArray(stampCardData.businesses) 
-            ? stampCardData.businesses[0] 
-            : stampCardData.businesses
-
-          const stampCard: StampCard = {
-            id: stampCardData.id,
-            name: stampCardData.name,
-            total_stamps: stampCardData.total_stamps,
-            reward_description: stampCardData.reward_description,
-            membership_type: 'loyalty', // Default for direct stamp card access
-            status: stampCardData.status,
-            business: business || { id: '', name: 'Unknown Business', logo_url: null }
-          }
-
-          return { customerCard: null, stampCard }
-        }
-      } catch (err) {
-        console.log('❌ Stamp card fetch failed:', err)
-      }
-
-      // Strategy 3: If we have authenticated user, try to find their customer cards by stamp_card_id
-      if (isAuthenticated && userId) {
-        try {
-          const { data: customerCardsData, error: customerCardsError } = await supabase
-            .from('customer_cards')
-            .select(`
-              id,
-              current_stamps,
-              sessions_used,
-              total_sessions,
-              membership_type,
-              stamp_card_id,
-              stamp_cards!inner (
-                id,
-                name,
-                total_stamps,
-                reward_description,
-                status,
-                businesses!inner (
-                  id,
-                  name,
-                  logo_url
-                )
-              )
-            `)
-            .eq('stamp_card_id', cardId)
-            .eq('customer_id', userId)
-            .limit(1)
-
-          if (!customerCardsError && customerCardsData && customerCardsData.length > 0) {
-            console.log('✅ Found customer card by stamp_card_id:', customerCardsData[0].id)
-            const customerCardData = customerCardsData[0]
-            const stampCardData = customerCardData.stamp_cards
-            const business = Array.isArray(stampCardData.businesses) 
-              ? stampCardData.businesses[0] 
-              : stampCardData.businesses
-
-            const customerCard: CustomerCard = {
-              id: customerCardData.id,
-              current_stamps: customerCardData.current_stamps || 0,
-              sessions_used: customerCardData.sessions_used || 0,
-              total_sessions: customerCardData.total_sessions || 0,
-              membership_type: customerCardData.membership_type || 'loyalty',
-              stamp_card: {
-                id: stampCardData.id,
-                name: stampCardData.name,
-                total_stamps: stampCardData.total_stamps,
-                reward_description: stampCardData.reward_description,
-                membership_type: customerCardData.membership_type || 'loyalty',
-                status: stampCardData.status,
-                business: business || { id: '', name: 'Unknown Business', logo_url: null }
-              }
-            }
-
-            return { customerCard, stampCard: null }
-          }
-        } catch (err) {
-          console.log('❌ Customer cards by stamp_card_id fetch failed:', err)
-        }
-      }
-
-      // Strategy 4: Final fallback - try to get ANY active stamp card for guest preview
-      try {
-        const { data: allStampCards, error: allStampCardsError } = await supabase
-          .from('stamp_cards')
-          .select(`
-            id,
-            name,
-            total_stamps,
-            reward_description,
-            status,
-            businesses!inner (
-              id,
-              name,
-              logo_url
-            )
-          `)
           .eq('status', 'active')
-          .limit(1)
+          .single()
 
-        if (!allStampCardsError && allStampCards && allStampCards.length > 0) {
-          console.log('⚠️ Using fallback stamp card for preview:', allStampCards[0].id)
-          const stampCardData = allStampCards[0]
-          const business = Array.isArray(stampCardData.businesses) 
-            ? stampCardData.businesses[0] 
-            : stampCardData.businesses
-
-          const stampCard: StampCard = {
-            id: stampCardData.id,
-            name: 'Sample Loyalty Card',
-            total_stamps: stampCardData.total_stamps,
-            reward_description: stampCardData.reward_description || 'Join this loyalty program to earn rewards!',
-            membership_type: 'loyalty',
-            status: stampCardData.status,
-            business: business || { id: '', name: 'Demo Business', logo_url: null }
-          }
-
-          return { customerCard: null, stampCard }
-        }
-      } catch (err) {
-        console.log('❌ Fallback stamp card fetch failed:', err)
-      }
-
-      // All strategies failed
-      console.log('❌ All card fetch strategies failed for cardId:', cardId)
-      return { customerCard: null, stampCard: null }
-
-    } catch (err) {
-      console.error('❌ Card fetch error:', err)
-      return { customerCard: null, stampCard: null }
-    }
-  }, [cardId, supabase, isAuthenticated, userId])
-
-  // Check authentication status
-  const checkAuthStatus = useCallback(async () => {
-    try {
-      let authAttempts = 0
-      const maxRetries = 3
-      
-      while (authAttempts < maxRetries) {
-        try {
-          const { data: { session }, error: authError } = await supabase.auth.getSession()
-          
-          if (authError) {
-            console.error('Auth check error:', authError)
-            authAttempts++
-            if (authAttempts < maxRetries) {
-              await new Promise(resolve => setTimeout(resolve, 1000))
-              continue
-            }
-            break
-          }
-
-          if (session?.user) {
-            console.log('✅ User authenticated:', session.user.id)
-            setIsAuthenticated(true)
-            setUserId(session.user.id)
-            
-            // Get user role
-            const { data: userData, error: userError } = await supabase
-              .from('users')
-              .select('role_id')
-              .eq('id', session.user.id)
-              .single()
-
-            if (!userError && userData) {
-              setUserRole(userData.role_id)
-              console.log('✅ User role:', userData.role_id)
-            }
-          } else {
-            console.log('ℹ️ User not authenticated')
-            setIsAuthenticated(false)
-            setUserId(null)
-            setUserRole(null)
-          }
-          break
-        } catch (err) {
-          console.error('Auth retry error:', err)
-          authAttempts++
-          if (authAttempts < maxRetries) {
-            await new Promise(resolve => setTimeout(resolve, 1000))
-          }
-        }
-      }
-    } catch (err) {
-      console.error('Auth status check error:', err)
-      setIsAuthenticated(false)
-    }
-  }, [supabase])
-
-  useEffect(() => {
-    const initializePage = async () => {
-      setLoading(true)
-      
-      try {
-        // First, check authentication status
-        await checkAuthStatus()
-        
-        // Then fetch card data (always attempt, regardless of auth status)
-        const { customerCard: fetchedCustomerCard, stampCard: fetchedStampCard } = await fetchCardData()
-        
-        if (fetchedCustomerCard) {
-          setCustomerCard(fetchedCustomerCard)
-          setStampCard(null)
-          console.log('🎯 Customer card loaded:', fetchedCustomerCard.id)
-        } else if (fetchedStampCard) {
-          setStampCard(fetchedStampCard)
-          setCustomerCard(null)
-          console.log('🎯 Stamp card loaded:', fetchedStampCard.id)
-        } else {
-          console.log('⚠️ No card data found, but continuing for guest mode')
-          // According to journeys.md, we should still show the page for guest access
-          setError('Card not found, but you can still create an account to join loyalty programs')
-        }
-
-        // If user is authenticated, customer role, and autoJoin is true, try to join
-        if (isAuthenticated && userRole === 3 && autoJoin && (fetchedCustomerCard || fetchedStampCard)) {
-          console.log('🚀 Auto-joining card for authenticated customer')
-          setTimeout(() => handleJoinCard(), 500)
+        if (stampCard) {
+          setCardInfo({
+            id: stampCard.id,
+            name: stampCard.name,
+            reward_description: stampCard.reward_description,
+            business: stampCard.businesses,
+            card_type: 'stamp',
+            total_stamps: stampCard.total_stamps
+          })
+          setStep(2)
           return
         }
 
-      } catch (err) {
-        console.error('Error in initializePage:', err)
-        // Don't fail completely - still show guest options
-        setError('Unable to load card details, but you can still sign up')
-      } finally {
-        setLoading(false)
-      }
-    }
+        // Try membership cards
+        let { data: membershipCard } = await supabase
+          .from('membership_cards')
+          .select(`
+            id,
+            name,
+            total_sessions,
+            cost,
+            duration_days,
+            businesses!inner(id, name, description)
+          `)
+          .eq('id', cardId)
+          .eq('status', 'active')
+          .single()
 
-    initializePage()
-    
-    // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('🔄 Auth state changed:', event, !!session?.user)
-        if (event === 'SIGNED_IN' && session?.user) {
-          await checkAuthStatus()
-          if (autoJoin) {
-            console.log('🚀 User signed in with autoJoin, triggering card join')
-            setTimeout(() => handleJoinCard(), 500)
-          }
-        } else if (event === 'SIGNED_OUT') {
-          setIsAuthenticated(false)
-          setUserId(null)
-          setUserRole(null)
+        if (membershipCard) {
+          setCardInfo({
+            id: membershipCard.id,
+            name: membershipCard.name,
+            reward_description: `${membershipCard.total_sessions} sessions for $${membershipCard.cost}`,
+            business: membershipCard.businesses,
+            card_type: 'membership',
+            total_sessions: membershipCard.total_sessions,
+            cost: membershipCard.cost,
+            duration_days: membershipCard.duration_days
+          })
+          setStep(2)
+          return
         }
+
+        setError('Card not found or inactive')
+      } catch (err) {
+        console.error('Error loading card:', err)
+        setError('Failed to load card information')
+      } finally {
+        setIsLoading(false)
       }
-    )
-    
-    return () => {
-      subscription.unsubscribe()
     }
-  }, [cardId, autoJoin, supabase, checkAuthStatus, fetchCardData, handleJoinCard])
 
-  // Get theme colors based on card type
-  const cardData = customerCard || stampCard
-  const theme = getThemeColors(cardData?.membership_type)
+    if (cardId) {
+      initialize()
+    }
+  }, [cardId])
 
-  // Trigger reward notification if eligible
-  useEffect(() => {
-    if (isRewardEligible() && cardData) {
-      triggerRewardNotification({
-        businessName: cardData.business.name,
-        rewardDescription: cardData.reward_description
+  const handleRegistration = async () => {
+    if (!cardInfo || !formData.name || !formData.email) {
+      setError('Please fill in all required fields')
+      return
+    }
+
+    setIsRegistering(true)
+    setError(null)
+
+    try {
+      const supabase = createClient()
+
+      // Create or get customer
+      let { data: existingCustomer } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('email', formData.email)
+        .single()
+
+      let customerId = existingCustomer?.id
+
+      if (!customerId) {
+        // Create new customer
+        const { data: newCustomer, error: customerError } = await supabase
+          .from('customers')
+          .insert([{
+            name: formData.name,
+            email: formData.email,
+            phone: formData.phone || null
+          }])
+          .select('id')
+          .single()
+
+        if (customerError) {
+          throw customerError
+        }
+        customerId = newCustomer.id
+      }
+
+      // Check if customer already has this card
+      const { data: existingCard } = await supabase
+        .from('customer_cards')
+        .select('id')
+        .eq('customer_id', customerId)
+        .eq(cardInfo.card_type === 'stamp' ? 'stamp_card_id' : 'membership_card_id', cardInfo.id)
+        .single()
+
+      if (existingCard) {
+        setError('You already have this card!')
+        setIsRegistering(false)
+        return
+      }
+
+      // Create customer card
+      const customerCardData = {
+        customer_id: customerId,
+        ...(cardInfo.card_type === 'stamp' ? {
+          stamp_card_id: cardInfo.id,
+          membership_card_id: null,
+          current_stamps: 0
+        } : {
+          stamp_card_id: null,
+          membership_card_id: cardInfo.id,
+          sessions_used: 0,
+          expiry_date: new Date(Date.now() + (cardInfo.duration_days || 365) * 24 * 60 * 60 * 1000).toISOString()
+        })
+      }
+
+      const { data: newCustomerCard, error: cardError } = await supabase
+        .from('customer_cards')
+        .insert([customerCardData])
+        .select('id')
+        .single()
+
+      if (cardError) {
+        throw cardError
+      }
+
+      setCustomerCardId(newCustomerCard.id)
+      setStep(4) // Move to wallet selection
+    } catch (err) {
+      console.error('Registration error:', err)
+      setError('Failed to register for card. Please try again.')
+    } finally {
+      setIsRegistering(false)
+    }
+  }
+
+  const addToWallet = async (walletType: 'apple' | 'google' | 'pwa') => {
+    if (!customerCardId) return
+
+    try {
+      const response = await fetch(`/api/wallet/${walletType}/${customerCardId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
       })
-    }
-  }, [customerCard, stampCard])
 
-  // Loading state
-  if (loading) {
+      if (walletType === 'apple' && response.ok) {
+        const blob = await response.blob()
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${cardInfo?.name.replace(/\s+/g, '_')}.pkpass`
+        a.click()
+        URL.revokeObjectURL(url)
+        setStep(5)
+      } else if (walletType === 'google' && response.ok) {
+        const html = await response.text()
+        const newWindow = window.open('', '_blank')
+        newWindow?.document.write(html)
+        setStep(5)
+      } else if (walletType === 'pwa') {
+        window.open(`/api/wallet/pwa/${customerCardId}`, '_blank')
+        setStep(5)
+      }
+    } catch (error) {
+      console.error(`Error adding to ${walletType} wallet:`, error)
+      setError(`Failed to add to ${walletType} wallet`)
+    }
+  }
+
+  if (isLoading || step === 1) {
     return (
-      <div className={`min-h-screen bg-gradient-to-br ${theme.gradient} flex items-center justify-center`}>
-        <div className="flex flex-col items-center space-y-4">
-          <Loader2 className={`w-8 h-8 animate-spin ${theme.iconColor}`} />
-          <p className={`${theme.iconColor} font-medium`}>Loading...</p>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="p-8 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading card information...</p>
+          </CardContent>
+        </Card>
       </div>
     )
   }
 
-  // According to journeys.md: "QR access allowed, stamps/rewards require authentication"
-  // Always show card preview, only require auth for actions
-  return (
-    <div className={`min-h-screen bg-gradient-to-br ${theme.gradient} flex items-center justify-center py-12 px-4`}>
-      <div className="max-w-md w-full space-y-6">
-        {/* Main Card Preview - Always visible according to journeys.md */}
-        <Card className="w-full shadow-xl border-0" data-testid="card-preview">
-          <CardHeader className="text-center pb-4">
-            {/* Business Logo Section */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-3">
-                {cardData?.business?.logo_url && !logoError ? (
-                  <div className="relative w-10 h-10 flex-shrink-0">
-                    <Image
-                      src={getLogoUrl(cardData.business) || ''}
-                      alt={`${cardData.business.name} logo`}
-                      width={40}
-                      height={40}
-                      className="rounded-lg object-cover"
-                      onError={() => setLogoError(true)}
-                      priority
-                    />
-                  </div>
-                ) : (
-                  <div className={`w-10 h-10 ${theme.iconBg} rounded-lg flex items-center justify-center flex-shrink-0`}>
-                    <span className={`${theme.iconColor} font-bold text-sm`}>
-                      {cardData?.business?.name?.charAt(0) || 'R'}
-                    </span>
-                  </div>
-                )}
-                <div className="text-left">
-                  <h3 className="font-semibold text-gray-900 text-sm">
-                    {cardData?.business?.name || 'RewardJar Business'}
-                  </h3>
-                  <p className="text-xs text-gray-500">
-                    {cardData?.membership_type === 'gym' ? 'Membership Program' : 'Loyalty Program'}
-                  </p>
-                </div>
-              </div>
-              <div className={`flex items-center justify-center w-16 h-16 ${theme.iconBg} rounded-full`}>
-                <CreditCard className={`w-8 h-8 ${theme.iconColor}`} />
-              </div>
+  if (error && !cardInfo) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-red-50 to-pink-100 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="p-8 text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-red-600 text-2xl">!</span>
             </div>
-            
-            <CardTitle className="text-xl font-bold text-gray-900">
-              {cardData?.name || 'Loyalty Program'}
-            </CardTitle>
-            <CardDescription className="text-gray-600">
-              {cardData ? 
-                (cardData.membership_type === 'gym' ? 'Membership program for tracking sessions' : 'Loyalty program for collecting stamps') :
-                'Join our loyalty program to earn rewards'
-              }
-            </CardDescription>
-          </CardHeader>
-          
-          <CardContent className="space-y-6">
-            {/* Card Preview Information */}
-            <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-gray-700">
-                  {cardData?.membership_type === 'gym' ? 'Sessions available:' : 'Stamps needed:'}
-                </span>
-                <span className={`text-lg font-bold ${theme.accentColor}`}>
-                  {cardData?.membership_type === 'gym' ? 'Unlimited' : (cardData?.total_stamps || 10)}
-                </span>
-              </div>
-              
-              {/* Progress for authenticated users with customer card */}
-              {customerCard && (
-                <>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-700">Your progress:</span>
-                    <span className={`text-lg font-bold ${theme.accentColor}`}>
-                      {customerCard.membership_type === 'gym' 
-                        ? `${customerCard.sessions_used}/${customerCard.total_sessions}`
-                        : `${customerCard.current_stamps}/${customerCard.stamp_card.total_stamps}`
-                      }
-                    </span>
-                  </div>
-                  
-                  {/* Progress Bar */}
-                  <div className={`w-full ${theme.progressBg} rounded-full h-3`}>
-                    <div 
-                      className={`${theme.progressFill} h-3 rounded-full transition-all duration-300`}
-                      style={{ width: `${getProgressPercentage()}%` }}
-                    />
-                  </div>
-                </>
-              )}
-              
-              <div className="space-y-1">
-                <span className="text-sm font-medium text-gray-700">
-                  {cardData?.membership_type === 'gym' ? 'Benefits:' : 'Reward:'}
-                </span>
-                <p className="text-sm text-gray-600">
-                  {cardData?.reward_description || 'Join our program and earn great rewards!'}
-                </p>
-              </div>
-
-              {/* Reward Eligibility for authenticated users */}
-              {isRewardEligible() && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                  <div className="flex items-center">
-                    <Trophy className="h-5 w-5 text-yellow-600 flex-shrink-0" />
-                    <div className="ml-3">
-                      <p className="text-sm font-medium text-yellow-800">
-                        🎉 Reward eligible! Visit the store to redeem.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Error message */}
-            {error && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <div className="flex items-center">
-                  <AlertCircle className="h-5 w-5 text-yellow-400 flex-shrink-0" />
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-yellow-800">{error}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Authentication-based Actions */}
-            {!isAuthenticated ? (
-              // Guest user experience - according to journeys.md
-              <div className="space-y-4">
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex items-center">
-                    <LogIn className="h-5 w-5 text-blue-600 flex-shrink-0" />
-                    <div className="ml-3">
-                      <p className="text-sm font-medium text-blue-800">
-                        Sign in to collect stamps and earn rewards!
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <Link href={`/auth/login?role=customer&next=${encodeURIComponent(`/join/${cardId}?autoJoin=true`)}`}>
-                    <Button className={`w-full h-12 ${theme.buttonBg} text-white font-semibold`}>
-                      <LogIn className="w-4 h-4 mr-2" />
-                      Sign In
-                    </Button>
-                  </Link>
-                  
-                  <Link href={`/auth/customer-signup?next=${encodeURIComponent(`/join/${cardId}?autoJoin=true`)}`}>
-                    <Button variant="outline" className={`w-full h-12 ${theme.borderColor} ${theme.textColor}`}>
-                      <UserIcon className="w-4 h-4 mr-2" />
-                      Sign Up
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            ) : (
-              // Authenticated user experience
-              <div className="space-y-4">
-                {/* Wallet Integration Buttons */}
-                <div className="space-y-2">
-                  <h4 className="font-medium text-gray-900 text-sm">Add to Wallet</h4>
-                  <div className="grid grid-cols-1 gap-2">
-                    {deviceType === 'ios' && (
-                      <Button
-                        onClick={() => handleWalletIntegration('apple')}
-                        className={`w-full h-12 ${theme.buttonBg} text-white font-semibold flex items-center justify-center`}
-                      >
-                        <Apple className="w-5 h-5 mr-2" />
-                        Add to Apple Wallet
-                      </Button>
-                    )}
-                    
-                    {deviceType === 'android' && (
-                      <Button
-                        onClick={() => handleWalletIntegration('google')}
-                        className={`w-full h-12 ${theme.buttonBg} text-white font-semibold flex items-center justify-center`}
-                      >
-                        <Smartphone className="w-5 h-5 mr-2" />
-                        Add to Google Wallet
-                      </Button>
-                    )}
-                    
-                    <Button
-                      onClick={() => handleWalletIntegration('pwa')}
-                      variant="outline"
-                      className={`w-full h-12 ${theme.borderColor} ${theme.textColor} hover:bg-opacity-10`}
-                    >
-                      <ExternalLink className="w-4 h-4 mr-2" />
-                      Open as Web App
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Join Card Button (if not already joined) */}
-                {!customerCard && stampCard && (
-                  <Button 
-                    onClick={handleJoinCard}
-                    disabled={loading}
-                    className={`w-full h-12 ${theme.buttonBg} text-white font-semibold`}
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Joining...
-                      </>
-                    ) : (
-                      <>
-                        Join Program
-                        <ArrowRight className="w-4 h-4 ml-2" />
-                      </>
-                    )}
-                  </Button>
-                )}
-
-                {/* Redemption Button (if eligible) */}
-                {isRewardEligible() && customerCard && (
-                  <Link href={`/customer/card/${customerCard.id}/redeem`}>
-                    <Button className="w-full h-12 bg-yellow-600 hover:bg-yellow-700 text-white font-semibold">
-                      <Gift className="w-4 h-4 mr-2" />
-                      Redeem Reward Now
-                    </Button>
-                  </Link>
-                )}
-              </div>
-            )}
+            <h2 className="text-xl font-semibold text-gray-800 mb-2">Card Not Found</h2>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <Button onClick={() => router.push('/')} variant="outline">
+              Go Home
+            </Button>
           </CardContent>
         </Card>
+      </div>
+    )
+  }
 
-        {/* Navigation Links for authenticated users */}
-        {isAuthenticated && (
-          <div className="grid grid-cols-2 gap-4">
-            <Link href="/customer/dashboard">
-              <Button variant="outline" className="w-full h-12">
-                <User className="w-4 h-4 mr-2" />
-                My Dashboard
-              </Button>
-            </Link>
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+      <div className="max-w-2xl mx-auto space-y-6">
+        {/* Step 2: Card Information Display */}
+        {step === 2 && cardInfo && (
+          <Card className="overflow-hidden">
+            <div 
+              className="h-32 bg-gradient-to-r from-blue-600 to-indigo-600 relative overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-black/20" />
+              <div className="relative p-6 text-white">
+                <h1 className="text-2xl font-bold">{cardInfo.business.name}</h1>
+                <p className="text-blue-100">{cardInfo.name}</p>
+              </div>
+            </div>
             
-            <Link href="/customer/profile">
-              <Button variant="outline" className="w-full h-12">
-                <UserIcon className="w-4 h-4 mr-2" />
-                My Profile
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <Badge variant={cardInfo.card_type === 'stamp' ? 'default' : 'secondary'}>
+                  {cardInfo.card_type === 'stamp' ? 'Loyalty Card' : 'Membership Card'}
+                </Badge>
+                <div className="flex items-center gap-4 text-sm text-gray-600">
+                  {cardInfo.card_type === 'stamp' ? (
+                    <div className="flex items-center gap-1">
+                      <Star className="h-4 w-4" />
+                      {cardInfo.total_stamps} stamps to reward
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-4 w-4" />
+                        {cardInfo.total_sessions} sessions
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Gift className="h-4 w-4" />
+                        ${cardInfo.cost}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-gray-800 mb-2">Reward Details</h3>
+                <p className="text-gray-600">{cardInfo.reward_description}</p>
+              </div>
+
+              {cardInfo.business.description && (
+                <div>
+                  <h3 className="font-semibold text-gray-800 mb-2">About {cardInfo.business.name}</h3>
+                  <p className="text-gray-600">{cardInfo.business.description}</p>
+                </div>
+              )}
+
+              <Button 
+                onClick={() => setStep(3)} 
+                className="w-full bg-blue-600 hover:bg-blue-700"
+                size="lg"
+              >
+                Join This Card
               </Button>
-            </Link>
-          </div>
+            </CardContent>
+          </Card>
         )}
 
-        {/* Info */}
-        <div className="text-center">
-          <p className="text-xs text-gray-500">
-            {cardData ? 
-              `Show this card at ${cardData.business?.name || 'this business'} to collect stamps or track sessions!` :
-              'Join RewardJar loyalty programs to earn rewards and track your progress!'
-            }
-          </p>
-        </div>
+        {/* Step 3: Registration Form */}
+        {step === 3 && cardInfo && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Join {cardInfo.business.name}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="name">Full Name *</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Enter your full name"
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="email">Email Address *</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  placeholder="Enter your email address"
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="phone">Phone Number (Optional)</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                  placeholder="Enter your phone number"
+                />
+              </div>
+
+              {error && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                  <p className="text-red-600 text-sm">{error}</p>
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setStep(2)}
+                  className="flex-1"
+                >
+                  Back
+                </Button>
+                <Button 
+                  onClick={handleRegistration}
+                  disabled={isRegistering || !formData.name || !formData.email}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700"
+                >
+                  {isRegistering ? 'Registering...' : 'Register'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Step 4: Wallet Selection */}
+        {step === 4 && cardInfo && deviceInfo && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Smartphone className="h-5 w-5" />
+                Add to Your Wallet
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-gray-600 mb-6">
+                Choose how you'd like to store your {cardInfo.name} card:
+              </p>
+
+              <div className="space-y-3">
+                {/* Apple Wallet Option */}
+                {deviceInfo.supportsAppleWallet && (
+                  <button
+                    onClick={() => addToWallet('apple')}
+                    className="w-full p-4 border-2 border-gray-200 rounded-lg hover:border-gray-300 hover:bg-gray-50 transition-all text-left"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-black rounded-lg flex items-center justify-center">
+                        <Apple className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold">Apple Wallet</h3>
+                        <p className="text-sm text-gray-600">
+                          Add to your iPhone's built-in wallet app
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                )}
+
+                {/* Google Wallet Option */}
+                {deviceInfo.supportsGoogleWallet && (
+                  <button
+                    onClick={() => addToWallet('google')}
+                    className="w-full p-4 border-2 border-gray-200 rounded-lg hover:border-gray-300 hover:bg-gray-50 transition-all text-left"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
+                        <Chrome className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold">Google Wallet</h3>
+                        <p className="text-sm text-gray-600">
+                          Add to your Google Wallet for easy access
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                )}
+
+                {/* PWA Option */}
+                <button
+                  onClick={() => addToWallet('pwa')}
+                  className="w-full p-4 border-2 border-gray-200 rounded-lg hover:border-gray-300 hover:bg-gray-50 transition-all text-left"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center">
+                      <Globe className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">Web Wallet</h3>
+                      <p className="text-sm text-gray-600">
+                        Access your card through any web browser
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              </div>
+
+              {error && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                  <p className="text-red-600 text-sm">{error}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Step 5: Success */}
+        {step === 5 && cardInfo && (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-green-600 text-2xl">✓</span>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">Welcome to {cardInfo.business.name}!</h2>
+              <p className="text-gray-600 mb-6">
+                Your {cardInfo.name} has been successfully added to your wallet.
+              </p>
+              
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <h3 className="font-semibold text-blue-800 mb-2">Next Steps:</h3>
+                <ul className="text-sm text-blue-700 space-y-1 text-left">
+                  <li>• Show your card when making purchases</li>
+                  <li>• Earn {cardInfo.card_type === 'stamp' ? 'stamps' : 'track sessions'} with each visit</li>
+                  <li>• Your card will update automatically</li>
+                  <li>• Enjoy your rewards when you complete the card!</li>
+                </ul>
+              </div>
+
+              <Button 
+                onClick={() => router.push('/')}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                Done
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   )

@@ -1,26 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin-client'
-import { z } from 'zod'
 
-// Validation schema
-const addStampSchema = z.object({
-  customerCardId: z.string().uuid('Invalid customer card ID'),
-  locationId: z.string().optional(), // Optional location tracking
-  businessConfirmation: z.boolean().optional(), // For business-initiated stamps
-  usageType: z.enum(['stamp', 'session']).optional() // Auto-detected if not provided
-})
+interface AddStampRequest {
+  customerCardId: string
+  businessId?: string
+  markedBy?: string
+  notes?: string
+}
 
 export async function POST(request: NextRequest) {
+  console.log('🎯 STAMP/SESSION ADD - Processing request...')
+  
   try {
-    const supabase = createAdminClient()
-    
-    // Parse and validate request body
-    const body = await request.json()
-    const validatedData = addStampSchema.parse(body)
-    
-    const { customerCardId, usageType } = validatedData
+    const body = await request.json() as AddStampRequest
+    const { customerCardId, businessId, markedBy, notes } = body
 
-    // Get customer card with unified schema details
+    if (!customerCardId) {
+      return NextResponse.json(
+        { error: 'Customer card ID is required' },
+        { status: 400 }
+      )
+    }
+
+    const supabase = createAdminClient()
+
+    // Get customer card with full details
     const { data: customerCard, error: cardError } = await supabase
       .from('customer_cards')
       .select(`
@@ -31,285 +35,319 @@ export async function POST(request: NextRequest) {
         current_stamps,
         sessions_used,
         expiry_date,
-        stamp_cards (
+        wallet_type,
+        wallet_pass_id,
+        customers!inner(name, email),
+        stamp_cards(
           id,
-          total_stamps,
           name,
+          total_stamps,
           reward_description,
           business_id,
-          businesses (
-            name
-          )
+          businesses!inner(id, name)
         ),
-        membership_cards (
+        membership_cards(
           id,
-          total_sessions,
           name,
+          total_sessions,
           cost,
           business_id,
-          businesses (
-            name
-          )
+          businesses!inner(id, name)
         )
       `)
       .eq('id', customerCardId)
       .single()
 
     if (cardError || !customerCard) {
+      console.error('❌ Customer card not found:', customerCardId)
       return NextResponse.json(
         { error: 'Customer card not found' },
         { status: 404 }
       )
     }
 
-    // Determine card type from unified schema
+    // Determine card type using unified schema
     const isStampCard = customerCard.stamp_card_id !== null
     const isMembershipCard = customerCard.membership_card_id !== null
-    
+
     if (!isStampCard && !isMembershipCard) {
+      console.error('❌ Invalid card type - neither stamp nor membership card')
       return NextResponse.json(
-        { error: 'Invalid customer card: no card type found' },
+        { error: 'Invalid card type' },
         { status: 400 }
       )
     }
 
-    // Get card details based on type
-    let cardData: any
-    let businessData: any
+    console.log(`📝 Processing ${isStampCard ? 'stamp' : 'session'} addition for card ${customerCardId}`)
+
+    let updateResult
+    let updateType: 'stamp_update' | 'session_update' | 'reward_complete' = isStampCard ? 'stamp_update' : 'session_update'
     
     if (isStampCard) {
-      cardData = customerCard.stamp_cards
-      businessData = cardData?.businesses
-    } else {
-      cardData = customerCard.membership_cards
-      businessData = cardData?.businesses
-    }
-
-    if (!cardData) {
-      return NextResponse.json(
-        { error: 'Card template not found' },
-        { status: 404 }
-      )
-    }
-
-    // Determine usage type based on card type if not provided
-    const actualUsageType = usageType || (isStampCard ? 'stamp' : 'session')
-
-    // Validate usage type against card type
-    if (isMembershipCard && actualUsageType !== 'session') {
-      return NextResponse.json(
-        { error: 'Membership cards only support session marking' },
-        { status: 400 }
-      )
-    }
-
-    if (isStampCard && actualUsageType !== 'stamp') {
-      return NextResponse.json(
-        { error: 'Stamp cards only support stamp addition' },
-        { status: 400 }
-      )
-    }
-
-    // Handle membership cards (sessions)
-    if (isMembershipCard) {
-      // Check if membership is expired
-      if (customerCard.expiry_date && new Date(customerCard.expiry_date) < new Date()) {
-        return NextResponse.json({
-          success: false,
-          error: 'Membership expired',
-          membershipCard: {
-            id: customerCard.id,
-            sessionsUsed: customerCard.sessions_used || 0,
-            totalSessions: cardData.total_sessions || 20,
-            expiryDate: customerCard.expiry_date,
-            isExpired: true,
-            card: {
-              name: cardData.name,
-              business: businessData
-            }
-          }
-        }, { status: 400 })
-      }
-
-      // Check if all sessions are used
-      const currentSessionsUsed = customerCard.sessions_used || 0
-      const totalSessions = cardData.total_sessions || 20
-
-      if (currentSessionsUsed >= totalSessions) {
-        return NextResponse.json({
-          success: true,
-          message: 'All sessions have been used! Please renew your membership.',
-          membershipCard: {
-            id: customerCard.id,
-            sessionsUsed: currentSessionsUsed,
-            totalSessions: totalSessions,
-            isCompleted: true,
-            cost: cardData.cost,
-            expiryDate: customerCard.expiry_date,
-            card: {
-              name: cardData.name,
-              business: businessData
-            }
-          }
-        })
-      }
-
-      // Use the database function to mark session usage
-      const { data: result, error: markError } = await supabase
-        .rpc('mark_session_usage', {
-          p_customer_card_id: customerCardId,
-          p_business_id: cardData.business_id,
-          p_marked_by: null, // Can be set if business user is marking
-          p_usage_type: 'session',
-          p_notes: 'Session marked via stamp/add API'
-        })
-
-      if (markError || !result?.success) {
-        console.error('Error marking session:', markError)
+      // Handle stamp card logic
+      const stampCard = customerCard.stamp_cards!
+      const currentStamps = customerCard.current_stamps
+      const totalStamps = stampCard.total_stamps
+      
+      if (currentStamps >= totalStamps) {
         return NextResponse.json(
-          { error: result?.error || 'Failed to mark session' },
-          { status: 500 }
+          { error: 'Card is already complete' },
+          { status: 400 }
         )
       }
 
-      const newSessionsUsed = result.sessions_used
-      const sessionsRemaining = (result.sessions_remaining || (totalSessions - newSessionsUsed))
-      const isCompleted = newSessionsUsed >= totalSessions
+      const newStampCount = currentStamps + 1
+      const isComplete = newStampCount >= totalStamps
 
-      return NextResponse.json({
-        success: true,
-        message: isCompleted 
-          ? '🎉 All sessions used! Your membership is complete.' 
-          : `Session marked! ${sessionsRemaining} sessions remaining.`,
-        membershipCard: {
-          id: customerCard.id,
-          sessionsUsed: newSessionsUsed,
-          totalSessions: totalSessions,
-          sessionsRemaining,
-          isCompleted,
-          isExpired: false,
-          cost: cardData.cost,
-          expiryDate: customerCard.expiry_date,
-          card: {
-            name: cardData.name,
-            business: businessData
-          }
-        }
-      })
-    }
-
-    // Handle stamp cards (stamp collection)
-    else {
-      // Check if card is already completed
-      if (customerCard.current_stamps >= cardData.total_stamps) {
-        return NextResponse.json({
-          success: true,
-          message: 'Card already completed! Reward is ready to claim.',
-          customerCard: {
-            id: customerCard.id,
-            currentStamps: customerCard.current_stamps,
-            totalStamps: cardData.total_stamps,
-            isCompleted: true,
-            stampCard: {
-              name: cardData.name,
-              rewardDescription: cardData.reward_description
-            },
-            business: {
-              name: businessData.name
-            }
-          }
-        })
-      }
-
-      // Add stamp to individual stamps table
-      const { error: stampInsertError } = await supabase
-        .from('stamps')
-        .insert({
-          customer_id: customerCard.customer_id,
-          stamp_card_id: customerCard.stamp_card_id,
-          // location_id: locationId // Add if location tracking is implemented
-        })
-
-      if (stampInsertError) {
-        console.error('Error inserting stamp:', stampInsertError)
-        return NextResponse.json(
-          { error: 'Failed to add stamp' },
-          { status: 500 }
-        )
-      }
-
-      // Update customer card stamp count
-      const newStampCount = customerCard.current_stamps + 1
+      // Update stamp count
       const { error: updateError } = await supabase
         .from('customer_cards')
-        .update({ current_stamps: newStampCount })
+        .update({ 
+          current_stamps: newStampCount,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', customerCardId)
 
       if (updateError) {
-        console.error('Error updating customer card:', updateError)
+        console.error('❌ Error updating stamp count:', updateError)
         return NextResponse.json(
           { error: 'Failed to update stamp count' },
           { status: 500 }
         )
       }
 
-      // Check if reward is now unlocked
-      const isCompleted = newStampCount >= cardData.total_stamps
-      let rewardGenerated = false
+      // Log session usage
+      await supabase
+        .from('session_usage')
+        .insert([{
+          customer_card_id: customerCardId,
+          business_id: businessId || stampCard.business_id,
+          marked_by: markedBy,
+          usage_type: 'stamp',
+          notes: notes
+        }])
 
-      if (isCompleted) {
-        // Create reward record
-        const { error: rewardError } = await supabase
-          .from('rewards')
-          .insert({
-            customer_id: customerCard.customer_id,
-            stamp_card_id: customerCard.stamp_card_id,
-            created_at: new Date().toISOString()
-          })
-
-        if (rewardError) {
-          console.error('Error creating reward:', rewardError)
-          // Continue - stamp was added successfully even if reward creation failed
-        } else {
-          rewardGenerated = true
-        }
+      updateType = isComplete ? 'reward_complete' : 'stamp_update'
+      updateResult = {
+        success: true,
+        card_type: 'stamp',
+        current_stamps: newStampCount,
+        total_stamps: totalStamps,
+        is_complete: isComplete,
+        progress_percentage: Math.round((newStampCount / totalStamps) * 100),
+        message: isComplete 
+          ? `🎉 Congratulations! You've completed your ${stampCard.name} card!`
+          : `Stamp added! ${newStampCount}/${totalStamps} stamps collected.`
       }
 
-      const stampsRemaining = Math.max(cardData.total_stamps - newStampCount, 0)
+      console.log(`✅ Stamp added: ${newStampCount}/${totalStamps} ${isComplete ? '(COMPLETE!)' : ''}`)
 
-      return NextResponse.json({
+    } else {
+      // Handle membership card logic
+      const membershipCard = customerCard.membership_cards!
+      const sessionsUsed = customerCard.sessions_used
+      const totalSessions = membershipCard.total_sessions
+      
+      // Check if membership is expired
+      if (customerCard.expiry_date && new Date(customerCard.expiry_date) < new Date()) {
+        return NextResponse.json(
+          { error: 'Membership has expired' },
+          { status: 400 }
+        )
+      }
+
+      if (sessionsUsed >= totalSessions) {
+        return NextResponse.json(
+          { error: 'No sessions remaining' },
+          { status: 400 }
+        )
+      }
+
+      const newSessionCount = sessionsUsed + 1
+      const sessionsRemaining = totalSessions - newSessionCount
+
+      // Update session count
+      const { error: updateError } = await supabase
+        .from('customer_cards')
+        .update({ 
+          sessions_used: newSessionCount,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', customerCardId)
+
+      if (updateError) {
+        console.error('❌ Error updating session count:', updateError)
+        return NextResponse.json(
+          { error: 'Failed to update session count' },
+          { status: 500 }
+        )
+      }
+
+      // Log session usage
+      await supabase
+        .from('session_usage')
+        .insert([{
+          customer_card_id: customerCardId,
+          business_id: businessId || membershipCard.business_id,
+          marked_by: markedBy,
+          usage_type: 'session',
+          notes: notes
+        }])
+
+      updateResult = {
         success: true,
-        message: isCompleted 
-          ? '🎉 Congratulations! Your reward is ready to claim!' 
-          : `Stamp added! ${stampsRemaining} more stamps needed for your reward.`,
-        customerCard: {
-          id: customerCard.id,
-          currentStamps: newStampCount,
-          totalStamps: cardData.total_stamps,
-          isCompleted,
-          stampsRemaining,
-          rewardGenerated,
-          stampCard: {
-            name: cardData.name,
-            rewardDescription: cardData.reward_description
-          },
-          business: {
-            name: businessData.name
-          }
+        card_type: 'membership',
+        sessions_used: newSessionCount,
+        total_sessions: totalSessions,
+        sessions_remaining: sessionsRemaining,
+        progress_percentage: Math.round((newSessionCount / totalSessions) * 100),
+        expiry_date: customerCard.expiry_date,
+        message: `Session marked! ${sessionsRemaining} sessions remaining.`
+      }
+
+      console.log(`✅ Session marked: ${newSessionCount}/${totalSessions} (${sessionsRemaining} remaining)`)
+    }
+
+    // Add to wallet update queue for real-time wallet updates
+    const queueMetadata = {
+      customer_name: customerCard.customers.name,
+      business_name: isStampCard 
+        ? customerCard.stamp_cards!.businesses.name 
+        : customerCard.membership_cards!.businesses.name,
+      card_name: isStampCard 
+        ? customerCard.stamp_cards!.name 
+        : customerCard.membership_cards!.name,
+      previous_progress: isStampCard 
+        ? customerCard.current_stamps 
+        : customerCard.sessions_used,
+      new_progress: isStampCard 
+        ? updateResult.current_stamps 
+        : updateResult.sessions_used,
+      wallet_type: customerCard.wallet_type,
+      timestamp: new Date().toISOString()
+    }
+
+    const { error: queueError } = await supabase
+      .from('wallet_update_queue')
+      .insert([{
+        customer_card_id: customerCardId,
+        update_type: updateType,
+        metadata: queueMetadata
+      }])
+
+    if (queueError) {
+      console.error('⚠️ Warning: Failed to add to wallet update queue:', queueError)
+      // Don't fail the request if queue update fails
+    } else {
+      console.log(`📤 Added ${updateType} to wallet update queue`)
+    }
+
+    // Trigger wallet queue processing (fire and forget)
+    if (process.env.NODE_ENV === 'production') {
+      fetch('/api/wallet/process-updates', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.ADMIN_DEBUG_TOKEN || 'admin-debug-token'}`,
+          'Content-Type': 'application/json'
         }
+      }).catch(error => {
+        console.error('⚠️ Warning: Failed to trigger wallet queue processing:', error)
       })
     }
 
+    return NextResponse.json({
+      success: true,
+      data: updateResult,
+      wallet_update_queued: !queueError
+    })
+
   } catch (error) {
-    console.error('Error in add stamp API:', error)
-    
-    if (error instanceof z.ZodError) {
+    console.error('❌ STAMP/SESSION ADD ERROR:', error)
+    return NextResponse.json(
+      { 
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    )
+  }
+}
+
+// GET endpoint to check stamp/session addition status
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const customerCardId = searchParams.get('customerCardId')
+
+    if (!customerCardId) {
       return NextResponse.json(
-        { error: 'Invalid request data', details: error.issues },
+        { error: 'Customer card ID is required' },
         { status: 400 }
       )
     }
 
+    const supabase = createAdminClient()
+
+    // Get current card status
+    const { data: customerCard, error } = await supabase
+      .from('customer_cards')
+      .select(`
+        id,
+        stamp_card_id,
+        membership_card_id,
+        current_stamps,
+        sessions_used,
+        expiry_date,
+        stamp_cards(name, total_stamps, reward_description),
+        membership_cards(name, total_sessions, cost)
+      `)
+      .eq('id', customerCardId)
+      .single()
+
+    if (error || !customerCard) {
+      return NextResponse.json(
+        { error: 'Customer card not found' },
+        { status: 404 }
+      )
+    }
+
+    const isStampCard = customerCard.stamp_card_id !== null
+    
+    let cardStatus
+    if (isStampCard) {
+      const stampCard = customerCard.stamp_cards!
+      cardStatus = {
+        card_type: 'stamp',
+        current_stamps: customerCard.current_stamps,
+        total_stamps: stampCard.total_stamps,
+        progress_percentage: Math.round((customerCard.current_stamps / stampCard.total_stamps) * 100),
+        is_complete: customerCard.current_stamps >= stampCard.total_stamps,
+        card_name: stampCard.name,
+        reward_description: stampCard.reward_description
+      }
+    } else {
+      const membershipCard = customerCard.membership_cards!
+      const isExpired = customerCard.expiry_date && new Date(customerCard.expiry_date) < new Date()
+      cardStatus = {
+        card_type: 'membership',
+        sessions_used: customerCard.sessions_used,
+        total_sessions: membershipCard.total_sessions,
+        sessions_remaining: membershipCard.total_sessions - customerCard.sessions_used,
+        progress_percentage: Math.round((customerCard.sessions_used / membershipCard.total_sessions) * 100),
+        is_expired: isExpired,
+        expiry_date: customerCard.expiry_date,
+        card_name: membershipCard.name,
+        cost: membershipCard.cost
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      card_status: cardStatus
+    })
+
+  } catch (error) {
+    console.error('Error fetching card status:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
