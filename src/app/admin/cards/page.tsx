@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { AdminLayout } from '@/components/layouts/AdminLayout'
+import { AdminLayoutClient } from '@/components/layouts/AdminLayoutClient'
 import LivePreviewBuilder from '@/components/wallet/LivePreviewBuilder'
 import { createClient } from '@/lib/supabase'
 import { 
@@ -71,8 +71,6 @@ interface MembershipCard {
 
 export default function AdminCardsPage() {
   const router = useRouter()
-  const [isAdmin, setIsAdmin] = useState(false)
-  const [authLoading, setAuthLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'stamp' | 'membership'>('stamp')
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'draft'>('all')
@@ -88,45 +86,8 @@ export default function AdminCardsPage() {
     activeCards: 0
   })
 
-  // Admin authentication check
-  useEffect(() => {
-    async function checkAdminAuth() {
-      try {
-        const supabase = createClient()
-        const { data: { user } } = await supabase.auth.getUser()
-        
-        if (!user) {
-          router.push('/auth/login')
-          return
-        }
-
-        const { data: userData } = await supabase
-          .from('users')
-          .select('role_id')
-          .eq('id', user.id)
-          .single()
-
-        if (userData?.role_id !== 1) {
-          router.push('/')
-          return
-        }
-
-        setIsAdmin(true)
-      } catch (error) {
-        console.error('Auth check failed:', error)
-        router.push('/auth/login')
-      } finally {
-        setAuthLoading(false)
-      }
-    }
-
-    checkAdminAuth()
-  }, [router])
-
   // Load cards data
   useEffect(() => {
-    if (!isAdmin) return
-
     async function loadCards() {
       setIsLoading(true)
       try {
@@ -202,7 +163,7 @@ export default function AdminCardsPage() {
     }
 
     loadCards()
-  }, [isAdmin])
+  }, [])
 
   const filteredStampCards = stampCards.filter(card => {
     const matchesSearch = card.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -246,26 +207,15 @@ export default function AdminCardsPage() {
     setPreviewCard(cardData)
   }
 
-  if (authLoading || !isAdmin) {
-    return (
-      <div className="min-h-screen bg-background p-4 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Checking admin access...</p>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <AdminLayout>
-      <div className="min-h-screen bg-background p-6">
+    <AdminLayoutClient>
+      <div className="p-6">
         <div className="max-w-7xl mx-auto space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold">Card Management</h1>
-              <p className="text-muted-foreground">Create and manage loyalty and membership cards</p>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Card Management</h1>
+              <p className="text-gray-600 dark:text-gray-400">Create and manage loyalty and membership cards</p>
             </div>
             <Button 
               onClick={() => router.push('/admin/cards/new')}
@@ -281,12 +231,12 @@ export default function AdminCardsPage() {
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <Star className="h-5 w-5 text-blue-600" />
+                  <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
+                    <Star className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Stamp Cards</p>
-                    <p className="text-2xl font-bold">{stats.totalStampCards}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Stamp Cards</p>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalStampCards}</p>
                   </div>
                 </div>
               </CardContent>
@@ -295,12 +245,12 @@ export default function AdminCardsPage() {
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                    <Clock className="h-5 w-5 text-red-600" />
+                  <div className="w-10 h-10 bg-red-100 dark:bg-red-900 rounded-lg flex items-center justify-center">
+                    <Clock className="h-5 w-5 text-red-600 dark:text-red-400" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Membership Cards</p>
-                    <p className="text-2xl font-bold">{stats.totalMembershipCards}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Membership Cards</p>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalMembershipCards}</p>
                   </div>
                 </div>
               </CardContent>
@@ -309,12 +259,12 @@ export default function AdminCardsPage() {
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                    <Users className="h-5 w-5 text-green-600" />
+                  <div className="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
+                    <Users className="h-5 w-5 text-green-600 dark:text-green-400" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Total Customers</p>
-                    <p className="text-2xl font-bold">{stats.totalCustomers}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Total Customers</p>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalCustomers}</p>
                   </div>
                 </div>
               </CardContent>
@@ -323,12 +273,12 @@ export default function AdminCardsPage() {
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <Activity className="h-5 w-5 text-purple-600" />
+                  <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
+                    <Activity className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Active Cards</p>
-                    <p className="text-2xl font-bold">{stats.activeCards}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Active Cards</p>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.activeCards}</p>
                   </div>
                 </div>
               </CardContent>
@@ -343,7 +293,7 @@ export default function AdminCardsPage() {
                 <CardContent className="p-4 space-y-4">
                   <div className="flex gap-4">
                     <div className="flex-1 relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                       <Input
                         placeholder="Search cards..."
                         value={searchTerm}
@@ -354,7 +304,7 @@ export default function AdminCardsPage() {
                     <select
                       value={statusFilter}
                       onChange={(e) => setStatusFilter(e.target.value as any)}
-                      className="px-3 py-2 border border-input rounded-md bg-background"
+                      className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                     >
                       <option value="all">All Status</option>
                       <option value="active">Active</option>
@@ -370,27 +320,32 @@ export default function AdminCardsPage() {
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="stamp" className="flex items-center gap-2">
                     <Star className="h-4 w-4" />
-                    Stamp Cards ({filteredStampCards.length})
+                    📮 Stamp Cards ({filteredStampCards.length})
                   </TabsTrigger>
                   <TabsTrigger value="membership" className="flex items-center gap-2">
                     <Clock className="h-4 w-4" />
-                    Membership Cards ({filteredMembershipCards.length})
+                    🎟️ Membership Cards ({filteredMembershipCards.length})
                   </TabsTrigger>
                 </TabsList>
 
                 {/* Stamp Cards Tab */}
                 <TabsContent value="stamp" className="space-y-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white">📮 Stamp Cards</h2>
+                    <Badge variant="outline">{filteredStampCards.length} cards</Badge>
+                  </div>
+                  
                   {isLoading ? (
                     <div className="text-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                      <p className="mt-2 text-muted-foreground">Loading stamp cards...</p>
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                      <p className="mt-2 text-gray-600 dark:text-gray-400">Loading stamp cards...</p>
                     </div>
                   ) : filteredStampCards.length === 0 ? (
                     <Card>
                       <CardContent className="p-8 text-center">
-                        <Star className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                        <h3 className="text-lg font-semibold mb-2">No stamp cards found</h3>
-                        <p className="text-muted-foreground mb-4">
+                        <Star className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">No stamp cards found</h3>
+                        <p className="text-gray-600 dark:text-gray-400 mb-4">
                           {searchTerm ? 'No cards match your search criteria.' : 'Create your first stamp card to get started.'}
                         </p>
                         {!searchTerm && (
@@ -408,13 +363,13 @@ export default function AdminCardsPage() {
                             <div className="flex items-center justify-between">
                               <div className="flex-1">
                                 <div className="flex items-center gap-3 mb-2">
-                                  <h3 className="font-semibold">{card.name}</h3>
+                                  <h3 className="font-semibold text-gray-900 dark:text-white">{card.name}</h3>
                                   <Badge variant={card.status === 'active' ? 'default' : 
                                                card.status === 'draft' ? 'secondary' : 'destructive'}>
                                     {card.status}
                                   </Badge>
                                 </div>
-                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
                                   <div className="flex items-center gap-1">
                                     <Building className="h-3 w-3" />
                                     {card.businesses.name}
@@ -455,17 +410,22 @@ export default function AdminCardsPage() {
 
                 {/* Membership Cards Tab */}
                 <TabsContent value="membership" className="space-y-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white">🎟️ Membership Cards</h2>
+                    <Badge variant="outline">{filteredMembershipCards.length} cards</Badge>
+                  </div>
+                  
                   {isLoading ? (
                     <div className="text-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                      <p className="mt-2 text-muted-foreground">Loading membership cards...</p>
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                      <p className="mt-2 text-gray-600 dark:text-gray-400">Loading membership cards...</p>
                     </div>
                   ) : filteredMembershipCards.length === 0 ? (
                     <Card>
                       <CardContent className="p-8 text-center">
-                        <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                        <h3 className="text-lg font-semibold mb-2">No membership cards found</h3>
-                        <p className="text-muted-foreground mb-4">
+                        <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">No membership cards found</h3>
+                        <p className="text-gray-600 dark:text-gray-400 mb-4">
                           {searchTerm ? 'No cards match your search criteria.' : 'Create your first membership card to get started.'}
                         </p>
                         {!searchTerm && (
@@ -483,13 +443,13 @@ export default function AdminCardsPage() {
                             <div className="flex items-center justify-between">
                               <div className="flex-1">
                                 <div className="flex items-center gap-3 mb-2">
-                                  <h3 className="font-semibold">{card.name}</h3>
+                                  <h3 className="font-semibold text-gray-900 dark:text-white">{card.name}</h3>
                                   <Badge variant={card.status === 'active' ? 'default' : 
                                                card.status === 'draft' ? 'secondary' : 'destructive'}>
                                     {card.status}
                                   </Badge>
                                 </div>
-                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
                                   <div className="flex items-center gap-1">
                                     <Building className="h-3 w-3" />
                                     {card.businesses.name}
@@ -556,9 +516,9 @@ export default function AdminCardsPage() {
               ) : (
                 <Card className="sticky top-6">
                   <CardContent className="p-8 text-center">
-                    <Eye className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">Live Preview</h3>
-                    <p className="text-muted-foreground">
+                    <Eye className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Live Preview</h3>
+                    <p className="text-gray-600 dark:text-gray-400">
                       Click the preview button on any card to see how it will look in different wallets.
                     </p>
                   </CardContent>
@@ -568,6 +528,6 @@ export default function AdminCardsPage() {
           </div>
         </div>
       </div>
-    </AdminLayout>
+    </AdminLayoutClient>
   )
 } 

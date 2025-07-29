@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { AdminLayout } from '@/components/layouts/AdminLayout'
+import { AdminLayoutClient } from '@/components/layouts/AdminLayoutClient'
 import LivePreviewBuilder from '@/components/wallet/LivePreviewBuilder'
 import { createClient } from '@/lib/supabase'
 import { ArrowLeft, Save, Eye, Palette, Settings, Zap } from 'lucide-react'
@@ -300,7 +300,7 @@ export default function NewCardPage() {
   }
 
   return (
-    <AdminLayout>
+    <AdminLayoutClient>
       <div className="min-h-screen bg-background p-6">
         <div className="max-w-6xl mx-auto space-y-6">
           {/* Header */}
@@ -611,6 +611,6 @@ export default function NewCardPage() {
           </div>
         </div>
       </div>
-    </AdminLayout>
+    </AdminLayoutClient>
   )
 } 
