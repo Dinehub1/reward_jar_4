@@ -153,8 +153,7 @@ export async function POST(request: NextRequest) {
         .from('customer_cards')
         .select('id')
         .eq('customer_id', customer.id)
-        .eq('stamp_card_id', cardId) // Using stamp_card_id for both types for simplicity
-        .eq('membership_type', 'gym')
+        .eq('membership_card_id', cardId)
         .single()
 
       if (existingCard) {
@@ -183,16 +182,14 @@ export async function POST(request: NextRequest) {
       expiryDate.setDate(expiryDate.getDate() + durationDays)
     }
 
-    // Create customer card relationship with type-specific data
+    // Create customer card relationship with unified schema
     const customerCardData = {
       customer_id: customer.id,
-      stamp_card_id: cardId, // Using for both types
-      current_stamps: isLoyaltyCard ? 0 : undefined,
-      membership_type: isLoyaltyCard ? 'loyalty' : 'gym',
-      total_sessions: isMembershipCard ? cardData.total_sessions : undefined,
-      sessions_used: isMembershipCard ? 0 : undefined,
-      cost: isMembershipCard ? cardData.cost : undefined,
-      expiry_date: expiryDate ? expiryDate.toISOString() : undefined,
+      stamp_card_id: isLoyaltyCard ? cardId : null,
+      membership_card_id: isMembershipCard ? cardId : null,
+      current_stamps: isLoyaltyCard ? 0 : 0,
+      sessions_used: isMembershipCard ? 0 : 0,
+      expiry_date: expiryDate ? expiryDate.toISOString() : null,
       wallet_type: walletType || 'pwa',
       wallet_pass_id: null // Will be generated when needed
     }

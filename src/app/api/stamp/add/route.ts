@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server-only'
+import { createAdminClient } from '@/lib/supabase/admin-client'
 import { z } from 'zod'
 
 // Validation schema
@@ -12,7 +12,7 @@ const addStampSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    const supabase = createAdminClient()
     
     // Parse and validate request body
     const body = await request.json()
@@ -20,26 +20,34 @@ export async function POST(request: NextRequest) {
     
     const { customerCardId, usageType } = validatedData
 
-    // Get customer card with full details including membership info
+    // Get customer card with unified schema details
     const { data: customerCard, error: cardError } = await supabase
       .from('customer_cards')
       .select(`
         id,
         customer_id,
         stamp_card_id,
+        membership_card_id,
         current_stamps,
-        membership_type,
         sessions_used,
-        total_sessions,
-        cost,
         expiry_date,
-        stamp_cards!inner (
+        stamp_cards (
           id,
           total_stamps,
           name,
           reward_description,
           business_id,
-          businesses!inner (
+          businesses (
+            name
+          )
+        ),
+        membership_cards (
+          id,
+          total_sessions,
+          name,
+          cost,
+          business_id,
+          businesses (
             name
           )
         )
@@ -54,52 +62,56 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const stampCardData = (customerCard.stamp_cards as unknown) as {
-      id: string
-      total_stamps: number
-      name: string
-      reward_description: string
-      business_id: string
-      businesses: {
-        name: string
-      }
-    }
-    const businessData = stampCardData?.businesses as {
-      name: string
-    }
+    // Determine card type from unified schema
+    const isStampCard = customerCard.stamp_card_id !== null
+    const isMembershipCard = customerCard.membership_card_id !== null
     
-    const stampCard = {
-      id: stampCardData.id,
-      total_stamps: stampCardData.total_stamps || 10,
-      name: stampCardData.name || 'Loyalty Card',
-      reward_description: stampCardData.reward_description || 'Reward',
-      business_id: stampCardData.business_id
+    if (!isStampCard && !isMembershipCard) {
+      return NextResponse.json(
+        { error: 'Invalid customer card: no card type found' },
+        { status: 400 }
+      )
     }
+
+    // Get card details based on type
+    let cardData: any
+    let businessData: any
     
-    const business = {
-      name: businessData?.name || 'Business'
+    if (isStampCard) {
+      cardData = customerCard.stamp_cards
+      businessData = cardData?.businesses
+    } else {
+      cardData = customerCard.membership_cards
+      businessData = cardData?.businesses
+    }
+
+    if (!cardData) {
+      return NextResponse.json(
+        { error: 'Card template not found' },
+        { status: 404 }
+      )
     }
 
     // Determine usage type based on card type if not provided
-    const actualUsageType = usageType || (customerCard.membership_type === 'gym' ? 'session' : 'stamp')
+    const actualUsageType = usageType || (isStampCard ? 'stamp' : 'session')
 
     // Validate usage type against card type
-    if (customerCard.membership_type === 'gym' && actualUsageType !== 'session') {
+    if (isMembershipCard && actualUsageType !== 'session') {
       return NextResponse.json(
-        { error: 'Gym memberships only support session marking' },
+        { error: 'Membership cards only support session marking' },
         { status: 400 }
       )
     }
 
-    if (customerCard.membership_type === 'loyalty' && actualUsageType !== 'stamp') {
+    if (isStampCard && actualUsageType !== 'stamp') {
       return NextResponse.json(
-        { error: 'Loyalty cards only support stamp addition' },
+        { error: 'Stamp cards only support stamp addition' },
         { status: 400 }
       )
     }
 
-    // Handle membership cards (gym sessions)
-    if (customerCard.membership_type === 'gym') {
+    // Handle membership cards (sessions)
+    if (isMembershipCard) {
       // Check if membership is expired
       if (customerCard.expiry_date && new Date(customerCard.expiry_date) < new Date()) {
         return NextResponse.json({
@@ -108,12 +120,12 @@ export async function POST(request: NextRequest) {
           membershipCard: {
             id: customerCard.id,
             sessionsUsed: customerCard.sessions_used || 0,
-            totalSessions: customerCard.total_sessions || 20,
+            totalSessions: cardData.total_sessions || 20,
             expiryDate: customerCard.expiry_date,
             isExpired: true,
             card: {
-              name: stampCard.name,
-              business: business
+              name: cardData.name,
+              business: businessData
             }
           }
         }, { status: 400 })
@@ -121,7 +133,7 @@ export async function POST(request: NextRequest) {
 
       // Check if all sessions are used
       const currentSessionsUsed = customerCard.sessions_used || 0
-      const totalSessions = customerCard.total_sessions || 20
+      const totalSessions = cardData.total_sessions || 20
 
       if (currentSessionsUsed >= totalSessions) {
         return NextResponse.json({
@@ -132,11 +144,11 @@ export async function POST(request: NextRequest) {
             sessionsUsed: currentSessionsUsed,
             totalSessions: totalSessions,
             isCompleted: true,
-            cost: customerCard.cost,
+            cost: cardData.cost,
             expiryDate: customerCard.expiry_date,
             card: {
-              name: stampCard.name,
-              business: business
+              name: cardData.name,
+              business: businessData
             }
           }
         })
@@ -146,7 +158,7 @@ export async function POST(request: NextRequest) {
       const { data: result, error: markError } = await supabase
         .rpc('mark_session_usage', {
           p_customer_card_id: customerCardId,
-          p_business_id: stampCard.business_id,
+          p_business_id: cardData.business_id,
           p_marked_by: null, // Can be set if business user is marking
           p_usage_type: 'session',
           p_notes: 'Session marked via stamp/add API'
@@ -176,34 +188,34 @@ export async function POST(request: NextRequest) {
           sessionsRemaining,
           isCompleted,
           isExpired: false,
-          cost: customerCard.cost,
+          cost: cardData.cost,
           expiryDate: customerCard.expiry_date,
           card: {
-            name: stampCard.name,
-            business: business
+            name: cardData.name,
+            business: businessData
           }
         }
       })
     }
 
-    // Handle loyalty cards (stamp collection) - existing logic
+    // Handle stamp cards (stamp collection)
     else {
       // Check if card is already completed
-      if (customerCard.current_stamps >= stampCard.total_stamps) {
+      if (customerCard.current_stamps >= cardData.total_stamps) {
         return NextResponse.json({
           success: true,
           message: 'Card already completed! Reward is ready to claim.',
           customerCard: {
             id: customerCard.id,
             currentStamps: customerCard.current_stamps,
-            totalStamps: stampCard.total_stamps,
+            totalStamps: cardData.total_stamps,
             isCompleted: true,
             stampCard: {
-              name: stampCard.name,
-              rewardDescription: stampCard.reward_description
+              name: cardData.name,
+              rewardDescription: cardData.reward_description
             },
             business: {
-              name: business.name
+              name: businessData.name
             }
           }
         })
@@ -242,7 +254,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Check if reward is now unlocked
-      const isCompleted = newStampCount >= stampCard.total_stamps
+      const isCompleted = newStampCount >= cardData.total_stamps
       let rewardGenerated = false
 
       if (isCompleted) {
@@ -263,7 +275,7 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      const stampsRemaining = Math.max(stampCard.total_stamps - newStampCount, 0)
+      const stampsRemaining = Math.max(cardData.total_stamps - newStampCount, 0)
 
       return NextResponse.json({
         success: true,
@@ -273,16 +285,16 @@ export async function POST(request: NextRequest) {
         customerCard: {
           id: customerCard.id,
           currentStamps: newStampCount,
-          totalStamps: stampCard.total_stamps,
+          totalStamps: cardData.total_stamps,
           isCompleted,
           stampsRemaining,
           rewardGenerated,
           stampCard: {
-            name: stampCard.name,
-            rewardDescription: stampCard.reward_description
+            name: cardData.name,
+            rewardDescription: cardData.reward_description
           },
           business: {
-            name: business.name
+            name: businessData.name
           }
         }
       })

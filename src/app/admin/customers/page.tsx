@@ -26,8 +26,16 @@ interface Customer {
   customer_cards: Array<{
     id: string
     current_stamps: number
-    membership_type: string
-    stamp_cards: {
+    sessions_used: number
+    stamp_card_id: string | null
+    membership_card_id: string | null
+    stamp_cards?: {
+      name: string
+      businesses: {
+        name: string
+      }
+    }
+    membership_cards?: {
       name: string
       businesses: {
         name: string
@@ -57,8 +65,14 @@ async function getCustomers() {
         customer_cards(
           id,
           current_stamps,
-          membership_type,
+          sessions_used,
+          stamp_card_id,
+          membership_card_id,
           stamp_cards(
+            name,
+            businesses(name)
+          ),
+          membership_cards(
             name,
             businesses(name)
           )

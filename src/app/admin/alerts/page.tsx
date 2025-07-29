@@ -5,8 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { createAdminClient } from '@/lib/supabase/admin-client'
 import { 
   AlertTriangle, 
   TrendingDown, 
@@ -30,18 +29,7 @@ interface Alert {
 }
 
 async function getInactiveBusinesses() {
-  const cookieStore = await cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-      },
-    }
-  )
+  const supabase = createAdminClient()
 
   try {
     const { data: businesses, error } = await supabase
@@ -50,7 +38,9 @@ async function getInactiveBusinesses() {
         id,
         name,
         created_at,
-        customer_cards:stamp_cards(customer_cards(created_at))
+        stamp_cards(
+          customer_cards(created_at)
+        )
       `)
       .lt('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
       .limit(10)
@@ -77,18 +67,7 @@ async function getInactiveBusinesses() {
 }
 
 async function getAbnormalActivity() {
-  const cookieStore = await cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-      },
-    }
-  )
+  const supabase = createAdminClient()
 
   try {
     // This would be more complex in a real scenario
@@ -101,18 +80,7 @@ async function getAbnormalActivity() {
 }
 
 async function getNewBusinesses() {
-  const cookieStore = await cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-      },
-    }
-  )
+  const supabase = createAdminClient()
 
   try {
     const { data: businesses, error } = await supabase

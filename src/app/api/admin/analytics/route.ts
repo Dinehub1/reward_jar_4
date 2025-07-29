@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
             name,
             total_stamps,
             businesses!inner(name),
-            customer_cards(id, current_stamps, sessions_used, membership_type)
+            customer_cards(id, current_stamps, stamp_card_id)
           `)
           .like('id', '20000000%')
 
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
           enrolled_customers: card.customer_cards?.length || 0,
           avg_progress: card.customer_cards?.length > 0 
             ? card.customer_cards.reduce((sum: number, cc: any) => 
-                sum + (cc.membership_type === 'loyalty' ? cc.current_stamps : cc.sessions_used), 0
+                sum + (cc.stamp_card_id ? cc.current_stamps : 0), 0
               ) / card.customer_cards.length
             : 0
         })) || []
@@ -105,12 +105,12 @@ export async function GET(request: NextRequest) {
             cost,
             total_sessions,
             businesses!inner(name),
-            customer_cards(id, sessions_used, expiry_date, membership_type)
+            customer_cards(id, sessions_used, expiry_date, membership_card_id)
           `)
           .like('id', '30000000%')
 
         const revenueData = membershipRevenue?.map(membership => {
-          const activeMemberships = membership.customer_cards?.filter((cc: any) => cc.membership_type === 'gym') || []
+          const activeMemberships = membership.customer_cards?.filter((cc: any) => cc.membership_card_id) || []
           const totalRevenue = activeMemberships.length * (membership.cost || 0)
           const expiringSoon = activeMemberships.filter((cc: any) => 
             cc.expiry_date && new Date(cc.expiry_date) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
