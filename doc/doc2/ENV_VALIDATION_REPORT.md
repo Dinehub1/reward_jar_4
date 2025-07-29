@@ -400,7 +400,7 @@ curl -s http://localhost:3000/test/wallet-preview | grep -o "Membership Cards"
 - ✅ **MCP Integration**: Operational with direct database access
 
 **Database Integration**: ✅ **FULLY OPERATIONAL WITH DUAL CARD SUPPORT**
-- ✅ **Customer Cards**: 439 total (410 loyalty + 29 membership cards)
+- ✅ **Customer Cards**: 51 total (34 stamp + 17 membership cards) with diverse test data
 - ✅ **Session Tracking**: Operational with mark_session_usage function
 - ✅ **Wallet APIs**: Apple, Google, PWA all support both card types
 - ✅ **Real-time Updates**: Session marking and wallet synchronization working
