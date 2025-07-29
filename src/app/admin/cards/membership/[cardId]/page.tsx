@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
-import AdminLayout from '@/components/layouts/AdminLayout'
+import { AdminLayoutClient } from '@/components/layouts/AdminLayoutClient'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -241,17 +241,17 @@ export default function AdminMembershipCardDetailPage() {
 
   if (loading) {
     return (
-      <AdminLayout>
+      <AdminLayoutClient>
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         </div>
-      </AdminLayout>
+      </AdminLayoutClient>
     )
   }
 
   if (error || !card) {
     return (
-      <AdminLayout>
+      <AdminLayoutClient>
         <div className="space-y-6">
           <div className="flex items-center space-x-4">
             <Button variant="outline" onClick={() => router.back()}>
@@ -265,12 +265,12 @@ export default function AdminMembershipCardDetailPage() {
             </CardContent>
           </Card>
         </div>
-      </AdminLayout>
+      </AdminLayoutClient>
     )
   }
 
   return (
-    <AdminLayout>
+    <AdminLayoutClient>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -609,6 +609,6 @@ export default function AdminMembershipCardDetailPage() {
           </div>
         )}
       </div>
-    </AdminLayout>
+    </AdminLayoutClient>
   )
 } 

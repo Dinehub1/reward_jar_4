@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server-only'
 import { v4 as uuid } from 'uuid'
 
 // Type definition for membership data from Supabase

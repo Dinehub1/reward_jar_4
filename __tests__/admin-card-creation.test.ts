@@ -6,7 +6,7 @@
  * @created July 28, 2025
  */
 
-import { describe, it, expect, beforeEach, afterEach } from '@jest/globals'
+// No need to import Jest globals - they're available globally
 import { createClient } from '@supabase/supabase-js'
 
 // Test configuration

@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ArrowLeft, Save, CheckCircle, AlertCircle, Calendar, DollarSign, Users, Building } from 'lucide-react'
 import Link from 'next/link'
-import AdminLayout from '@/components/layouts/AdminLayout'
+import { AdminLayoutClient } from '@/components/layouts/AdminLayoutClient'
 
 // Form validation interfaces
 interface MembershipCardForm {
@@ -252,7 +252,7 @@ export default function AdminNewMembershipCard() {
   }
 
   return (
-    <AdminLayout>
+    <AdminLayoutClient>
       <div className="max-w-4xl mx-auto p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6 overflow-hidden">
       {/* Header */}
       <div className="flex flex-col space-y-3 md:flex-row md:items-center md:space-y-0 md:space-x-4">
@@ -630,6 +630,6 @@ export default function AdminNewMembershipCard() {
         </div>
       )}
       </div>
-    </AdminLayout>
+    </AdminLayoutClient>
   )
 } 

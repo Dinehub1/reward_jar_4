@@ -74,6 +74,25 @@ graph TD
 
 ### Card Display & Visual Design
 
+#### Card Type Detection (UNIFIED SCHEMA)
+```typescript
+const cardTypeDetection = {
+  determineCardType: (customerCard) => {
+    if (customerCard.stamp_card_id) return 'stamp_card';
+    if (customerCard.membership_card_id) return 'membership_card';
+    return 'invalid';
+  },
+  progressCalculation: {
+    stamp_card: "(current_stamps / stamp_cards.total_stamps) * 100",
+    membership_card: "(sessions_used / membership_cards.total_sessions) * 100"
+  },
+  themeSelection: {
+    stamp_card: "Green theme (#10b981)",
+    membership_card: "Indigo theme (#6366f1)"
+  }
+};
+```
+
 #### Loyalty Card Design (Green Theme)
 ```typescript
 const loyaltyCardDisplay = {
@@ -115,9 +134,9 @@ const membershipCardDisplay = {
   },
   data: {
     sessionsUsed: "customer_cards.sessions_used",
-    totalSessions: "customer_cards.total_sessions",
+    totalSessions: "membership_cards.total_sessions",
     expiryDate: "customer_cards.expiry_date",
-    membershipCost: "customer_cards.cost"
+    membershipCost: "membership_cards.cost"
   }
 };
 ```
@@ -217,11 +236,12 @@ graph TD
     H --> I[Request New Cards from Admin]
 ```
 
-**Key Changes**:
-- ❌ **Removed**: Card creation capabilities (`/business/cards/new` routes deprecated)
-- ✅ **Enhanced**: Customer management and analytics focus
-- ✅ **Improved**: Streamlined operations for assigned cards
-- ✅ **Added**: Admin request system for new cards
+**Key Changes (ADMIN-ONLY CARD CREATION)**:
+- ❌ **Removed**: All card creation capabilities from business dashboard
+- ❌ **Deprecated**: `/business/cards/new`, `/business/stamp-cards/new`, `/business/memberships/new`
+- ✅ **Enhanced**: Focus on customer management and analytics for assigned cards
+- ✅ **Improved**: Streamlined operations for admin-created cards
+- ✅ **Added**: Support request system for new card requests to admin
 
 ### Enhanced Dashboard Features
 
@@ -276,16 +296,18 @@ const billAmountModal = {
 ```typescript
 const managerPermissions = {
   allowed: [
-    "Add stamps with bill amount modal",
+    "Add stamps to admin-created cards with bill amount modal",
+    "Mark sessions on admin-created membership cards",
     "Redeem customer rewards",
-    "View customer card details",
-    "Generate location QR codes"
+    "View customer card details for assigned cards",
+    "Generate QR codes for assigned cards"
   ],
   restricted: [
-    "Create new loyalty cards",
-    "Modify business profile",
-    "Access financial analytics",
-    "Delete customer data"
+    "Create ANY new cards (stamp or membership) - ADMIN ONLY",
+    "Delete or modify card templates - ADMIN ONLY", 
+    "Modify business profile settings",
+    "Access comprehensive financial analytics",
+    "Delete customer data or history"
   ],
   ui: {
     section: "Manager Mode toggle in dashboard",
@@ -328,14 +350,17 @@ const analyticsTabsStructure = {
 
 ## ⚙️ Admin Journey
 
-### Full System Access
+### Comprehensive System Control ✅ ENHANCED
 
-#### Admin Dashboard Structure (Updated with Card Management)
+#### Admin Dashboard Structure (Complete Control Center)
 ```typescript
 const adminDashboard = {
   routes: {
-    main: "/admin",
-    cards: "/admin/cards", // NEW: Centralized card management
+    main: "/admin", // System overview and metrics
+    businesses: "/admin/businesses", // Business management and control
+    businessDetails: "/admin/businesses/[id]", // Individual business control
+    customers: "/admin/customers", // Customer monitoring and support
+    cards: "/admin/cards", // Centralized card management
     cardCreation: {
       stamp: "/admin/cards/stamp/new",
       membership: "/admin/cards/membership/new"
@@ -344,17 +369,18 @@ const adminDashboard = {
       stamp: "/admin/cards/stamp/[cardId]",
       membership: "/admin/cards/membership/[cardId]"
     },
-    businesses: "/admin/businesses",
-    customers: "/admin/customers", 
-    support: "/admin/support",
-    analytics: "/admin/analytics"
+    alerts: "/admin/alerts", // System monitoring and alerts
+    support: "/admin/support", // Manual override tools
+    sandbox: "/admin/sandbox" // Testing and preview environment
   },
   permissions: {
-    level: "Full system access + Card Creation Authority",
-    dataAccess: "All business and customer data",
-    modifications: "Can edit/delete any record",
+    level: "Full system access + Complete Platform Control",
+    dataAccess: "All business, customer, and system data",
+    modifications: "Can edit/delete any record with audit logging",
     cardManagement: "Exclusive card creation and assignment rights",
-    support: "Manual operations and overrides"
+    businessControl: "Flag, impersonate, and manage all businesses",
+    customerSupport: "Manual interventions and issue resolution",
+    systemMonitoring: "Real-time alerts and anomaly detection"
   }
 };
 ```

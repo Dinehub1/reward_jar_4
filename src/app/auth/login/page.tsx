@@ -216,6 +216,7 @@ function LoginContent() {
                     type="email"
                     placeholder="Enter your email"
                     className="pl-10"
+                    data-testid="email-input"
                     {...form.register('email')}
                   />
                 </div>
@@ -235,6 +236,7 @@ function LoginContent() {
                     type="password"
                     placeholder="Enter your password"
                     className="pl-10"
+                    data-testid="password-input"
                     {...form.register('password')}
                   />
                 </div>
@@ -247,6 +249,7 @@ function LoginContent() {
                 type="submit" 
                 className="w-full"
                 disabled={isSubmitting}
+                data-testid="login-button"
               >
                 {isSubmitting ? 'Signing In...' : 'Sign In'}
               </Button>

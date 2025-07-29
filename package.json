@@ -7,10 +7,18 @@
     "dev:https": "node server.js",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:admin": "jest --testPathPattern=admin-card-creation.test.ts",
+    "test:e2e": "playwright test",
+    "test:admin-e2e": "playwright test admin-card-management.spec.ts",
+    "test:join-e2e": "playwright test card-join-flow.spec.ts",
+    "test:all": "./scripts/test-admin-card-creation.sh"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.1.1",
+    "@radix-ui/react-dropdown-menu": "^2.1.15",
     "@radix-ui/react-label": "^2.1.7",
     "@radix-ui/react-select": "^2.2.5",
     "@radix-ui/react-slot": "^1.2.3",
@@ -44,6 +52,8 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@playwright/test": "^1.54.1",
+    "@types/jest": "^29.5.14",
     "@types/node": "^20",
     "@types/qrcode": "^1.5.5",
     "@types/react": "^19",
@@ -52,8 +62,11 @@
     "autoprefixer": "^10.4.21",
     "eslint": "^9",
     "eslint-config-next": "15.3.5",
+    "jest": "^29.7.0",
+    "jest-environment-node": "^29.7.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
+    "ts-jest": "^29.4.0",
     "typescript": "^5",
     "uuid-validate": "^0.0.3"
   }

@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: 'class', // Enable class-based dark mode
   content: [
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
@@ -8,44 +9,45 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        border: "rgb(229, 231, 235)", // gray-200
-        input: "rgb(229, 231, 235)", // gray-200
-        ring: "rgb(59, 130, 246)", // blue-500
-        background: "rgb(255, 255, 255)", // white
-        foreground: "rgb(17, 24, 39)", // gray-900
+        // CSS variable-based colors for dark mode
+        border: "rgb(var(--border) / <alpha-value>)",
+        input: "rgb(var(--input) / <alpha-value>)",
+        ring: "rgb(var(--ring) / <alpha-value>)",
+        background: "rgb(var(--background) / <alpha-value>)",
+        foreground: "rgb(var(--foreground) / <alpha-value>)",
         primary: {
-          DEFAULT: "rgb(37, 99, 235)", // blue-600
-          foreground: "rgb(255, 255, 255)", // white
+          DEFAULT: "rgb(var(--primary) / <alpha-value>)",
+          foreground: "rgb(var(--primary-foreground) / <alpha-value>)",
         },
         secondary: {
-          DEFAULT: "rgb(243, 244, 246)", // gray-100
-          foreground: "rgb(17, 24, 39)", // gray-900
+          DEFAULT: "rgb(var(--secondary) / <alpha-value>)",
+          foreground: "rgb(var(--secondary-foreground) / <alpha-value>)",
         },
         destructive: {
-          DEFAULT: "rgb(239, 68, 68)", // red-500
-          foreground: "rgb(255, 255, 255)", // white
+          DEFAULT: "rgb(var(--destructive) / <alpha-value>)",
+          foreground: "rgb(var(--destructive-foreground) / <alpha-value>)",
         },
         muted: {
-          DEFAULT: "rgb(243, 244, 246)", // gray-100
-          foreground: "rgb(107, 114, 128)", // gray-500
+          DEFAULT: "rgb(var(--muted) / <alpha-value>)",
+          foreground: "rgb(var(--muted-foreground) / <alpha-value>)",
         },
         accent: {
-          DEFAULT: "rgb(243, 244, 246)", // gray-100
-          foreground: "rgb(17, 24, 39)", // gray-900
+          DEFAULT: "rgb(var(--accent) / <alpha-value>)",
+          foreground: "rgb(var(--accent-foreground) / <alpha-value>)",
         },
         popover: {
-          DEFAULT: "rgb(255, 255, 255)", // white
-          foreground: "rgb(17, 24, 39)", // gray-900
+          DEFAULT: "rgb(var(--popover) / <alpha-value>)",
+          foreground: "rgb(var(--popover-foreground) / <alpha-value>)",
         },
         card: {
-          DEFAULT: "rgb(255, 255, 255)", // white
-          foreground: "rgb(17, 24, 39)", // gray-900
+          DEFAULT: "rgb(var(--card) / <alpha-value>)",
+          foreground: "rgb(var(--card-foreground) / <alpha-value>)",
         },
       },
       borderRadius: {
-        lg: "0.5rem",
-        md: "0.375rem",
-        sm: "0.25rem",
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],

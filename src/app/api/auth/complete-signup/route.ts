@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server-only'
 
 // Create a service role client that bypasses RLS
 const supabaseServiceRole = createServiceClient()

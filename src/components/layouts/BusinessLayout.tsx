@@ -7,6 +7,7 @@ import { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { getAuthStatus, signOut } from '@/lib/auth-protection'
 import { Menu, X, LogOut, User as UserIcon } from 'lucide-react'
+import { ThemeToggle } from '@/components/ui/theme-toggle'
 
 interface BusinessLayoutProps {
   children: React.ReactNode
@@ -38,74 +39,84 @@ export default function BusinessLayout({ children }: BusinessLayoutProps) {
 
         if (!authStatus.isBusiness) {
           console.error('BusinessLayout: User is not a business user, role_id:', authStatus.user?.role_id)
-          setAuthError(`Access denied: Business access requires role_id: 2, but user has role_id: ${authStatus.user?.role_id}`)
-          router.push('/auth/login?error=insufficient_permissions')
+          setAuthError('Access denied: Business account required')
+          setTimeout(() => router.push('/'), 2000)
           return
         }
 
-        console.log('BusinessLayout: Auth check successful for business user')
-        console.log('BusinessLayout: User:', authStatus.user?.email, 'Role:', authStatus.user?.role_id)
-        
-        // Get the actual Supabase User object for UI purposes
-        const { data: { user: supabaseUser } } = await supabase.auth.getUser()
-        setUser(supabaseUser)
-        setAuthError(null)
-        
+        console.log('BusinessLayout: Auth successful, setting user')
+        setUser(authStatus.user)
       } catch (error) {
         console.error('BusinessLayout: Auth check failed:', error)
-        setAuthError(error instanceof Error ? error.message : 'Authentication failed')
-        router.push('/auth/login?error=system_error')
+        setAuthError('Authentication failed')
+        setTimeout(() => router.push('/auth/login'), 2000)
       } finally {
         setLoading(false)
       }
     }
 
     checkAuth()
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        console.log('BusinessLayout: Auth state change:', event)
-        if (event === 'SIGNED_OUT' || !session) {
-          router.push('/auth/login')
-        } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          // Re-check auth when user signs in or token refreshes
-          checkAuth()
-        }
-      }
-    )
-
-    return () => subscription.unsubscribe()
-  }, [router, supabase])
+  }, [router])
 
   const handleSignOut = async () => {
     try {
-      console.log('BusinessLayout: Signing out...')
       await signOut()
-      router.push('/')
+      router.push('/auth/login')
     } catch (error) {
-      console.error('BusinessLayout: Sign out error:', error)
-      router.push('/') // Force navigation even if sign out fails
+      console.error('Sign out failed:', error)
     }
   }
 
+  const navigation = [
+    {
+      name: 'Dashboard',
+      href: '/business/dashboard',
+      icon: '📊',
+      current: pathname === '/business/dashboard'
+    },
+    {
+      name: 'Stamp Cards',
+      href: '/business/stamp-cards',
+      icon: '🎯',
+      current: pathname.startsWith('/business/stamp-cards')
+    },
+    {
+      name: 'Memberships',
+      href: '/business/memberships',
+      icon: '💳',
+      current: pathname.startsWith('/business/memberships')
+    },
+    {
+      name: 'Analytics',
+      href: '/business/analytics',
+      icon: '📈',
+      current: pathname === '/business/analytics'
+    },
+    {
+      name: 'Profile',
+      href: '/business/profile',
+      icon: '⚙️',
+      current: pathname === '/business/profile'
+    }
+  ]
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="text-lg font-medium text-gray-900">Loading...</div>
-          <div className="text-sm text-gray-500 mt-1">Verifying business account access</div>
-          {authError && (
-            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
-              <div className="text-sm text-red-700">{authError}</div>
-              <button
-                onClick={() => window.location.reload()}
-                className="mt-2 text-xs text-red-600 hover:text-red-800 underline"
-              >
-                Retry
-              </button>
-            </div>
-          )}
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <div className="text-muted-foreground">Loading...</div>
+        </div>
+      </div>
+    )
+  }
+
+  if (authError) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-destructive mb-4">{authError}</div>
+          <div className="text-muted-foreground">Redirecting...</div>
         </div>
       </div>
     )
@@ -113,120 +124,127 @@ export default function BusinessLayout({ children }: BusinessLayoutProps) {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="text-lg font-medium text-gray-900">Access Denied</div>
-          <div className="text-sm text-gray-500 mt-1">Redirecting to login...</div>
-          {authError && (
-            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md max-w-md">
-              <div className="text-sm text-red-700">{authError}</div>
-            </div>
-          )}
+          <div className="text-muted-foreground">Authenticating...</div>
         </div>
       </div>
     )
   }
 
-  const navigationItems = [
-    { name: 'Dashboard', href: '/business/dashboard', icon: '📊' },
-    { name: 'Stamp Cards', href: '/business/stamp-cards', icon: '🎫' },
-    { name: 'Memberships', href: '/business/memberships', icon: '💳' },
-    { name: 'Analytics', href: '/business/analytics', icon: '📈' },
-    { name: 'Profile', href: '/business/profile', icon: '⚙️' },
-  ]
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Mobile sidebar */}
-      <div className={`fixed inset-0 z-50 lg:hidden ${sidebarOpen ? 'block' : 'hidden'}`}>
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={() => setSidebarOpen(false)} />
-        <div className="relative flex w-64 flex-col bg-white">
-          <div className="flex items-center justify-between h-16 px-4 border-b">
-            <span className="text-xl font-semibold text-gray-900">RewardJar Business</span>
-            <button onClick={() => setSidebarOpen(false)} className="text-gray-400 hover:text-gray-600">
-              <X className="h-6 w-6" />
-            </button>
-          </div>
-          <nav className="flex-1 px-4 py-4 space-y-2">
-            {navigationItems.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  pathname === item.href
-                    ? 'bg-green-100 text-green-700'
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
-                onClick={() => setSidebarOpen(false)}
-              >
-                <span className="mr-3 text-lg">{item.icon}</span>
-                {item.name}
-              </Link>
-            ))}
-          </nav>
-        </div>
-      </div>
+    <div className="min-h-screen bg-background transition-colors duration-300">
+      {/* Mobile sidebar backdrop */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
-      {/* Desktop layout */}
-      <div className="lg:flex">
-        {/* Desktop sidebar */}
-        <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0">
-          <div className="flex flex-col flex-grow bg-white border-r border-gray-200">
-            <div className="flex items-center h-16 px-4 border-b">
-              <span className="text-xl font-semibold text-gray-900">RewardJar Business</span>
-            </div>
-            <nav className="flex-1 px-4 py-4 space-y-2">
-              {navigationItems.map((item) => (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                    pathname === item.href
-                      ? 'bg-green-100 text-green-700'
-                      : 'text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  <span className="mr-3 text-lg">{item.icon}</span>
-                  {item.name}
-                </Link>
-              ))}
-            </nav>
-          </div>
-        </div>
-
-        {/* Main content */}
-        <div className="lg:ml-64 flex-1">
-          {/* Top navigation */}
-          <div className="bg-white shadow-sm border-b">
-            <div className="flex items-center justify-between h-16 px-4 lg:px-6">
-              <button
-                onClick={() => setSidebarOpen(true)}
-                className="lg:hidden text-gray-400 hover:text-gray-600"
-              >
-                <Menu className="h-6 w-6" />
-              </button>
-              
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-2 text-sm text-gray-700">
-                  <UserIcon className="h-4 w-4" />
-                  <span>{user.email}</span>
-                </div>
-                <button
-                  onClick={handleSignOut}
-                  className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <LogOut className="h-4 w-4" />
-                  <span>Sign Out</span>
-                </button>
+      {/* Sidebar */}
+      <div className={`
+        fixed inset-y-0 left-0 z-50 w-64 bg-card border-r border-border transform transition-transform duration-300 ease-in-out
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0
+      `}>
+        <div className="flex flex-col h-full">
+          {/* Logo */}
+          <div className="flex items-center h-16 px-6 border-b border-border">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                <span className="text-primary-foreground font-bold text-sm">R</span>
+              </div>
+              <div>
+                <div className="font-semibold text-foreground">RewardJar</div>
+                <div className="text-xs text-muted-foreground">Business Portal</div>
               </div>
             </div>
           </div>
 
-          {/* Page content */}
-          <main className="flex-1">
-            {children}
-          </main>
+          {/* Navigation */}
+          <nav className="flex-1 px-4 py-6 space-y-2">
+            {navigation.map((item) => (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={`
+                  flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200
+                  ${item.current 
+                    ? 'bg-primary text-primary-foreground' 
+                    : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                  }
+                `}
+                onClick={() => setSidebarOpen(false)}
+              >
+                <span className="text-lg">{item.icon}</span>
+                <span>{item.name}</span>
+              </Link>
+            ))}
+          </nav>
+
+          {/* User info */}
+          <div className="p-4 border-t border-border">
+            <div className="flex items-center space-x-3 mb-3">
+              <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
+                <UserIcon className="w-4 h-4 text-muted-foreground" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-foreground truncate">
+                  {user.email}
+                </div>
+                <div className="text-xs text-muted-foreground">Business Account</div>
+              </div>
+            </div>
+            <button
+              onClick={handleSignOut}
+              className="flex items-center space-x-2 w-full px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-colors duration-200"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Sign Out</span>
+            </button>
+          </div>
         </div>
+      </div>
+
+      {/* Main content */}
+      <div className="lg:ml-64">
+        {/* Top bar */}
+        <div className="sticky top-0 z-30 bg-card border-b border-border px-4 lg:px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            {/* Mobile menu button */}
+            <button
+              type="button"
+              className="lg:hidden p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+            >
+              {sidebarOpen ? (
+                <X className="h-5 w-5" />
+              ) : (
+                <Menu className="h-5 w-5" />
+              )}
+            </button>
+            
+            <div className="text-lg font-semibold text-foreground lg:hidden">
+              RewardJar Business
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-4">
+            <div className="hidden sm:flex items-center space-x-2 text-sm">
+              <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+              <span className="text-muted-foreground">System Operational</span>
+            </div>
+            <div className="text-sm text-muted-foreground hidden md:block">
+              {new Date().toLocaleDateString()}
+            </div>
+            <ThemeToggle />
+          </div>
+        </div>
+
+        {/* Page content */}
+        <main className="flex-1">
+          {children}
+        </main>
       </div>
     </div>
   )

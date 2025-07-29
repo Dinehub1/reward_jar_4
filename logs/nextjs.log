@@ -4,134 +4,153 @@
 
    ▲ Next.js 15.3.5
    - Local:        http://localhost:3000
-   - Network:      http://192.168.29.83:3000
+   - Network:      http://192.168.29.198:3000
    - Environments: .env.local
 
  ✓ Starting...
- ✓ Ready in 8.7s
- ○ Compiling /api/health ...
- ✓ Compiled /api/health in 10.1s (361 modules)
- GET /api/health 200 in 11249ms
- ○ Compiling /api/health/env ...
- ✓ Compiled /api/health/env in 5.1s (510 modules)
-🔍 Starting environment validation...
-✅ Environment validation completed: 69% (9/13)
- GET /api/health/env 200 in 5674ms
- ○ Compiling /api/test/database-check ...
- ✓ Compiled /api/test/database-check in 4.3s (621 modules)
-🔍 Testing Supabase database connectivity...
-✅ Database query successful: []
- GET /api/test/database-check 200 in 5798ms
- ○ Compiling /api/auth/status ...
- ✓ Compiled /api/auth/status in 1685ms (623 modules)
-=== AUTH STATUS CHECK ===
-Auth Status: No authenticated user
- GET /api/auth/status 200 in 2153ms
- ○ Compiling /api/health/wallet ...
- ✓ Compiled /api/health/wallet in 2s (625 modules)
- GET /api/health/wallet 200 in 2409ms
- ○ Compiling /join/[cardId] ...
- ✓ Compiled /join/[cardId] in 20.8s (1300 modules)
- ✓ Compiled in 5.4s (450 modules)
- GET /join/faccf70b-eb79-45c7-ba0e-fcf9fe4a8498?guest=true 200 in 30029ms
- ○ Compiling /api/business/dashboard ...
- ✓ Compiled /api/business/dashboard in 2.8s (1286 modules)
-=== BUSINESS DASHBOARD API START ===
-Dashboard API: Authentication failed: Auth session missing!
- GET /api/business/dashboard 401 in 3595ms
- ○ Compiling /api/dev-seed ...
- ✓ Compiled /api/dev-seed in 1513ms (1288 modules)
- GET /api/dev-seed 200 in 2897ms
- POST /api/test/database-check 405 in 120ms
- POST /api/test/database-check 405 in 43ms
-🔍 Testing Supabase database connectivity...
-✅ Database query successful: []
- GET /api/test/database-check 200 in 319ms
- GET /join/faccf70b-eb79-45c7-ba0e-fcf9fe4a8498?guest=true 200 in 1610ms
- ○ Compiling /api/wallet/apple/[customerCardId] ...
- ✓ Compiled /api/wallet/apple/[customerCardId] in 9.2s (1409 modules)
-🍎 Generating Apple Wallet for card ID: faccf70b-eb79-45c7-ba0e-fcf9fe4a8498
-❌ Customer card not found: {
-  code: 'PGRST116',
-  details: 'The result contains 0 rows',
-  hint: null,
-  message: 'JSON object requested, multiple (or no) rows returned'
+ ✓ Ready in 7.2s
+ ○ Compiling /api/dev-seed/admin-cards ...
+ ✓ Compiled /api/dev-seed/admin-cards in 9.2s (456 modules)
+🚀 ADMIN-CARDS API CALLED at 2025-07-28T10:11:13.483Z
+🎯 Creating admin test data ecosystem...
+📝 Note: Using existing users or creating test data without auth constraints
+👥 Using user IDs: {
+  adminUserId: 'b37e533a-be24-4502-9673-6e0a0bb96a46',
+  businessUserId: '445db54b-ff31-48f1-95d5-7ce02d3ff80d',
+  customerUserId: '22154fc2-e36c-4108-a61b-9aa017074971'
 }
- HEAD /api/wallet/apple/faccf70b-eb79-45c7-ba0e-fcf9fe4a8498 404 in 14743ms
- ○ Compiling /api/health/env ...
- ✓ Compiled /api/health/env in 971ms (1105 modules)
-🔍 Starting environment validation...
-✅ Environment validation completed: 69% (9/13)
- GET /api/health/env 200 in 1209ms
- GET /api/dev-seed 200 in 403ms
- ✓ Compiled in 1790ms (450 modules)
- ○ Compiling /api/test/database-check ...
- ✓ Compiled /api/test/database-check in 1324ms (199 modules)
-🔍 Testing Supabase database connectivity...
-✅ Database queries successful
- GET /api/test/database-check 200 in 2316ms
- ○ Compiling /join/[cardId] ...
- ✓ Compiled /join/[cardId] in 865ms (702 modules)
- GET /join/faccf70b-eb79-45c7-ba0e-fcf9fe4a8498 200 in 3153ms
- ○ Compiling /api/dev-seed ...
- ✓ Compiled /api/dev-seed in 898ms (704 modules)
-Error generating demo cards: SyntaxError: Unexpected end of JSON input
-    at JSON.parse (<anonymous>)
-    at async POST (src/app/api/dev-seed/route.ts:140:17)
-  138 |     lastGenerationTime = now
-  139 |
-> 140 |     const body = await request.json()
-      |                 ^
-  141 |     const { createAll = false, scenario, count = 1 } = body
-  142 |
-  143 |     // Check for existing cards to prevent duplicates
- POST /api/dev-seed 500 in 2625ms
- ○ Compiling /api/wallet/apple/[customerCardId] ...
- ✓ Compiled /api/wallet/apple/[customerCardId] in 4.9s (971 modules)
-🍎 Generating Apple Wallet for card ID: 8e78f3d8-ed50-4a2a-b4e6-91e30d158e95
-❌ Customer card not found: {
-  code: 'PGRST116',
-  details: 'The result contains 0 rows',
+✅ Stamp cards created successfully: 1
+✅ Membership cards created successfully: 1
+🎯 Starting customer cards creation process...
+📊 Stamp cards result: { count: 1, ids: [ 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' ] }
+📊 Membership cards result: { count: 1, ids: [ 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' ] }
+🔨 About to create customer cards: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    membership_type: 'loyalty',
+    wallet_type: 'pwa'
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:11:15.128Z',
+    wallet_type: 'apple'
+  }
+]
+❌ Customer cards creation error: {
+  code: '23503',
+  details: 'Key (stamp_card_id)=(bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb) is not present in table "stamp_cards".',
   hint: null,
-  message: 'JSON object requested, multiple (or no) rows returned'
+  message: 'insert or update on table "customer_cards" violates foreign key constraint "customer_cards_stamp_card_id_fkey"'
 }
- HEAD /api/wallet/apple/8e78f3d8-ed50-4a2a-b4e6-91e30d158e95 404 in 6889ms
-🍎 Generating Apple Wallet for card ID: 8e78f3d8-ed50-4a2a-b4e6-91e30d158e95
-❌ Customer card not found: {
-  code: 'PGRST116',
-  details: 'The result contains 0 rows',
-  hint: null,
-  message: 'JSON object requested, multiple (or no) rows returned'
+ POST /api/dev-seed/admin-cards 200 in 12181ms
+ ✓ Compiled in 83ms
+ ○ Compiling /api/dev-seed/admin-cards ...
+ ✓ Compiled /api/dev-seed/admin-cards in 1075ms (179 modules)
+🚀 ADMIN-CARDS API CALLED at 2025-07-28T10:14:34.309Z
+🎯 Creating admin test data ecosystem...
+📝 Note: Using existing users or creating test data without auth constraints
+👥 Using user IDs: {
+  adminUserId: 'b37e533a-be24-4502-9673-6e0a0bb96a46',
+  businessUserId: '445db54b-ff31-48f1-95d5-7ce02d3ff80d',
+  customerUserId: '22154fc2-e36c-4108-a61b-9aa017074971'
 }
- GET /api/wallet/apple/8e78f3d8-ed50-4a2a-b4e6-91e30d158e95 404 in 209ms
- ○ Compiling /auth/login ...
- ✓ Compiled /auth/login in 11.5s (1147 modules)
- ✓ Compiled in 3.1s (529 modules)
- ✓ Compiled in 779ms (529 modules)
+✅ Stamp cards created successfully: 1
+✅ Membership cards created successfully: 1
+✅ Membership stamp cards created successfully: 1
+🎯 Starting customer cards creation process...
+📊 Stamp cards result: { count: 1, ids: [ 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' ] }
+📊 Membership cards result: { count: 1, ids: [ 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' ] }
+🔨 About to create customer cards: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    membership_type: 'loyalty',
+    wallet_type: 'pwa'
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:14:35.333Z',
+    wallet_type: 'apple'
+  }
+]
+✅ Customer cards created successfully: 2
+📋 Customer cards data: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    wallet_type: 'pwa',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:14:35.673474+00:00',
+    updated_at: '2025-07-28T10:14:35.673474+00:00',
+    membership_type: 'loyalty',
+    total_sessions: null,
+    sessions_used: null,
+    cost: null,
+    expiry_date: null
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    current_stamps: null,
+    wallet_type: 'apple',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:14:35.673474+00:00',
+    updated_at: '2025-07-28T10:14:35.673474+00:00',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:14:35.333+00:00'
+  }
+]
+ POST /api/dev-seed/admin-cards 200 in 2639ms
  ○ Compiling /api/wallet/apple/[customerCardId] ...
- ✓ Compiled /api/wallet/apple/[customerCardId] in 1214ms (466 modules)
-🍎 Generating Apple Wallet for card ID: 8e78f3d8-ed50-4a2a-b4e6-91e30d158e95
+ ✓ Compiled /api/wallet/apple/[customerCardId] in 3.9s (745 modules)
+🍎 Generating Apple Wallet for card ID: cccccccc-cccc-cccc-cccc-cccccccccccc
 ✅ Fetched customer card: {
-  id: '8e78f3d8-ed50-4a2a-b4e6-91e30d158e95',
-  current_stamps: 1,
+  id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+  current_stamps: 3,
   membership_type: 'loyalty',
-  sessions_used: 0,
+  sessions_used: null,
   total_sessions: null,
   cost: null,
   expiry_date: null,
-  created_at: '2025-07-15T19:05:02.494916+00:00',
-  updated_at: '2025-07-16T19:22:28.510015+00:00',
+  created_at: '2025-07-28T10:14:35.673474+00:00',
+  updated_at: '2025-07-28T10:14:35.673474+00:00',
   stamp_cards: {
-    id: '6b79ddcb-79fa-4b03-837e-b8ac7bedb335',
-    name: 'Pizza Club',
-    businesses: { name: 'Pizza Palace', description: 'Authentic Italian pizza' },
-    total_stamps: 5,
-    reward_description: 'Free pizza after 5 purchases'
+    id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    name: 'Admin Coffee Loyalty',
+    businesses: {
+      name: 'Admin Test Coffee Shop',
+      description: 'Test coffee shop for admin-created stamp cards'
+    },
+    total_stamps: 10,
+    reward_description: 'Get your 10th coffee free! (Admin created)'
   }
 }
 Starting PKPass generation...
 Generated 6 icon files
-Generated pass.json: 2786 bytes
+Generated pass.json: 2899 bytes
 Generated manifest.json with 7 files
 Certificate validation passed: {
   passExpires: '2026-08-15T13:42:37.000Z',
@@ -142,59 +161,2515 @@ Created PKCS#7 signature using OpenSSL: 3191 bytes
 Generated signature: 3191 bytes
 Finalizing PKPass archive...
 PKPass archive created successfully
-✅ PKPass generated successfully: { size: 5486, sizeKB: '5.4' }
- HEAD /api/wallet/apple/8e78f3d8-ed50-4a2a-b4e6-91e30d158e95 200 in 4111ms
- ○ Compiling /api/wallet/google/[customerCardId] ...
- ✓ Compiled /api/wallet/google/[customerCardId] in 5s (1129 modules)
-🎫 Generating Google Wallet pass for card: 8e78f3d8-ed50-4a2a-b4e6-91e30d158e95
-📋 Card type detected: Stamp Cards
-🏷️ Setting Google Wallet title to: "Stamp Cards"
-🔐 Signing JWT with RS256 algorithm for Google Wallet
-🔍 Processing private key format...
-✅ Private key validated successfully
-🔐 Signing JWT with RS256...
-✅ JWT signed successfully
- HEAD /api/wallet/google/8e78f3d8-ed50-4a2a-b4e6-91e30d158e95 200 in 7147ms
- ○ Compiling /api/wallet/pwa/[customerCardId] ...
- ✓ Compiled /api/wallet/pwa/[customerCardId] in 1699ms (1117 modules)
-Generating PWA Wallet for card ID: 8e78f3d8-ed50-4a2a-b4e6-91e30d158e95
-Fetched customer card: {
-  id: '8e78f3d8-ed50-4a2a-b4e6-91e30d158e95',
-  current_stamps: 1,
-  membership_type: 'loyalty',
-  sessions_used: 0,
-  total_sessions: null,
-  cost: null,
-  expiry_date: null,
-  created_at: '2025-07-15T19:05:02.494916+00:00',
+✅ PKPass generated successfully: { size: 5471, sizeKB: '5.3' }
+ HEAD /api/wallet/apple/cccccccc-cccc-cccc-cccc-cccccccccccc 200 in 9068ms
+🍎 Generating Apple Wallet for card ID: dddddddd-dddd-dddd-dddd-dddddddddddd
+✅ Fetched customer card: {
+  id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+  current_stamps: null,
+  membership_type: 'gym',
+  sessions_used: 5,
+  total_sessions: 20,
+  cost: 15000,
+  expiry_date: '2025-10-26T10:14:35.333+00:00',
+  created_at: '2025-07-28T10:14:35.673474+00:00',
+  updated_at: '2025-07-28T10:14:35.673474+00:00',
   stamp_cards: {
-    id: '6b79ddcb-79fa-4b03-837e-b8ac7bedb335',
-    name: 'Pizza Club',
-    businesses: { name: 'Pizza Palace', description: 'Authentic Italian pizza' },
-    total_stamps: 5,
-    reward_description: 'Free pizza after 5 purchases'
+    id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    name: 'Admin Gym Membership',
+    businesses: {
+      name: 'Admin Test Gym',
+      description: 'Test gym for admin-created membership cards'
+    },
+    total_stamps: 20,
+    reward_description: 'Complete 20 sessions to finish your membership'
   }
 }
-Card Type: Loyalty
-Stamp Card: {
-  id: '6b79ddcb-79fa-4b03-837e-b8ac7bedb335',
-  name: 'Pizza Club',
-  total_stamps: 5,
-  reward_description: 'Free pizza after 5 purchases'
+Starting PKPass generation...
+Generated 6 icon files
+Generated pass.json: 2875 bytes
+Generated manifest.json with 7 files
+Certificate validation passed: {
+  passExpires: '2026-08-15T13:42:37.000Z',
+  wwdrExpires: '2030-12-10T00:00:00.000Z'
 }
-Business: { name: 'Pizza Palace', description: 'Authentic Italian pizza' }
- HEAD /api/wallet/pwa/8e78f3d8-ed50-4a2a-b4e6-91e30d158e95 200 in 4408ms
+Running OpenSSL command for PKCS#7 signature...
+Created PKCS#7 signature using OpenSSL: 3191 bytes
+Generated signature: 3191 bytes
+Finalizing PKPass archive...
+PKPass archive created successfully
+✅ PKPass generated successfully: { size: 5468, sizeKB: '5.3' }
+ HEAD /api/wallet/apple/dddddddd-dddd-dddd-dddd-dddddddddddd 200 in 539ms
+ ✓ Compiled in 801ms (277 modules)
+ ○ Compiling / ...
+ ✓ Compiled / in 10.3s (811 modules)
+ GET / 200 in 11599ms
+ ✓ Compiled in 1359ms (344 modules)
+ GET / 200 in 262ms
+ ○ Compiling /api/dev-seed/admin-cards ...
+ ✓ Compiled /api/dev-seed/admin-cards in 670ms (578 modules)
+🚀 ADMIN-CARDS API CALLED at 2025-07-28T10:17:47.091Z
+🎯 Creating admin test data ecosystem...
+📝 Note: Using existing users or creating test data without auth constraints
+🚀 ADMIN-CARDS API CALLED at 2025-07-28T10:17:47.092Z
+🎯 Creating admin test data ecosystem...
+📝 Note: Using existing users or creating test data without auth constraints
+👥 Using user IDs: {
+  adminUserId: '00000000-0000-0000-0000-000000000001',
+  businessUserId: '445db54b-ff31-48f1-95d5-7ce02d3ff80d',
+  customerUserId: '22154fc2-e36c-4108-a61b-9aa017074971'
+}
+👥 Using user IDs: {
+  adminUserId: 'b37e533a-be24-4502-9673-6e0a0bb96a46',
+  businessUserId: '445db54b-ff31-48f1-95d5-7ce02d3ff80d',
+  customerUserId: '22154fc2-e36c-4108-a61b-9aa017074971'
+}
+✅ Stamp cards created successfully: 1
+✅ Stamp cards created successfully: 1
+✅ Membership cards created successfully: 1
+✅ Membership cards created successfully: 1
+✅ Membership stamp cards created successfully: 1
+🎯 Starting customer cards creation process...
+📊 Stamp cards result: { count: 1, ids: [ 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' ] }
+📊 Membership cards result: { count: 1, ids: [ 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' ] }
+🔨 About to create customer cards: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    membership_type: 'loyalty',
+    wallet_type: 'pwa'
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:17:48.496Z',
+    wallet_type: 'apple'
+  }
+]
+✅ Membership stamp cards created successfully: 1
+🎯 Starting customer cards creation process...
+📊 Stamp cards result: { count: 1, ids: [ 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' ] }
+📊 Membership cards result: { count: 1, ids: [ 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' ] }
+🔨 About to create customer cards: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    membership_type: 'loyalty',
+    wallet_type: 'pwa'
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:17:48.510Z',
+    wallet_type: 'apple'
+  }
+]
+✅ Customer cards created successfully: 2
+📋 Customer cards data: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    wallet_type: 'pwa',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:17:48.830916+00:00',
+    membership_type: 'loyalty',
+    total_sessions: null,
+    sessions_used: null,
+    cost: null,
+    expiry_date: null
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    current_stamps: null,
+    wallet_type: 'apple',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:17:48.830916+00:00',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:17:48.496+00:00'
+  }
+]
+ POST /api/dev-seed/admin-cards 200 in 2868ms
+✅ Customer cards created successfully: 2
+📋 Customer cards data: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    wallet_type: 'pwa',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:17:48.837001+00:00',
+    membership_type: 'loyalty',
+    total_sessions: null,
+    sessions_used: null,
+    cost: null,
+    expiry_date: null
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    current_stamps: null,
+    wallet_type: 'apple',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:17:48.837001+00:00',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:17:48.51+00:00'
+  }
+]
+ POST /api/dev-seed/admin-cards 200 in 2916ms
  ○ Compiling /join/[cardId] ...
- ✓ Compiled /join/[cardId] in 3.6s (1103 modules)
- GET /join/8e78f3d8-ed50-4a2a-b4e6-91e30d158e95?guest=true 200 in 5071ms
- GET /join/8e78f3d8-ed50-4a2a-b4e6-91e30d158e95 200 in 214ms
-🍎 Generating Apple Wallet for card ID: 8e78f3d8-ed50-4a2a-b4e6-91e30d158e95
-❌ Customer card not found: {
+ ✓ Compiled /join/[cardId] in 8.7s (1144 modules)
+ GET /join/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa 200 in 13793ms
+ GET /join/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb 200 in 13847ms
+🚀 ADMIN-CARDS API CALLED at 2025-07-28T10:18:24.183Z
+🎯 Creating admin test data ecosystem...
+📝 Note: Using existing users or creating test data without auth constraints
+🚀 ADMIN-CARDS API CALLED at 2025-07-28T10:18:24.415Z
+🎯 Creating admin test data ecosystem...
+📝 Note: Using existing users or creating test data without auth constraints
+👥 Using user IDs: {
+  adminUserId: 'b37e533a-be24-4502-9673-6e0a0bb96a46',
+  businessUserId: '445db54b-ff31-48f1-95d5-7ce02d3ff80d',
+  customerUserId: '22154fc2-e36c-4108-a61b-9aa017074971'
+}
+👥 Using user IDs: {
+  adminUserId: 'b37e533a-be24-4502-9673-6e0a0bb96a46',
+  businessUserId: '445db54b-ff31-48f1-95d5-7ce02d3ff80d',
+  customerUserId: '22154fc2-e36c-4108-a61b-9aa017074971'
+}
+✅ Stamp cards created successfully: 1
+✅ Membership cards created successfully: 1
+✅ Stamp cards created successfully: 1
+✅ Membership stamp cards created successfully: 1
+🎯 Starting customer cards creation process...
+📊 Stamp cards result: { count: 1, ids: [ 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' ] }
+📊 Membership cards result: { count: 1, ids: [ 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' ] }
+🔨 About to create customer cards: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    membership_type: 'loyalty',
+    wallet_type: 'pwa'
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:18:25.053Z',
+    wallet_type: 'apple'
+  }
+]
+✅ Membership cards created successfully: 1
+✅ Customer cards created successfully: 2
+📋 Customer cards data: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    wallet_type: 'pwa',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:18:25.380148+00:00',
+    membership_type: 'loyalty',
+    total_sessions: null,
+    sessions_used: null,
+    cost: null,
+    expiry_date: null
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    current_stamps: null,
+    wallet_type: 'apple',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:18:25.380148+00:00',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:18:25.053+00:00'
+  }
+]
+ POST /api/dev-seed/admin-cards 200 in 1430ms
+✅ Membership stamp cards created successfully: 1
+🎯 Starting customer cards creation process...
+📊 Stamp cards result: { count: 1, ids: [ 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' ] }
+📊 Membership cards result: { count: 1, ids: [ 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' ] }
+🔨 About to create customer cards: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    membership_type: 'loyalty',
+    wallet_type: 'pwa'
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:18:25.124Z',
+    wallet_type: 'apple'
+  }
+]
+✅ Customer cards created successfully: 2
+📋 Customer cards data: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    wallet_type: 'pwa',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:18:25.457878+00:00',
+    membership_type: 'loyalty',
+    total_sessions: null,
+    sessions_used: null,
+    cost: null,
+    expiry_date: null
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    current_stamps: null,
+    wallet_type: 'apple',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:18:25.457878+00:00',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:18:25.124+00:00'
+  }
+]
+ POST /api/dev-seed/admin-cards 200 in 970ms
+ GET /join/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb 200 in 650ms
+ GET /join/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa 200 in 1435ms
+🚀 ADMIN-CARDS API CALLED at 2025-07-28T10:18:44.311Z
+🎯 Creating admin test data ecosystem...
+📝 Note: Using existing users or creating test data without auth constraints
+🚀 ADMIN-CARDS API CALLED at 2025-07-28T10:18:44.476Z
+🎯 Creating admin test data ecosystem...
+📝 Note: Using existing users or creating test data without auth constraints
+👥 Using user IDs: {
+  adminUserId: 'b37e533a-be24-4502-9673-6e0a0bb96a46',
+  businessUserId: '445db54b-ff31-48f1-95d5-7ce02d3ff80d',
+  customerUserId: '22154fc2-e36c-4108-a61b-9aa017074971'
+}
+👥 Using user IDs: {
+  adminUserId: 'b37e533a-be24-4502-9673-6e0a0bb96a46',
+  businessUserId: '445db54b-ff31-48f1-95d5-7ce02d3ff80d',
+  customerUserId: '22154fc2-e36c-4108-a61b-9aa017074971'
+}
+✅ Stamp cards created successfully: 1
+✅ Membership cards created successfully: 1
+✅ Membership stamp cards created successfully: 1
+🎯 Starting customer cards creation process...
+📊 Stamp cards result: { count: 1, ids: [ 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' ] }
+📊 Membership cards result: { count: 1, ids: [ 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' ] }
+🔨 About to create customer cards: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    membership_type: 'loyalty',
+    wallet_type: 'pwa'
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:18:44.912Z',
+    wallet_type: 'apple'
+  }
+]
+✅ Stamp cards created successfully: 1
+✅ Customer cards created successfully: 2
+📋 Customer cards data: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    wallet_type: 'pwa',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:18:45.24867+00:00',
+    membership_type: 'loyalty',
+    total_sessions: null,
+    sessions_used: null,
+    cost: null,
+    expiry_date: null
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    current_stamps: null,
+    wallet_type: 'apple',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:18:45.24867+00:00',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:18:44.912+00:00'
+  }
+]
+ POST /api/dev-seed/admin-cards 200 in 749ms
+✅ Membership cards created successfully: 1
+✅ Membership stamp cards created successfully: 1
+🎯 Starting customer cards creation process...
+📊 Stamp cards result: { count: 1, ids: [ 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' ] }
+📊 Membership cards result: { count: 1, ids: [ 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' ] }
+🔨 About to create customer cards: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    membership_type: 'loyalty',
+    wallet_type: 'pwa'
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:18:45.163Z',
+    wallet_type: 'apple'
+  }
+]
+✅ Customer cards created successfully: 2
+📋 Customer cards data: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    wallet_type: 'pwa',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:18:45.499615+00:00',
+    membership_type: 'loyalty',
+    total_sessions: null,
+    sessions_used: null,
+    cost: null,
+    expiry_date: null
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    current_stamps: null,
+    wallet_type: 'apple',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:18:45.499615+00:00',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:18:45.163+00:00'
+  }
+]
+ POST /api/dev-seed/admin-cards 200 in 828ms
+ GET /join/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa 200 in 697ms
+ GET /join/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb 200 in 1309ms
+🚀 ADMIN-CARDS API CALLED at 2025-07-28T10:19:10.887Z
+🎯 Creating admin test data ecosystem...
+📝 Note: Using existing users or creating test data without auth constraints
+🚀 ADMIN-CARDS API CALLED at 2025-07-28T10:19:10.947Z
+🎯 Creating admin test data ecosystem...
+📝 Note: Using existing users or creating test data without auth constraints
+👥 Using user IDs: {
+  adminUserId: 'b37e533a-be24-4502-9673-6e0a0bb96a46',
+  businessUserId: '445db54b-ff31-48f1-95d5-7ce02d3ff80d',
+  customerUserId: '22154fc2-e36c-4108-a61b-9aa017074971'
+}
+👥 Using user IDs: {
+  adminUserId: 'b37e533a-be24-4502-9673-6e0a0bb96a46',
+  businessUserId: '445db54b-ff31-48f1-95d5-7ce02d3ff80d',
+  customerUserId: '22154fc2-e36c-4108-a61b-9aa017074971'
+}
+✅ Stamp cards created successfully: 1
+✅ Stamp cards created successfully: 1
+✅ Membership cards created successfully: 1
+✅ Membership cards created successfully: 1
+✅ Membership stamp cards created successfully: 1
+🎯 Starting customer cards creation process...
+📊 Stamp cards result: { count: 1, ids: [ 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' ] }
+📊 Membership cards result: { count: 1, ids: [ 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' ] }
+🔨 About to create customer cards: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    membership_type: 'loyalty',
+    wallet_type: 'pwa'
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:19:11.500Z',
+    wallet_type: 'apple'
+  }
+]
+✅ Membership stamp cards created successfully: 1
+🎯 Starting customer cards creation process...
+📊 Stamp cards result: { count: 1, ids: [ 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' ] }
+📊 Membership cards result: { count: 1, ids: [ 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' ] }
+🔨 About to create customer cards: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    membership_type: 'loyalty',
+    wallet_type: 'pwa'
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:19:11.548Z',
+    wallet_type: 'apple'
+  }
+]
+✅ Customer cards created successfully: 2
+📋 Customer cards data: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    wallet_type: 'pwa',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:19:11.838411+00:00',
+    membership_type: 'loyalty',
+    total_sessions: null,
+    sessions_used: null,
+    cost: null,
+    expiry_date: null
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    current_stamps: null,
+    wallet_type: 'apple',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:19:11.838411+00:00',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:19:11.5+00:00'
+  }
+]
+ POST /api/dev-seed/admin-cards 200 in 760ms
+✅ Customer cards created successfully: 2
+📋 Customer cards data: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    wallet_type: 'pwa',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:19:11.883572+00:00',
+    membership_type: 'loyalty',
+    total_sessions: null,
+    sessions_used: null,
+    cost: null,
+    expiry_date: null
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    current_stamps: null,
+    wallet_type: 'apple',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:19:11.883572+00:00',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:19:11.548+00:00'
+  }
+]
+ POST /api/dev-seed/admin-cards 200 in 730ms
+ GET /join/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa 200 in 1270ms
+ GET /join/invalid-card-id-12345 200 in 1323ms
+🚀 ADMIN-CARDS API CALLED at 2025-07-28T10:19:24.705Z
+🎯 Creating admin test data ecosystem...
+📝 Note: Using existing users or creating test data without auth constraints
+👥 Using user IDs: {
+  adminUserId: 'b37e533a-be24-4502-9673-6e0a0bb96a46',
+  businessUserId: '445db54b-ff31-48f1-95d5-7ce02d3ff80d',
+  customerUserId: '22154fc2-e36c-4108-a61b-9aa017074971'
+}
+✅ Stamp cards created successfully: 1
+✅ Membership cards created successfully: 1
+✅ Membership stamp cards created successfully: 1
+🎯 Starting customer cards creation process...
+📊 Stamp cards result: { count: 1, ids: [ 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' ] }
+📊 Membership cards result: { count: 1, ids: [ 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' ] }
+🔨 About to create customer cards: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    membership_type: 'loyalty',
+    wallet_type: 'pwa'
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:19:25.179Z',
+    wallet_type: 'apple'
+  }
+]
+✅ Customer cards created successfully: 2
+📋 Customer cards data: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    wallet_type: 'pwa',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:19:25.504989+00:00',
+    membership_type: 'loyalty',
+    total_sessions: null,
+    sessions_used: null,
+    cost: null,
+    expiry_date: null
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    current_stamps: null,
+    wallet_type: 'apple',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:19:25.504989+00:00',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:19:25.179+00:00'
+  }
+]
+ POST /api/dev-seed/admin-cards 200 in 572ms
+ GET /join/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa 200 in 541ms
+🚀 ADMIN-CARDS API CALLED at 2025-07-28T10:19:32.521Z
+🎯 Creating admin test data ecosystem...
+📝 Note: Using existing users or creating test data without auth constraints
+👥 Using user IDs: {
+  adminUserId: 'b37e533a-be24-4502-9673-6e0a0bb96a46',
+  businessUserId: '445db54b-ff31-48f1-95d5-7ce02d3ff80d',
+  customerUserId: '22154fc2-e36c-4108-a61b-9aa017074971'
+}
+✅ Stamp cards created successfully: 1
+✅ Membership cards created successfully: 1
+✅ Membership stamp cards created successfully: 1
+🎯 Starting customer cards creation process...
+📊 Stamp cards result: { count: 1, ids: [ 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' ] }
+📊 Membership cards result: { count: 1, ids: [ 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' ] }
+🔨 About to create customer cards: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    membership_type: 'loyalty',
+    wallet_type: 'pwa'
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:19:33.264Z',
+    wallet_type: 'apple'
+  }
+]
+✅ Customer cards created successfully: 2
+📋 Customer cards data: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    wallet_type: 'pwa',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:19:33.600992+00:00',
+    membership_type: 'loyalty',
+    total_sessions: null,
+    sessions_used: null,
+    cost: null,
+    expiry_date: null
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    current_stamps: null,
+    wallet_type: 'apple',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:19:33.600992+00:00',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:19:33.264+00:00'
+  }
+]
+ POST /api/dev-seed/admin-cards 200 in 880ms
+ GET /join/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa 200 in 566ms
+🚀 ADMIN-CARDS API CALLED at 2025-07-28T10:19:43.618Z
+🎯 Creating admin test data ecosystem...
+📝 Note: Using existing users or creating test data without auth constraints
+👥 Using user IDs: {
+  adminUserId: 'b37e533a-be24-4502-9673-6e0a0bb96a46',
+  businessUserId: '445db54b-ff31-48f1-95d5-7ce02d3ff80d',
+  customerUserId: '22154fc2-e36c-4108-a61b-9aa017074971'
+}
+✅ Stamp cards created successfully: 1
+✅ Membership cards created successfully: 1
+✅ Membership stamp cards created successfully: 1
+🎯 Starting customer cards creation process...
+📊 Stamp cards result: { count: 1, ids: [ 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' ] }
+📊 Membership cards result: { count: 1, ids: [ 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' ] }
+🔨 About to create customer cards: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    membership_type: 'loyalty',
+    wallet_type: 'pwa'
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:19:44.151Z',
+    wallet_type: 'apple'
+  }
+]
+✅ Customer cards created successfully: 2
+📋 Customer cards data: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    wallet_type: 'pwa',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:19:44.479992+00:00',
+    membership_type: 'loyalty',
+    total_sessions: null,
+    sessions_used: null,
+    cost: null,
+    expiry_date: null
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    current_stamps: null,
+    wallet_type: 'apple',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:19:44.479992+00:00',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:19:44.151+00:00'
+  }
+]
+ POST /api/dev-seed/admin-cards 200 in 618ms
+ GET /join/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa 200 in 656ms
+🚀 ADMIN-CARDS API CALLED at 2025-07-28T10:19:52.865Z
+🎯 Creating admin test data ecosystem...
+📝 Note: Using existing users or creating test data without auth constraints
+👥 Using user IDs: {
+  adminUserId: 'b37e533a-be24-4502-9673-6e0a0bb96a46',
+  businessUserId: '445db54b-ff31-48f1-95d5-7ce02d3ff80d',
+  customerUserId: '22154fc2-e36c-4108-a61b-9aa017074971'
+}
+✅ Stamp cards created successfully: 1
+✅ Membership cards created successfully: 1
+🚀 ADMIN-CARDS API CALLED at 2025-07-28T10:19:53.484Z
+🎯 Creating admin test data ecosystem...
+📝 Note: Using existing users or creating test data without auth constraints
+✅ Membership stamp cards created successfully: 1
+🎯 Starting customer cards creation process...
+📊 Stamp cards result: { count: 1, ids: [ 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' ] }
+📊 Membership cards result: { count: 1, ids: [ 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' ] }
+🔨 About to create customer cards: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    membership_type: 'loyalty',
+    wallet_type: 'pwa'
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:19:53.506Z',
+    wallet_type: 'apple'
+  }
+]
+✅ Customer cards created successfully: 2
+📋 Customer cards data: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    wallet_type: 'pwa',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:19:53.84061+00:00',
+    membership_type: 'loyalty',
+    total_sessions: null,
+    sessions_used: null,
+    cost: null,
+    expiry_date: null
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    current_stamps: null,
+    wallet_type: 'apple',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:19:53.84061+00:00',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:19:53.506+00:00'
+  }
+]
+ POST /api/dev-seed/admin-cards 200 in 759ms
+👥 Using user IDs: {
+  adminUserId: '00000000-0000-0000-0000-000000000001',
+  businessUserId: '445db54b-ff31-48f1-95d5-7ce02d3ff80d',
+  customerUserId: '22154fc2-e36c-4108-a61b-9aa017074971'
+}
+✅ Stamp cards created successfully: 1
+✅ Membership cards created successfully: 1
+✅ Membership stamp cards created successfully: 1
+🎯 Starting customer cards creation process...
+📊 Stamp cards result: { count: 1, ids: [ 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' ] }
+📊 Membership cards result: { count: 1, ids: [ 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' ] }
+🔨 About to create customer cards: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    membership_type: 'loyalty',
+    wallet_type: 'pwa'
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:19:53.989Z',
+    wallet_type: 'apple'
+  }
+]
+✅ Customer cards created successfully: 2
+📋 Customer cards data: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    wallet_type: 'pwa',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:19:54.32084+00:00',
+    membership_type: 'loyalty',
+    total_sessions: null,
+    sessions_used: null,
+    cost: null,
+    expiry_date: null
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    current_stamps: null,
+    wallet_type: 'apple',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:19:54.32084+00:00',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:19:53.989+00:00'
+  }
+]
+ POST /api/dev-seed/admin-cards 200 in 599ms
+ GET /join/cccccccc-cccc-cccc-cccc-cccccccccccc 200 in 911ms
+ GET /join/dddddddd-dddd-dddd-dddd-dddddddddddd 200 in 1483ms
+🚀 ADMIN-CARDS API CALLED at 2025-07-28T10:20:24.781Z
+🎯 Creating admin test data ecosystem...
+📝 Note: Using existing users or creating test data without auth constraints
+👥 Using user IDs: {
+  adminUserId: 'b37e533a-be24-4502-9673-6e0a0bb96a46',
+  businessUserId: '445db54b-ff31-48f1-95d5-7ce02d3ff80d',
+  customerUserId: '22154fc2-e36c-4108-a61b-9aa017074971'
+}
+✅ Stamp cards created successfully: 1
+✅ Membership cards created successfully: 1
+✅ Membership stamp cards created successfully: 1
+🎯 Starting customer cards creation process...
+📊 Stamp cards result: { count: 1, ids: [ 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' ] }
+📊 Membership cards result: { count: 1, ids: [ 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' ] }
+🔨 About to create customer cards: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    membership_type: 'loyalty',
+    wallet_type: 'pwa'
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:20:25.511Z',
+    wallet_type: 'apple'
+  }
+]
+✅ Customer cards created successfully: 2
+📋 Customer cards data: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    wallet_type: 'pwa',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:20:25.837737+00:00',
+    membership_type: 'loyalty',
+    total_sessions: null,
+    sessions_used: null,
+    cost: null,
+    expiry_date: null
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    current_stamps: null,
+    wallet_type: 'apple',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:20:25.837737+00:00',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:20:25.511+00:00'
+  }
+]
+ POST /api/dev-seed/admin-cards 200 in 816ms
+ GET /join/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb 200 in 557ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 7.4s (685 modules)
+ GET /favicon.ico 200 in 10121ms
+🚀 ADMIN-CARDS API CALLED at 2025-07-28T10:20:40.540Z
+🎯 Creating admin test data ecosystem...
+📝 Note: Using existing users or creating test data without auth constraints
+👥 Using user IDs: {
+  adminUserId: '00000000-0000-0000-0000-000000000001',
+  businessUserId: '445db54b-ff31-48f1-95d5-7ce02d3ff80d',
+  customerUserId: '22154fc2-e36c-4108-a61b-9aa017074971'
+}
+✅ Stamp cards created successfully: 1
+✅ Membership cards created successfully: 1
+✅ Membership stamp cards created successfully: 1
+🎯 Starting customer cards creation process...
+📊 Stamp cards result: { count: 1, ids: [ 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' ] }
+📊 Membership cards result: { count: 1, ids: [ 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' ] }
+🔨 About to create customer cards: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    membership_type: 'loyalty',
+    wallet_type: 'pwa'
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:20:41.059Z',
+    wallet_type: 'apple'
+  }
+]
+✅ Customer cards created successfully: 2
+📋 Customer cards data: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    wallet_type: 'pwa',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:20:41.393428+00:00',
+    membership_type: 'loyalty',
+    total_sessions: null,
+    sessions_used: null,
+    cost: null,
+    expiry_date: null
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    current_stamps: null,
+    wallet_type: 'apple',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:20:41.393428+00:00',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:20:41.059+00:00'
+  }
+]
+ POST /api/dev-seed/admin-cards 200 in 7523ms
+ GET /join/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa 200 in 1861ms
+ GET /favicon.ico 200 in 284ms
+🚀 ADMIN-CARDS API CALLED at 2025-07-28T10:21:05.727Z
+🎯 Creating admin test data ecosystem...
+📝 Note: Using existing users or creating test data without auth constraints
+👥 Using user IDs: {
+  adminUserId: 'b37e533a-be24-4502-9673-6e0a0bb96a46',
+  businessUserId: '445db54b-ff31-48f1-95d5-7ce02d3ff80d',
+  customerUserId: '22154fc2-e36c-4108-a61b-9aa017074971'
+}
+✅ Stamp cards created successfully: 1
+✅ Membership cards created successfully: 1
+✅ Membership stamp cards created successfully: 1
+🎯 Starting customer cards creation process...
+📊 Stamp cards result: { count: 1, ids: [ 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' ] }
+📊 Membership cards result: { count: 1, ids: [ 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' ] }
+🔨 About to create customer cards: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    membership_type: 'loyalty',
+    wallet_type: 'pwa'
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:21:06.281Z',
+    wallet_type: 'apple'
+  }
+]
+✅ Customer cards created successfully: 2
+📋 Customer cards data: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    wallet_type: 'pwa',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:21:06.617629+00:00',
+    membership_type: 'loyalty',
+    total_sessions: null,
+    sessions_used: null,
+    cost: null,
+    expiry_date: null
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    current_stamps: null,
+    wallet_type: 'apple',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:21:06.617629+00:00',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:21:06.281+00:00'
+  }
+]
+ POST /api/dev-seed/admin-cards 200 in 781ms
+ GET /join/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa 200 in 432ms
+ GET /favicon.ico 200 in 128ms
+🚀 ADMIN-CARDS API CALLED at 2025-07-28T10:21:19.142Z
+🎯 Creating admin test data ecosystem...
+📝 Note: Using existing users or creating test data without auth constraints
+👥 Using user IDs: {
+  adminUserId: 'b37e533a-be24-4502-9673-6e0a0bb96a46',
+  businessUserId: '445db54b-ff31-48f1-95d5-7ce02d3ff80d',
+  customerUserId: '22154fc2-e36c-4108-a61b-9aa017074971'
+}
+✅ Stamp cards created successfully: 1
+✅ Membership cards created successfully: 1
+✅ Membership stamp cards created successfully: 1
+🎯 Starting customer cards creation process...
+📊 Stamp cards result: { count: 1, ids: [ 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' ] }
+📊 Membership cards result: { count: 1, ids: [ 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' ] }
+🔨 About to create customer cards: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    membership_type: 'loyalty',
+    wallet_type: 'pwa'
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:21:20.025Z',
+    wallet_type: 'apple'
+  }
+]
+✅ Customer cards created successfully: 2
+📋 Customer cards data: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    wallet_type: 'pwa',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:21:20.355846+00:00',
+    membership_type: 'loyalty',
+    total_sessions: null,
+    sessions_used: null,
+    cost: null,
+    expiry_date: null
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    current_stamps: null,
+    wallet_type: 'apple',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:21:20.355846+00:00',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:21:20.025+00:00'
+  }
+]
+ POST /api/dev-seed/admin-cards 200 in 981ms
+ GET /join/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb 200 in 546ms
+ GET /favicon.ico 200 in 213ms
+ ○ Compiling / ...
+ ✓ Compiled / in 902ms (608 modules)
+ GET / 200 in 1315ms
+ GET / 200 in 94ms
+ ✓ Compiled /api/dev-seed/admin-cards in 420ms (707 modules)
+🚀 ADMIN-CARDS API CALLED at 2025-07-28T10:44:56.856Z
+🎯 Creating admin test data ecosystem...
+📝 Note: Using existing users or creating test data without auth constraints
+🚀 ADMIN-CARDS API CALLED at 2025-07-28T10:44:56.857Z
+🎯 Creating admin test data ecosystem...
+📝 Note: Using existing users or creating test data without auth constraints
+👥 Using user IDs: {
+  adminUserId: '00000000-0000-0000-0000-000000000001',
+  businessUserId: '445db54b-ff31-48f1-95d5-7ce02d3ff80d',
+  customerUserId: '22154fc2-e36c-4108-a61b-9aa017074971'
+}
+👥 Using user IDs: {
+  adminUserId: 'b37e533a-be24-4502-9673-6e0a0bb96a46',
+  businessUserId: '445db54b-ff31-48f1-95d5-7ce02d3ff80d',
+  customerUserId: '22154fc2-e36c-4108-a61b-9aa017074971'
+}
+✅ Stamp cards created successfully: 1
+✅ Membership cards created successfully: 1
+✅ Stamp cards created successfully: 1
+✅ Membership stamp cards created successfully: 1
+🎯 Starting customer cards creation process...
+📊 Stamp cards result: { count: 1, ids: [ 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' ] }
+📊 Membership cards result: { count: 1, ids: [ 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' ] }
+🔨 About to create customer cards: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    membership_type: 'loyalty',
+    wallet_type: 'pwa'
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:44:57.785Z',
+    wallet_type: 'apple'
+  }
+]
+✅ Membership cards created successfully: 1
+✅ Customer cards created successfully: 2
+📋 Customer cards data: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    wallet_type: 'pwa',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:44:57.900019+00:00',
+    membership_type: 'loyalty',
+    total_sessions: null,
+    sessions_used: null,
+    cost: null,
+    expiry_date: null
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    current_stamps: null,
+    wallet_type: 'apple',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:44:57.900019+00:00',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:44:57.785+00:00'
+  }
+]
+ POST /api/dev-seed/admin-cards 200 in 1691ms
+✅ Membership stamp cards created successfully: 1
+🎯 Starting customer cards creation process...
+📊 Stamp cards result: { count: 1, ids: [ 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' ] }
+📊 Membership cards result: { count: 1, ids: [ 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' ] }
+🔨 About to create customer cards: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    membership_type: 'loyalty',
+    wallet_type: 'pwa'
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:44:57.871Z',
+    wallet_type: 'apple'
+  }
+]
+✅ Customer cards created successfully: 2
+📋 Customer cards data: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    wallet_type: 'pwa',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:44:57.989555+00:00',
+    membership_type: 'loyalty',
+    total_sessions: null,
+    sessions_used: null,
+    cost: null,
+    expiry_date: null
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    current_stamps: null,
+    wallet_type: 'apple',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:44:57.989555+00:00',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:44:57.871+00:00'
+  }
+]
+ POST /api/dev-seed/admin-cards 200 in 1771ms
+ GET /join/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa 200 in 438ms
+ GET /join/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb 200 in 679ms
+🚀 ADMIN-CARDS API CALLED at 2025-07-28T10:45:09.151Z
+🎯 Creating admin test data ecosystem...
+📝 Note: Using existing users or creating test data without auth constraints
+🚀 ADMIN-CARDS API CALLED at 2025-07-28T10:45:09.443Z
+🎯 Creating admin test data ecosystem...
+📝 Note: Using existing users or creating test data without auth constraints
+👥 Using user IDs: {
+  adminUserId: '00000000-0000-0000-0000-000000000001',
+  businessUserId: '445db54b-ff31-48f1-95d5-7ce02d3ff80d',
+  customerUserId: '22154fc2-e36c-4108-a61b-9aa017074971'
+}
+✅ Stamp cards created successfully: 1
+✅ Membership cards created successfully: 1
+✅ Membership stamp cards created successfully: 1
+🎯 Starting customer cards creation process...
+📊 Stamp cards result: { count: 1, ids: [ 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' ] }
+📊 Membership cards result: { count: 1, ids: [ 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' ] }
+🔨 About to create customer cards: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    membership_type: 'loyalty',
+    wallet_type: 'pwa'
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:45:09.983Z',
+    wallet_type: 'apple'
+  }
+]
+✅ Customer cards created successfully: 2
+📋 Customer cards data: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    wallet_type: 'pwa',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:45:10.101541+00:00',
+    membership_type: 'loyalty',
+    total_sessions: null,
+    sessions_used: null,
+    cost: null,
+    expiry_date: null
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    current_stamps: null,
+    wallet_type: 'apple',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:45:10.101541+00:00',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:45:09.983+00:00'
+  }
+]
+ POST /api/dev-seed/admin-cards 200 in 976ms
+👥 Using user IDs: {
+  adminUserId: 'b37e533a-be24-4502-9673-6e0a0bb96a46',
+  businessUserId: '445db54b-ff31-48f1-95d5-7ce02d3ff80d',
+  customerUserId: '22154fc2-e36c-4108-a61b-9aa017074971'
+}
+✅ Stamp cards created successfully: 1
+✅ Membership cards created successfully: 1
+✅ Membership stamp cards created successfully: 1
+🎯 Starting customer cards creation process...
+📊 Stamp cards result: { count: 1, ids: [ 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' ] }
+📊 Membership cards result: { count: 1, ids: [ 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' ] }
+🔨 About to create customer cards: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    membership_type: 'loyalty',
+    wallet_type: 'pwa'
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:45:10.369Z',
+    wallet_type: 'apple'
+  }
+]
+✅ Customer cards created successfully: 2
+📋 Customer cards data: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    wallet_type: 'pwa',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:45:10.493977+00:00',
+    membership_type: 'loyalty',
+    total_sessions: null,
+    sessions_used: null,
+    cost: null,
+    expiry_date: null
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    current_stamps: null,
+    wallet_type: 'apple',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:45:10.493977+00:00',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:45:10.369+00:00'
+  }
+]
+ POST /api/dev-seed/admin-cards 200 in 1125ms
+ GET /join/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb 200 in 895ms
+ GET /join/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa 200 in 1231ms
+ ○ Compiling /api/auth/status ...
+ ✓ Compiled /api/auth/status in 6.4s (1165 modules)
+ ○ Compiling /auth/login ...
+ ✓ Compiled /auth/login in 8.4s (1326 modules)
+=== AUTH STATUS CHECK ===
+🚀 ADMIN-CARDS API CALLED at 2025-07-28T10:45:39.452Z
+🎯 Creating admin test data ecosystem...
+📝 Note: Using existing users or creating test data without auth constraints
+🚀 ADMIN-CARDS API CALLED at 2025-07-28T10:45:39.453Z
+🎯 Creating admin test data ecosystem...
+📝 Note: Using existing users or creating test data without auth constraints
+Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+Auth Status: User authenticated: bebdf69e-f75c-4383-a470-155c84c7cf06
+ GET /auth/login 200 in 10659ms
+Auth Status: User role verified: 2
+ GET /api/auth/status 200 in 16788ms
+👥 Using user IDs: {
+  adminUserId: 'b37e533a-be24-4502-9673-6e0a0bb96a46',
+  businessUserId: '445db54b-ff31-48f1-95d5-7ce02d3ff80d',
+  customerUserId: '22154fc2-e36c-4108-a61b-9aa017074971'
+}
+👥 Using user IDs: {
+  adminUserId: 'b37e533a-be24-4502-9673-6e0a0bb96a46',
+  businessUserId: '445db54b-ff31-48f1-95d5-7ce02d3ff80d',
+  customerUserId: '22154fc2-e36c-4108-a61b-9aa017074971'
+}
+=== AUTH STATUS CHECK ===
+Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+Auth Status: User authenticated: bebdf69e-f75c-4383-a470-155c84c7cf06
+ GET / 200 in 3077ms
+Auth Status: User role verified: 2
+ GET /api/auth/status 200 in 149ms
+✅ Stamp cards created successfully: 1
+✅ Stamp cards created successfully: 1
+✅ Membership cards created successfully: 1
+✅ Membership cards created successfully: 1
+✅ Membership stamp cards created successfully: 1
+🎯 Starting customer cards creation process...
+📊 Stamp cards result: { count: 1, ids: [ 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' ] }
+📊 Membership cards result: { count: 1, ids: [ 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' ] }
+🔨 About to create customer cards: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    membership_type: 'loyalty',
+    wallet_type: 'pwa'
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:45:40.766Z',
+    wallet_type: 'apple'
+  }
+]
+✅ Membership stamp cards created successfully: 1
+🎯 Starting customer cards creation process...
+📊 Stamp cards result: { count: 1, ids: [ 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' ] }
+📊 Membership cards result: { count: 1, ids: [ 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' ] }
+🔨 About to create customer cards: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    membership_type: 'loyalty',
+    wallet_type: 'pwa'
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:45:40.800Z',
+    wallet_type: 'apple'
+  }
+]
+✅ Customer cards created successfully: 2
+📋 Customer cards data: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    wallet_type: 'pwa',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:45:40.882568+00:00',
+    membership_type: 'loyalty',
+    total_sessions: null,
+    sessions_used: null,
+    cost: null,
+    expiry_date: null
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    current_stamps: null,
+    wallet_type: 'apple',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:45:40.882568+00:00',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:45:40.766+00:00'
+  }
+]
+ POST /api/dev-seed/admin-cards 200 in 13390ms
+✅ Customer cards created successfully: 2
+📋 Customer cards data: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    wallet_type: 'pwa',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:45:40.920837+00:00',
+    membership_type: 'loyalty',
+    total_sessions: null,
+    sessions_used: null,
+    cost: null,
+    expiry_date: null
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    current_stamps: null,
+    wallet_type: 'apple',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:45:40.920837+00:00',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:45:40.8+00:00'
+  }
+]
+ POST /api/dev-seed/admin-cards 200 in 13449ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 1089ms (812 modules)
+ GET /favicon.ico 200 in 1637ms
+ GET /join/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb 200 in 2031ms
+ GET /join/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa 200 in 1845ms
+ GET /auth/login 200 in 130ms
+ GET /favicon.ico 200 in 50ms
+=== AUTH STATUS CHECK ===
+Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+Auth Status: User authenticated: ba3615c6-9be6-4714-b4d6-e686b6e44308
+🚀 ADMIN-CARDS API CALLED at 2025-07-28T10:45:57.579Z
+🎯 Creating admin test data ecosystem...
+📝 Note: Using existing users or creating test data without auth constraints
+Auth Status: User role verified: 1
+ GET /api/auth/status 200 in 444ms
+🚀 ADMIN-CARDS API CALLED at 2025-07-28T10:45:57.616Z
+🎯 Creating admin test data ecosystem...
+📝 Note: Using existing users or creating test data without auth constraints
+👥 Using user IDs: {
+  adminUserId: 'b37e533a-be24-4502-9673-6e0a0bb96a46',
+  businessUserId: '445db54b-ff31-48f1-95d5-7ce02d3ff80d',
+  customerUserId: '22154fc2-e36c-4108-a61b-9aa017074971'
+}
+👥 Using user IDs: {
+  adminUserId: 'b37e533a-be24-4502-9673-6e0a0bb96a46',
+  businessUserId: '445db54b-ff31-48f1-95d5-7ce02d3ff80d',
+  customerUserId: '22154fc2-e36c-4108-a61b-9aa017074971'
+}
+✅ Stamp cards created successfully: 1
+ ○ Compiling /admin ...
+✅ Stamp cards created successfully: 1
+✅ Membership cards created successfully: 1
+✅ Membership cards created successfully: 1
+✅ Membership stamp cards created successfully: 1
+🎯 Starting customer cards creation process...
+📊 Stamp cards result: { count: 1, ids: [ 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' ] }
+📊 Membership cards result: { count: 1, ids: [ 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' ] }
+🔨 About to create customer cards: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    membership_type: 'loyalty',
+    wallet_type: 'pwa'
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:45:58.725Z',
+    wallet_type: 'apple'
+  }
+]
+✅ Membership stamp cards created successfully: 1
+🎯 Starting customer cards creation process...
+📊 Stamp cards result: { count: 1, ids: [ 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' ] }
+📊 Membership cards result: { count: 1, ids: [ 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' ] }
+🔨 About to create customer cards: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    membership_type: 'loyalty',
+    wallet_type: 'pwa'
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:45:58.808Z',
+    wallet_type: 'apple'
+  }
+]
+✅ Customer cards created successfully: 2
+📋 Customer cards data: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    wallet_type: 'pwa',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:45:58.846511+00:00',
+    membership_type: 'loyalty',
+    total_sessions: null,
+    sessions_used: null,
+    cost: null,
+    expiry_date: null
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    current_stamps: null,
+    wallet_type: 'apple',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:45:58.846511+00:00',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:45:58.725+00:00'
+  }
+]
+ POST /api/dev-seed/admin-cards 200 in 1325ms
+✅ Customer cards created successfully: 2
+📋 Customer cards data: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    wallet_type: 'pwa',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:45:58.920135+00:00',
+    membership_type: 'loyalty',
+    total_sessions: null,
+    sessions_used: null,
+    cost: null,
+    expiry_date: null
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    current_stamps: null,
+    wallet_type: 'apple',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:45:58.920135+00:00',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:45:58.808+00:00'
+  }
+]
+ POST /api/dev-seed/admin-cards 200 in 1425ms
+ ✓ Compiled /admin in 5.2s (1390 modules)
+ GET /admin 200 in 6155ms
+ GET /join/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa 200 in 4236ms
+ GET /join/invalid-card-id-12345 200 in 3502ms
+=== AUTH STATUS CHECK ===
+Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+Auth Status: User authenticated: ba3615c6-9be6-4714-b4d6-e686b6e44308
+Auth Status: User role verified: 1
+ GET /api/auth/status 200 in 1069ms
+ GET /favicon.ico 200 in 1036ms
+=== AUTH STATUS CHECK ===
+Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+Auth Status: User authenticated: ba3615c6-9be6-4714-b4d6-e686b6e44308
+Auth Status: User role verified: 1
+ GET /api/auth/status 200 in 461ms
+🚀 ADMIN-CARDS API CALLED at 2025-07-28T10:46:11.568Z
+🎯 Creating admin test data ecosystem...
+📝 Note: Using existing users or creating test data without auth constraints
+👥 Using user IDs: {
+  adminUserId: 'b37e533a-be24-4502-9673-6e0a0bb96a46',
+  businessUserId: '445db54b-ff31-48f1-95d5-7ce02d3ff80d',
+  customerUserId: '22154fc2-e36c-4108-a61b-9aa017074971'
+}
+✅ Stamp cards created successfully: 1
+✅ Membership cards created successfully: 1
+✅ Membership stamp cards created successfully: 1
+🎯 Starting customer cards creation process...
+📊 Stamp cards result: { count: 1, ids: [ 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' ] }
+📊 Membership cards result: { count: 1, ids: [ 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' ] }
+🔨 About to create customer cards: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    membership_type: 'loyalty',
+    wallet_type: 'pwa'
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:46:12.118Z',
+    wallet_type: 'apple'
+  }
+]
+✅ Customer cards created successfully: 2
+📋 Customer cards data: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    wallet_type: 'pwa',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:46:12.246992+00:00',
+    membership_type: 'loyalty',
+    total_sessions: null,
+    sessions_used: null,
+    cost: null,
+    expiry_date: null
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    current_stamps: null,
+    wallet_type: 'apple',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:46:12.246992+00:00',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:46:12.118+00:00'
+  }
+]
+ POST /api/dev-seed/admin-cards 200 in 666ms
+ GET /join/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa 200 in 374ms
+🚀 ADMIN-CARDS API CALLED at 2025-07-28T10:46:15.948Z
+🎯 Creating admin test data ecosystem...
+📝 Note: Using existing users or creating test data without auth constraints
+👥 Using user IDs: {
+  adminUserId: 'b37e533a-be24-4502-9673-6e0a0bb96a46',
+  businessUserId: '445db54b-ff31-48f1-95d5-7ce02d3ff80d',
+  customerUserId: '22154fc2-e36c-4108-a61b-9aa017074971'
+}
+✅ Stamp cards created successfully: 1
+✅ Membership cards created successfully: 1
+✅ Membership stamp cards created successfully: 1
+🎯 Starting customer cards creation process...
+📊 Stamp cards result: { count: 1, ids: [ 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' ] }
+📊 Membership cards result: { count: 1, ids: [ 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' ] }
+🔨 About to create customer cards: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    membership_type: 'loyalty',
+    wallet_type: 'pwa'
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:46:16.393Z',
+    wallet_type: 'apple'
+  }
+]
+✅ Customer cards created successfully: 2
+📋 Customer cards data: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    wallet_type: 'pwa',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:46:16.512479+00:00',
+    membership_type: 'loyalty',
+    total_sessions: null,
+    sessions_used: null,
+    cost: null,
+    expiry_date: null
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    current_stamps: null,
+    wallet_type: 'apple',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:46:16.512479+00:00',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:46:16.393+00:00'
+  }
+]
+ POST /api/dev-seed/admin-cards 200 in 515ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 3.4s (1391 modules)
+ GET /admin/businesses 404 in 4601ms
+ GET /join/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa 200 in 4015ms
+ GET /admin/businesses 404 in 1195ms
+ GET /admin 200 in 745ms
+ GET /favicon.ico 200 in 41ms
+=== AUTH STATUS CHECK ===
+Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+Auth Status: User authenticated: ba3615c6-9be6-4714-b4d6-e686b6e44308
+🚀 ADMIN-CARDS API CALLED at 2025-07-28T10:46:28.965Z
+🎯 Creating admin test data ecosystem...
+📝 Note: Using existing users or creating test data without auth constraints
+Auth Status: User role verified: 1
+ GET /api/auth/status 200 in 640ms
+👥 Using user IDs: {
+  adminUserId: 'b37e533a-be24-4502-9673-6e0a0bb96a46',
+  businessUserId: '445db54b-ff31-48f1-95d5-7ce02d3ff80d',
+  customerUserId: '22154fc2-e36c-4108-a61b-9aa017074971'
+}
+✅ Stamp cards created successfully: 1
+✅ Membership cards created successfully: 1
+✅ Membership stamp cards created successfully: 1
+🎯 Starting customer cards creation process...
+📊 Stamp cards result: { count: 1, ids: [ 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' ] }
+📊 Membership cards result: { count: 1, ids: [ 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' ] }
+🔨 About to create customer cards: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    membership_type: 'loyalty',
+    wallet_type: 'pwa'
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:46:29.494Z',
+    wallet_type: 'apple'
+  }
+]
+✅ Customer cards created successfully: 2
+📋 Customer cards data: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    wallet_type: 'pwa',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:46:29.616884+00:00',
+    membership_type: 'loyalty',
+    total_sessions: null,
+    sessions_used: null,
+    cost: null,
+    expiry_date: null
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    current_stamps: null,
+    wallet_type: 'apple',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:46:29.616884+00:00',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:46:29.494+00:00'
+  }
+]
+ POST /api/dev-seed/admin-cards 200 in 733ms
+ GET /join/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa 200 in 235ms
+🚀 ADMIN-CARDS API CALLED at 2025-07-28T10:46:33.701Z
+🎯 Creating admin test data ecosystem...
+📝 Note: Using existing users or creating test data without auth constraints
+👥 Using user IDs: {
+  adminUserId: 'b37e533a-be24-4502-9673-6e0a0bb96a46',
+  businessUserId: '445db54b-ff31-48f1-95d5-7ce02d3ff80d',
+  customerUserId: '22154fc2-e36c-4108-a61b-9aa017074971'
+}
+✅ Stamp cards created successfully: 1
+✅ Membership cards created successfully: 1
+✅ Membership stamp cards created successfully: 1
+🎯 Starting customer cards creation process...
+📊 Stamp cards result: { count: 1, ids: [ 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' ] }
+📊 Membership cards result: { count: 1, ids: [ 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' ] }
+🔨 About to create customer cards: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    membership_type: 'loyalty',
+    wallet_type: 'pwa'
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:46:34.251Z',
+    wallet_type: 'apple'
+  }
+]
+✅ Customer cards created successfully: 2
+📋 Customer cards data: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    wallet_type: 'pwa',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:46:34.3708+00:00',
+    membership_type: 'loyalty',
+    total_sessions: null,
+    sessions_used: null,
+    cost: null,
+    expiry_date: null
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    current_stamps: null,
+    wallet_type: 'apple',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:46:34.3708+00:00',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:46:34.251+00:00'
+  }
+]
+ POST /api/dev-seed/admin-cards 200 in 654ms
+🚀 ADMIN-CARDS API CALLED at 2025-07-28T10:46:34.403Z
+🎯 Creating admin test data ecosystem...
+📝 Note: Using existing users or creating test data without auth constraints
+👥 Using user IDs: {
+  adminUserId: 'b37e533a-be24-4502-9673-6e0a0bb96a46',
+  businessUserId: '445db54b-ff31-48f1-95d5-7ce02d3ff80d',
+  customerUserId: '22154fc2-e36c-4108-a61b-9aa017074971'
+}
+✅ Stamp cards created successfully: 1
+✅ Membership cards created successfully: 1
+✅ Membership stamp cards created successfully: 1
+🎯 Starting customer cards creation process...
+📊 Stamp cards result: { count: 1, ids: [ 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' ] }
+📊 Membership cards result: { count: 1, ids: [ 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' ] }
+🔨 About to create customer cards: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    membership_type: 'loyalty',
+    wallet_type: 'pwa'
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:46:34.857Z',
+    wallet_type: 'apple'
+  }
+]
+✅ Customer cards created successfully: 2
+📋 Customer cards data: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    wallet_type: 'pwa',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:46:34.977848+00:00',
+    membership_type: 'loyalty',
+    total_sessions: null,
+    sessions_used: null,
+    cost: null,
+    expiry_date: null
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    current_stamps: null,
+    wallet_type: 'apple',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:46:34.977848+00:00',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:46:34.857+00:00'
+  }
+]
+ POST /api/dev-seed/admin-cards 200 in 530ms
+ GET /join/dddddddd-dddd-dddd-dddd-dddddddddddd 200 in 181ms
+ GET /join/cccccccc-cccc-cccc-cccc-cccccccccccc 200 in 452ms
+🚀 ADMIN-CARDS API CALLED at 2025-07-28T10:46:49.562Z
+🎯 Creating admin test data ecosystem...
+📝 Note: Using existing users or creating test data without auth constraints
+👥 Using user IDs: {
+  adminUserId: 'b37e533a-be24-4502-9673-6e0a0bb96a46',
+  businessUserId: '445db54b-ff31-48f1-95d5-7ce02d3ff80d',
+  customerUserId: '22154fc2-e36c-4108-a61b-9aa017074971'
+}
+✅ Stamp cards created successfully: 1
+✅ Membership cards created successfully: 1
+✅ Membership stamp cards created successfully: 1
+🎯 Starting customer cards creation process...
+📊 Stamp cards result: { count: 1, ids: [ 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' ] }
+📊 Membership cards result: { count: 1, ids: [ 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' ] }
+🔨 About to create customer cards: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    membership_type: 'loyalty',
+    wallet_type: 'pwa'
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:46:50.317Z',
+    wallet_type: 'apple'
+  }
+]
+✅ Customer cards created successfully: 2
+📋 Customer cards data: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    wallet_type: 'pwa',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:46:50.424737+00:00',
+    membership_type: 'loyalty',
+    total_sessions: null,
+    sessions_used: null,
+    cost: null,
+    expiry_date: null
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    current_stamps: null,
+    wallet_type: 'apple',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:46:50.424737+00:00',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:46:50.317+00:00'
+  }
+]
+ POST /api/dev-seed/admin-cards 200 in 843ms
+🚀 ADMIN-CARDS API CALLED at 2025-07-28T10:46:51.226Z
+🎯 Creating admin test data ecosystem...
+📝 Note: Using existing users or creating test data without auth constraints
+👥 Using user IDs: {
+  adminUserId: 'b37e533a-be24-4502-9673-6e0a0bb96a46',
+  businessUserId: '445db54b-ff31-48f1-95d5-7ce02d3ff80d',
+  customerUserId: '22154fc2-e36c-4108-a61b-9aa017074971'
+}
+✅ Stamp cards created successfully: 1
+✅ Membership cards created successfully: 1
+ GET /join/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa 200 in 182ms
+✅ Membership stamp cards created successfully: 1
+🎯 Starting customer cards creation process...
+📊 Stamp cards result: { count: 1, ids: [ 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' ] }
+📊 Membership cards result: { count: 1, ids: [ 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' ] }
+🔨 About to create customer cards: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    membership_type: 'loyalty',
+    wallet_type: 'pwa'
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:46:51.717Z',
+    wallet_type: 'apple'
+  }
+]
+✅ Customer cards created successfully: 2
+📋 Customer cards data: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    wallet_type: 'pwa',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:46:51.831111+00:00',
+    membership_type: 'loyalty',
+    total_sessions: null,
+    sessions_used: null,
+    cost: null,
+    expiry_date: null
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    current_stamps: null,
+    wallet_type: 'apple',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:46:51.831111+00:00',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:46:51.717+00:00'
+  }
+]
+ POST /api/dev-seed/admin-cards 200 in 610ms
+ GET /favicon.ico 200 in 78ms
+ GET /join/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb 200 in 133ms
+ GET /favicon.ico 200 in 51ms
+🚀 ADMIN-CARDS API CALLED at 2025-07-28T10:47:04.982Z
+🎯 Creating admin test data ecosystem...
+📝 Note: Using existing users or creating test data without auth constraints
+👥 Using user IDs: {
+  adminUserId: 'b37e533a-be24-4502-9673-6e0a0bb96a46',
+  businessUserId: '445db54b-ff31-48f1-95d5-7ce02d3ff80d',
+  customerUserId: '22154fc2-e36c-4108-a61b-9aa017074971'
+}
+✅ Stamp cards created successfully: 1
+✅ Membership cards created successfully: 1
+✅ Membership stamp cards created successfully: 1
+🎯 Starting customer cards creation process...
+📊 Stamp cards result: { count: 1, ids: [ 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' ] }
+📊 Membership cards result: { count: 1, ids: [ 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' ] }
+🔨 About to create customer cards: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    membership_type: 'loyalty',
+    wallet_type: 'pwa'
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:47:05.446Z',
+    wallet_type: 'apple'
+  }
+]
+✅ Customer cards created successfully: 2
+📋 Customer cards data: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    wallet_type: 'pwa',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:47:05.565806+00:00',
+    membership_type: 'loyalty',
+    total_sessions: null,
+    sessions_used: null,
+    cost: null,
+    expiry_date: null
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    current_stamps: null,
+    wallet_type: 'apple',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:47:05.565806+00:00',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:47:05.446+00:00'
+  }
+]
+ POST /api/dev-seed/admin-cards 200 in 555ms
+ GET /join/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa 200 in 223ms
+ GET /favicon.ico 200 in 34ms
+🚀 ADMIN-CARDS API CALLED at 2025-07-28T10:47:07.884Z
+🎯 Creating admin test data ecosystem...
+📝 Note: Using existing users or creating test data without auth constraints
+👥 Using user IDs: {
+  adminUserId: 'b37e533a-be24-4502-9673-6e0a0bb96a46',
+  businessUserId: '445db54b-ff31-48f1-95d5-7ce02d3ff80d',
+  customerUserId: '22154fc2-e36c-4108-a61b-9aa017074971'
+}
+✅ Stamp cards created successfully: 1
+✅ Membership cards created successfully: 1
+✅ Membership stamp cards created successfully: 1
+🎯 Starting customer cards creation process...
+📊 Stamp cards result: { count: 1, ids: [ 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' ] }
+📊 Membership cards result: { count: 1, ids: [ 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' ] }
+🔨 About to create customer cards: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    membership_type: 'loyalty',
+    wallet_type: 'pwa'
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:47:08.299Z',
+    wallet_type: 'apple'
+  }
+]
+✅ Customer cards created successfully: 2
+📋 Customer cards data: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    wallet_type: 'pwa',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:47:08.40787+00:00',
+    membership_type: 'loyalty',
+    total_sessions: null,
+    sessions_used: null,
+    cost: null,
+    expiry_date: null
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    current_stamps: null,
+    wallet_type: 'apple',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:47:08.40787+00:00',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:47:08.299+00:00'
+  }
+]
+ POST /api/dev-seed/admin-cards 200 in 490ms
+ GET /join/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb 200 in 158ms
+ GET /favicon.ico 200 in 33ms
+🚀 ADMIN-CARDS API CALLED at 2025-07-28T10:50:41.278Z
+🎯 Creating admin test data ecosystem...
+📝 Note: Using existing users or creating test data without auth constraints
+👥 Using user IDs: {
+  adminUserId: '00000000-0000-0000-0000-000000000001',
+  businessUserId: '22222222-2222-2222-2222-222222222222',
+  customerUserId: '66666666-6666-6666-6666-666666666666'
+}
+Business creation error: {
   message: 'TypeError: fetch failed',
   details: 'TypeError: fetch failed\n' +
     '    at node:internal/deps/undici/undici:13502:13\n' +
     '    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n' +
-    '    at async GET (webpack-internal:///(rsc)/./src/app/api/wallet/apple/[customerCardId]/route.ts:49:47)\n' +
+    '    at async POST (webpack-internal:///(rsc)/./src/app/api/dev-seed/admin-cards/route.ts:162:42)\n' +
     '    at async AppRouteRouteModule.do (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:26:34112)\n' +
     '    at async AppRouteRouteModule.handle (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:26:41338)\n' +
     '    at async doRender (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:1518:42)\n' +
@@ -214,166 +2689,597 @@ Business: { name: 'Pizza Palace', description: 'Authentic Italian pizza' }
   hint: '',
   code: ''
 }
- GET /api/wallet/apple/8e78f3d8-ed50-4a2a-b4e6-91e30d158e95 404 in 1377ms
-🎫 Generating Google Wallet pass for card: 8e78f3d8-ed50-4a2a-b4e6-91e30d158e95
-📋 Card type detected: Stamp Cards
-🏷️ Setting Google Wallet title to: "Stamp Cards"
-🔐 Signing JWT with RS256 algorithm for Google Wallet
-🔍 Processing private key format...
-✅ Private key validated successfully
-🔐 Signing JWT with RS256...
-✅ JWT signed successfully
- GET /api/wallet/google/8e78f3d8-ed50-4a2a-b4e6-91e30d158e95 200 in 1154ms
-Generating PWA Wallet for card ID: 8e78f3d8-ed50-4a2a-b4e6-91e30d158e95
-Fetched customer card: {
-  id: '8e78f3d8-ed50-4a2a-b4e6-91e30d158e95',
-  current_stamps: 1,
-  membership_type: 'loyalty',
-  sessions_used: 0,
-  total_sessions: null,
-  cost: null,
-  expiry_date: null,
-  created_at: '2025-07-15T19:05:02.494916+00:00',
-  stamp_cards: {
-    id: '6b79ddcb-79fa-4b03-837e-b8ac7bedb335',
-    name: 'Pizza Club',
-    businesses: { name: 'Pizza Palace', description: 'Authentic Italian pizza' },
-    total_stamps: 5,
-    reward_description: 'Free pizza after 5 purchases'
+Customer creation error: {
+  message: 'TypeError: fetch failed',
+  details: 'TypeError: fetch failed\n' +
+    '    at node:internal/deps/undici/undici:13502:13\n' +
+    '    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n' +
+    '    at async POST (webpack-internal:///(rsc)/./src/app/api/dev-seed/admin-cards/route.ts:173:42)\n' +
+    '    at async AppRouteRouteModule.do (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:26:34112)\n' +
+    '    at async AppRouteRouteModule.handle (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:26:41338)\n' +
+    '    at async doRender (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:1518:42)\n' +
+    '    at async DevServer.renderToResponseWithComponentsImpl (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:1920:28)\n' +
+    '    at async DevServer.renderPageComponent (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:2408:24)\n' +
+    '    at async DevServer.renderToResponseImpl (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:2445:32)\n' +
+    '    at async DevServer.pipeImpl (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:1008:25)\n' +
+    '    at async NextNodeServer.handleCatchallRenderRequest (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/next-server.js:305:17)\n' +
+    '    at async DevServer.handleRequestImpl (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:900:17)\n' +
+    '    at async /Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/dev/next-dev-server.js:371:20\n' +
+    '    at async Span.traceAsyncFn (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/trace/trace.js:157:20)\n' +
+    '    at async DevServer.handleRequest (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/dev/next-dev-server.js:368:24)\n' +
+    '    at async invokeRender (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/lib/router-server.js:237:21)\n' +
+    '    at async handleRequest (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/lib/router-server.js:428:24)\n' +
+    '    at async requestHandlerImpl (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/lib/router-server.js:452:13)\n' +
+    '    at async Server.requestListener (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/lib/start-server.js:158:13)',
+  hint: '',
+  code: ''
+}
+Stamp cards creation error: {
+  message: 'TypeError: fetch failed',
+  details: 'TypeError: fetch failed\n' +
+    '    at node:internal/deps/undici/undici:13502:13\n' +
+    '    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n' +
+    '    at async POST (webpack-internal:///(rsc)/./src/app/api/dev-seed/admin-cards/route.ts:180:57)\n' +
+    '    at async AppRouteRouteModule.do (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:26:34112)\n' +
+    '    at async AppRouteRouteModule.handle (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:26:41338)\n' +
+    '    at async doRender (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:1518:42)\n' +
+    '    at async DevServer.renderToResponseWithComponentsImpl (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:1920:28)\n' +
+    '    at async DevServer.renderPageComponent (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:2408:24)\n' +
+    '    at async DevServer.renderToResponseImpl (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:2445:32)\n' +
+    '    at async DevServer.pipeImpl (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:1008:25)\n' +
+    '    at async NextNodeServer.handleCatchallRenderRequest (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/next-server.js:305:17)\n' +
+    '    at async DevServer.handleRequestImpl (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:900:17)\n' +
+    '    at async /Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/dev/next-dev-server.js:371:20\n' +
+    '    at async Span.traceAsyncFn (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/trace/trace.js:157:20)\n' +
+    '    at async DevServer.handleRequest (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/dev/next-dev-server.js:368:24)\n' +
+    '    at async invokeRender (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/lib/router-server.js:237:21)\n' +
+    '    at async handleRequest (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/lib/router-server.js:428:24)\n' +
+    '    at async requestHandlerImpl (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/lib/router-server.js:452:13)\n' +
+    '    at async Server.requestListener (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/lib/start-server.js:158:13)',
+  hint: '',
+  code: ''
+}
+Membership cards creation error: {
+  message: 'TypeError: fetch failed',
+  details: 'TypeError: fetch failed\n' +
+    '    at node:internal/deps/undici/undici:13502:13\n' +
+    '    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n' +
+    '    at async POST (webpack-internal:///(rsc)/./src/app/api/dev-seed/admin-cards/route.ts:189:67)\n' +
+    '    at async AppRouteRouteModule.do (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:26:34112)\n' +
+    '    at async AppRouteRouteModule.handle (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:26:41338)\n' +
+    '    at async doRender (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:1518:42)\n' +
+    '    at async DevServer.renderToResponseWithComponentsImpl (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:1920:28)\n' +
+    '    at async DevServer.renderPageComponent (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:2408:24)\n' +
+    '    at async DevServer.renderToResponseImpl (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:2445:32)\n' +
+    '    at async DevServer.pipeImpl (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:1008:25)\n' +
+    '    at async NextNodeServer.handleCatchallRenderRequest (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/next-server.js:305:17)\n' +
+    '    at async DevServer.handleRequestImpl (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:900:17)\n' +
+    '    at async /Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/dev/next-dev-server.js:371:20\n' +
+    '    at async Span.traceAsyncFn (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/trace/trace.js:157:20)\n' +
+    '    at async DevServer.handleRequest (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/dev/next-dev-server.js:368:24)\n' +
+    '    at async invokeRender (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/lib/router-server.js:237:21)\n' +
+    '    at async handleRequest (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/lib/router-server.js:428:24)\n' +
+    '    at async requestHandlerImpl (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/lib/router-server.js:452:13)\n' +
+    '    at async Server.requestListener (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/lib/start-server.js:158:13)',
+  hint: '',
+  code: ''
+}
+🎯 Starting customer cards creation process...
+📊 Stamp cards result: { count: undefined, ids: undefined }
+📊 Membership cards result: { count: undefined, ids: undefined }
+⚠️ No customer cards created - stamp/membership cards creation failed
+ POST /api/dev-seed/admin-cards 200 in 274ms
+ GET /join/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa 200 in 1981ms
+ GET /favicon.ico 200 in 74ms
+🚀 ADMIN-CARDS API CALLED at 2025-07-28T10:50:49.440Z
+🎯 Creating admin test data ecosystem...
+📝 Note: Using existing users or creating test data without auth constraints
+👥 Using user IDs: {
+  adminUserId: '00000000-0000-0000-0000-000000000001',
+  businessUserId: '22222222-2222-2222-2222-222222222222',
+  customerUserId: '66666666-6666-6666-6666-666666666666'
+}
+Business creation error: {
+  message: 'TypeError: fetch failed',
+  details: 'TypeError: fetch failed\n' +
+    '    at node:internal/deps/undici/undici:13502:13\n' +
+    '    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n' +
+    '    at async POST (webpack-internal:///(rsc)/./src/app/api/dev-seed/admin-cards/route.ts:162:42)\n' +
+    '    at async AppRouteRouteModule.do (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:26:34112)\n' +
+    '    at async AppRouteRouteModule.handle (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:26:41338)\n' +
+    '    at async doRender (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:1518:42)\n' +
+    '    at async DevServer.renderToResponseWithComponentsImpl (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:1920:28)\n' +
+    '    at async DevServer.renderPageComponent (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:2408:24)\n' +
+    '    at async DevServer.renderToResponseImpl (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:2445:32)\n' +
+    '    at async DevServer.pipeImpl (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:1008:25)\n' +
+    '    at async NextNodeServer.handleCatchallRenderRequest (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/next-server.js:305:17)\n' +
+    '    at async DevServer.handleRequestImpl (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:900:17)\n' +
+    '    at async /Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/dev/next-dev-server.js:371:20\n' +
+    '    at async Span.traceAsyncFn (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/trace/trace.js:157:20)\n' +
+    '    at async DevServer.handleRequest (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/dev/next-dev-server.js:368:24)\n' +
+    '    at async invokeRender (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/lib/router-server.js:237:21)\n' +
+    '    at async handleRequest (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/lib/router-server.js:428:24)\n' +
+    '    at async requestHandlerImpl (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/lib/router-server.js:452:13)\n' +
+    '    at async Server.requestListener (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/lib/start-server.js:158:13)',
+  hint: '',
+  code: ''
+}
+Customer creation error: {
+  message: 'TypeError: fetch failed',
+  details: 'TypeError: fetch failed\n' +
+    '    at node:internal/deps/undici/undici:13502:13\n' +
+    '    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n' +
+    '    at async POST (webpack-internal:///(rsc)/./src/app/api/dev-seed/admin-cards/route.ts:173:42)\n' +
+    '    at async AppRouteRouteModule.do (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:26:34112)\n' +
+    '    at async AppRouteRouteModule.handle (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:26:41338)\n' +
+    '    at async doRender (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:1518:42)\n' +
+    '    at async DevServer.renderToResponseWithComponentsImpl (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:1920:28)\n' +
+    '    at async DevServer.renderPageComponent (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:2408:24)\n' +
+    '    at async DevServer.renderToResponseImpl (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:2445:32)\n' +
+    '    at async DevServer.pipeImpl (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:1008:25)\n' +
+    '    at async NextNodeServer.handleCatchallRenderRequest (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/next-server.js:305:17)\n' +
+    '    at async DevServer.handleRequestImpl (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:900:17)\n' +
+    '    at async /Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/dev/next-dev-server.js:371:20\n' +
+    '    at async Span.traceAsyncFn (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/trace/trace.js:157:20)\n' +
+    '    at async DevServer.handleRequest (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/dev/next-dev-server.js:368:24)\n' +
+    '    at async invokeRender (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/lib/router-server.js:237:21)\n' +
+    '    at async handleRequest (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/lib/router-server.js:428:24)\n' +
+    '    at async requestHandlerImpl (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/lib/router-server.js:452:13)\n' +
+    '    at async Server.requestListener (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/lib/start-server.js:158:13)',
+  hint: '',
+  code: ''
+}
+Stamp cards creation error: {
+  message: 'TypeError: fetch failed',
+  details: 'TypeError: fetch failed\n' +
+    '    at node:internal/deps/undici/undici:13502:13\n' +
+    '    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n' +
+    '    at async POST (webpack-internal:///(rsc)/./src/app/api/dev-seed/admin-cards/route.ts:180:57)\n' +
+    '    at async AppRouteRouteModule.do (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:26:34112)\n' +
+    '    at async AppRouteRouteModule.handle (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:26:41338)\n' +
+    '    at async doRender (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:1518:42)\n' +
+    '    at async DevServer.renderToResponseWithComponentsImpl (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:1920:28)\n' +
+    '    at async DevServer.renderPageComponent (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:2408:24)\n' +
+    '    at async DevServer.renderToResponseImpl (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:2445:32)\n' +
+    '    at async DevServer.pipeImpl (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:1008:25)\n' +
+    '    at async NextNodeServer.handleCatchallRenderRequest (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/next-server.js:305:17)\n' +
+    '    at async DevServer.handleRequestImpl (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:900:17)\n' +
+    '    at async /Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/dev/next-dev-server.js:371:20\n' +
+    '    at async Span.traceAsyncFn (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/trace/trace.js:157:20)\n' +
+    '    at async DevServer.handleRequest (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/dev/next-dev-server.js:368:24)\n' +
+    '    at async invokeRender (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/lib/router-server.js:237:21)\n' +
+    '    at async handleRequest (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/lib/router-server.js:428:24)\n' +
+    '    at async requestHandlerImpl (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/lib/router-server.js:452:13)\n' +
+    '    at async Server.requestListener (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/lib/start-server.js:158:13)',
+  hint: '',
+  code: ''
+}
+Membership cards creation error: {
+  message: 'TypeError: fetch failed',
+  details: 'TypeError: fetch failed\n' +
+    '    at node:internal/deps/undici/undici:13502:13\n' +
+    '    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n' +
+    '    at async POST (webpack-internal:///(rsc)/./src/app/api/dev-seed/admin-cards/route.ts:189:67)\n' +
+    '    at async AppRouteRouteModule.do (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:26:34112)\n' +
+    '    at async AppRouteRouteModule.handle (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:26:41338)\n' +
+    '    at async doRender (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:1518:42)\n' +
+    '    at async DevServer.renderToResponseWithComponentsImpl (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:1920:28)\n' +
+    '    at async DevServer.renderPageComponent (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:2408:24)\n' +
+    '    at async DevServer.renderToResponseImpl (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:2445:32)\n' +
+    '    at async DevServer.pipeImpl (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:1008:25)\n' +
+    '    at async NextNodeServer.handleCatchallRenderRequest (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/next-server.js:305:17)\n' +
+    '    at async DevServer.handleRequestImpl (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/base-server.js:900:17)\n' +
+    '    at async /Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/dev/next-dev-server.js:371:20\n' +
+    '    at async Span.traceAsyncFn (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/trace/trace.js:157:20)\n' +
+    '    at async DevServer.handleRequest (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/dev/next-dev-server.js:368:24)\n' +
+    '    at async invokeRender (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/lib/router-server.js:237:21)\n' +
+    '    at async handleRequest (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/lib/router-server.js:428:24)\n' +
+    '    at async requestHandlerImpl (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/lib/router-server.js:452:13)\n' +
+    '    at async Server.requestListener (/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/node_modules/next/dist/server/lib/start-server.js:158:13)',
+  hint: '',
+  code: ''
+}
+🎯 Starting customer cards creation process...
+📊 Stamp cards result: { count: undefined, ids: undefined }
+📊 Membership cards result: { count: undefined, ids: undefined }
+⚠️ No customer cards created - stamp/membership cards creation failed
+ POST /api/dev-seed/admin-cards 200 in 142ms
+ GET /join/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb 200 in 1046ms
+ GET /favicon.ico 200 in 16ms
+🚀 ADMIN-CARDS API CALLED at 2025-07-28T10:52:09.910Z
+🎯 Creating admin test data ecosystem...
+📝 Note: Using existing users or creating test data without auth constraints
+👥 Using user IDs: {
+  adminUserId: 'b37e533a-be24-4502-9673-6e0a0bb96a46',
+  businessUserId: '445db54b-ff31-48f1-95d5-7ce02d3ff80d',
+  customerUserId: '22154fc2-e36c-4108-a61b-9aa017074971'
+}
+✅ Stamp cards created successfully: 1
+✅ Membership cards created successfully: 1
+✅ Membership stamp cards created successfully: 1
+🎯 Starting customer cards creation process...
+📊 Stamp cards result: { count: 1, ids: [ 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' ] }
+📊 Membership cards result: { count: 1, ids: [ 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' ] }
+🔨 About to create customer cards: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    membership_type: 'loyalty',
+    wallet_type: 'pwa'
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:52:11.124Z',
+    wallet_type: 'apple'
   }
-}
-Card Type: Loyalty
-Stamp Card: {
-  id: '6b79ddcb-79fa-4b03-837e-b8ac7bedb335',
-  name: 'Pizza Club',
-  total_stamps: 5,
-  reward_description: 'Free pizza after 5 purchases'
-}
-Business: { name: 'Pizza Palace', description: 'Authentic Italian pizza' }
- GET /api/wallet/pwa/8e78f3d8-ed50-4a2a-b4e6-91e30d158e95 200 in 585ms
- ○ Compiling /api/test/database-check ...
- ✓ Compiled /api/test/database-check in 5.7s (604 modules)
-🔍 Testing Supabase database connectivity...
-✅ Database queries successful
- GET /api/test/database-check 200 in 7006ms
- ○ Compiling /api/health/env ...
- ✓ Compiled /api/health/env in 3.8s (737 modules)
-🔍 Starting environment validation...
-✅ Environment validation completed: 69% (9/13)
- GET /api/health/env 200 in 4086ms
-🍎 Generating Apple Wallet for card ID: 8e78f3d8-ed50-4a2a-b4e6-91e30d158e95
-✅ Fetched customer card: {
-  id: '8e78f3d8-ed50-4a2a-b4e6-91e30d158e95',
-  current_stamps: 1,
-  membership_type: 'loyalty',
-  sessions_used: 0,
-  total_sessions: null,
-  cost: null,
-  expiry_date: null,
-  created_at: '2025-07-15T19:05:02.494916+00:00',
-  updated_at: '2025-07-16T19:22:28.510015+00:00',
-  stamp_cards: {
-    id: '6b79ddcb-79fa-4b03-837e-b8ac7bedb335',
-    name: 'Pizza Club',
-    businesses: { name: 'Pizza Palace', description: 'Authentic Italian pizza' },
-    total_stamps: 5,
-    reward_description: 'Free pizza after 5 purchases'
+]
+✅ Customer cards created successfully: 2
+📋 Customer cards data: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    wallet_type: 'pwa',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:52:11.245184+00:00',
+    membership_type: 'loyalty',
+    total_sessions: null,
+    sessions_used: null,
+    cost: null,
+    expiry_date: null
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    current_stamps: null,
+    wallet_type: 'apple',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T10:52:11.245184+00:00',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T10:52:11.124+00:00'
   }
+]
+ POST /api/dev-seed/admin-cards 200 in 1347ms
+ GET /join/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa 200 in 969ms
+ GET /favicon.ico 200 in 86ms
+=== AUTH STATUS CHECK ===
+Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+Auth Status: User authenticated: bebdf69e-f75c-4383-a470-155c84c7cf06
+Auth Status: User role verified: 2
+ GET /api/auth/status 200 in 707ms
+=== AUTH STATUS CHECK ===
+Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+Auth Status: User authenticated: bebdf69e-f75c-4383-a470-155c84c7cf06
+Auth Status: User role verified: 2
+ GET /api/auth/status 200 in 300ms
+🚀 ADMIN-CARDS API CALLED at 2025-07-28T12:01:15.651Z
+🎯 Creating admin test data ecosystem...
+📝 Note: Using existing users or creating test data without auth constraints
+👥 Using user IDs: {
+  adminUserId: 'b37e533a-be24-4502-9673-6e0a0bb96a46',
+  businessUserId: '445db54b-ff31-48f1-95d5-7ce02d3ff80d',
+  customerUserId: '22154fc2-e36c-4108-a61b-9aa017074971'
 }
-Starting PKPass generation...
-Generated 6 icon files
-Generated pass.json: 2786 bytes
-Generated manifest.json with 7 files
-Certificate validation passed: {
-  passExpires: '2026-08-15T13:42:37.000Z',
-  wwdrExpires: '2030-12-10T00:00:00.000Z'
-}
-Running OpenSSL command for PKCS#7 signature...
-Created PKCS#7 signature using OpenSSL: 3191 bytes
-Generated signature: 3191 bytes
-Finalizing PKPass archive...
-PKPass archive created successfully
-✅ PKPass generated successfully: { size: 5486, sizeKB: '5.4' }
- GET /api/wallet/apple/8e78f3d8-ed50-4a2a-b4e6-91e30d158e95 200 in 1105ms
-🍎 Generating Apple Wallet for card ID: 8e78f3d8-ed50-4a2a-b4e6-91e30d158e95
-✅ Fetched customer card: {
-  id: '8e78f3d8-ed50-4a2a-b4e6-91e30d158e95',
-  current_stamps: 1,
-  membership_type: 'loyalty',
-  sessions_used: 0,
-  total_sessions: null,
-  cost: null,
-  expiry_date: null,
-  created_at: '2025-07-15T19:05:02.494916+00:00',
-  updated_at: '2025-07-16T19:22:28.510015+00:00',
-  stamp_cards: {
-    id: '6b79ddcb-79fa-4b03-837e-b8ac7bedb335',
-    name: 'Pizza Club',
-    businesses: { name: 'Pizza Palace', description: 'Authentic Italian pizza' },
-    total_stamps: 5,
-    reward_description: 'Free pizza after 5 purchases'
+✅ Stamp cards created successfully: 1
+✅ Membership cards created successfully: 1
+✅ Membership stamp cards created successfully: 1
+🎯 Starting customer cards creation process...
+📊 Stamp cards result: { count: 1, ids: [ 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' ] }
+📊 Membership cards result: { count: 1, ids: [ 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' ] }
+🔨 About to create customer cards: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    membership_type: 'loyalty',
+    wallet_type: 'pwa'
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T12:01:16.292Z',
+    wallet_type: 'apple'
   }
-}
-Starting PKPass generation...
-Generated 6 icon files
-Generated pass.json: 2786 bytes
-Generated manifest.json with 7 files
-Certificate validation passed: {
-  passExpires: '2026-08-15T13:42:37.000Z',
-  wwdrExpires: '2030-12-10T00:00:00.000Z'
-}
-Running OpenSSL command for PKCS#7 signature...
-Created PKCS#7 signature using OpenSSL: 3191 bytes
-Generated signature: 3191 bytes
-Finalizing PKPass archive...
-PKPass archive created successfully
-✅ PKPass generated successfully: { size: 5484, sizeKB: '5.4' }
- GET /api/wallet/apple/8e78f3d8-ed50-4a2a-b4e6-91e30d158e95 200 in 530ms
-🍎 Generating Apple Wallet for card ID: 8e78f3d8-ed50-4a2a-b4e6-91e30d158e95
-✅ Fetched customer card: {
-  id: '8e78f3d8-ed50-4a2a-b4e6-91e30d158e95',
-  current_stamps: 1,
-  membership_type: 'loyalty',
-  sessions_used: 0,
-  total_sessions: null,
-  cost: null,
-  expiry_date: null,
-  created_at: '2025-07-15T19:05:02.494916+00:00',
-  updated_at: '2025-07-16T19:22:28.510015+00:00',
-  stamp_cards: {
-    id: '6b79ddcb-79fa-4b03-837e-b8ac7bedb335',
-    name: 'Pizza Club',
-    businesses: { name: 'Pizza Palace', description: 'Authentic Italian pizza' },
-    total_stamps: 5,
-    reward_description: 'Free pizza after 5 purchases'
+]
+✅ Customer cards created successfully: 2
+📋 Customer cards data: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    wallet_type: 'pwa',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T12:01:16.356373+00:00',
+    membership_type: 'loyalty',
+    total_sessions: null,
+    sessions_used: null,
+    cost: null,
+    expiry_date: null
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    current_stamps: null,
+    wallet_type: 'apple',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T12:01:16.356373+00:00',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T12:01:16.292+00:00'
   }
+]
+ POST /api/dev-seed/admin-cards 200 in 748ms
+ GET /join/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa 200 in 335ms
+ GET /favicon.ico 200 in 132ms
+🚀 ADMIN-CARDS API CALLED at 2025-07-28T12:01:22.393Z
+🎯 Creating admin test data ecosystem...
+📝 Note: Using existing users or creating test data without auth constraints
+👥 Using user IDs: {
+  adminUserId: 'b37e533a-be24-4502-9673-6e0a0bb96a46',
+  businessUserId: '445db54b-ff31-48f1-95d5-7ce02d3ff80d',
+  customerUserId: '22154fc2-e36c-4108-a61b-9aa017074971'
 }
-Starting PKPass generation...
-Generated 6 icon files
-Generated pass.json: 2786 bytes
-Generated manifest.json with 7 files
-Certificate validation passed: {
-  passExpires: '2026-08-15T13:42:37.000Z',
-  wwdrExpires: '2030-12-10T00:00:00.000Z'
-}
-Running OpenSSL command for PKCS#7 signature...
-Created PKCS#7 signature using OpenSSL: 3191 bytes
-Generated signature: 3191 bytes
-Finalizing PKPass archive...
-PKPass archive created successfully
-✅ PKPass generated successfully: { size: 5487, sizeKB: '5.4' }
- GET /api/wallet/apple/8e78f3d8-ed50-4a2a-b4e6-91e30d158e95 200 in 736ms
- ○ Compiling /auth/login ...
- ✓ Compiled /auth/login in 3.9s (632 modules)
- ⨯ [TypeError: Cannot read properties of undefined (reading 'clientModules')] {
-  page: '/auth/login'
+✅ Stamp cards created successfully: 1
+✅ Membership cards created successfully: 1
+✅ Membership stamp cards created successfully: 1
+🎯 Starting customer cards creation process...
+📊 Stamp cards result: { count: 1, ids: [ 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' ] }
+📊 Membership cards result: { count: 1, ids: [ 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' ] }
+🔨 About to create customer cards: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    membership_type: 'loyalty',
+    wallet_type: 'pwa'
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T12:01:23.169Z',
+    wallet_type: 'apple'
+  }
+]
+✅ Customer cards created successfully: 2
+📋 Customer cards data: [
+  {
+    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    current_stamps: 3,
+    wallet_type: 'pwa',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T12:01:23.221274+00:00',
+    membership_type: 'loyalty',
+    total_sessions: null,
+    sessions_used: null,
+    cost: null,
+    expiry_date: null
+  },
+  {
+    id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+    customer_id: '55555555-5555-5555-5555-555555555555',
+    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    current_stamps: null,
+    wallet_type: 'apple',
+    wallet_pass_id: null,
+    created_at: '2025-07-28T10:17:48.830916+00:00',
+    updated_at: '2025-07-28T12:01:23.221274+00:00',
+    membership_type: 'gym',
+    total_sessions: 20,
+    sessions_used: 5,
+    cost: 15000,
+    expiry_date: '2025-10-26T12:01:23.169+00:00'
+  }
+]
+ POST /api/dev-seed/admin-cards 200 in 877ms
+=== AUTH STATUS CHECK ===
+Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+Auth Status: User authenticated: bebdf69e-f75c-4383-a470-155c84c7cf06
+Auth Status: User role verified: 2
+ GET /api/auth/status 200 in 479ms
+=== AUTH STATUS CHECK ===
+Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+Auth Status: User authenticated: bebdf69e-f75c-4383-a470-155c84c7cf06
+Auth Status: User role verified: 2
+ GET /api/auth/status 200 in 317ms
+ ○ Compiling /business/stamp-cards ...
+ ✓ Compiled /business/stamp-cards in 4s (1411 modules)
+ GET /business/stamp-cards 200 in 4324ms
+ GET /business/stamp-cards 200 in 82ms
+=== AUTH STATUS CHECK ===
+Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+Auth Status: User authenticated: bebdf69e-f75c-4383-a470-155c84c7cf06
+Auth Status: User role verified: 2
+ GET /api/auth/status 200 in 958ms
+=== AUTH STATUS CHECK ===
+Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+Auth Status: User authenticated: bebdf69e-f75c-4383-a470-155c84c7cf06
+Auth Status: User role verified: 2
+ GET /api/auth/status 200 in 270ms
+=== AUTH STATUS CHECK ===
+Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+Auth Status: User authenticated: bebdf69e-f75c-4383-a470-155c84c7cf06
+Auth Status: User role verified: 2
+ GET /api/auth/status 200 in 158ms
+=== AUTH STATUS CHECK ===
+Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+Auth Status: User authenticated: bebdf69e-f75c-4383-a470-155c84c7cf06
+Auth Status: User role verified: 2
+ GET /api/auth/status 200 in 187ms
+ ✓ Compiled /_not-found in 481ms (854 modules)
+ ⨯ [TypeError: Cannot read properties of undefined (reading 'entryCSSFiles')]
+ ⨯ [Error: ENOENT: no such file or directory, open '/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/.next/server/app/api/auth/status/route.js'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/.next/server/app/api/auth/status/route.js',
+  page: '/api/auth/status'
 }
  ○ Compiling /_error ...
- ✓ Compiled /_error in 5.2s (1480 modules)
- ○ Compiling / ...
- ✓ Compiled / in 1653ms (1505 modules)
- GET / 200 in 2741ms
- GET /auth/login 200 in 100ms
- ○ Compiling /_not-found ...
- ✓ Compiled /_not-found in 1985ms (1508 modules)
- GET /_next/static/chunks/app/auth/login/page.js 404 in 2753ms
+ ✓ Compiled /_error in 8s (1741 modules)
+ GET /admin/settings 500 in 12854ms
+ GET /api/auth/status 500 in 10976ms
+ GET /admin/settings 404 in 295ms
+=== AUTH STATUS CHECK ===
+Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+Auth Status: User authenticated: bebdf69e-f75c-4383-a470-155c84c7cf06
+ GET /auth/login?error=unauthorized 200 in 396ms
+ GET /admin/settings 404 in 236ms
+ GET /admin/settings 404 in 301ms
+Auth Status: User role verified: 2
+ GET /api/auth/status 200 in 774ms
+ GET /_next/static/css/app/layout.css?v=1753704154256 404 in 188ms
+=== AUTH STATUS CHECK ===
+Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+Auth Status: User authenticated: bebdf69e-f75c-4383-a470-155c84c7cf06
+ GET /_next/static/chunks/main-app.js?v=1753704154256 404 in 219ms
+ GET /_next/static/chunks/app/not-found.js 404 in 217ms
+ GET /_next/static/chunks/app-pages-internals.js 404 in 221ms
+Auth Status: User role verified: 2
+ GET /api/auth/status 200 in 282ms
+ ✓ Compiled /favicon.ico in 344ms (939 modules)
+=== AUTH STATUS CHECK ===
+ GET /favicon.ico 200 in 759ms
+Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+Auth Status: User authenticated: bebdf69e-f75c-4383-a470-155c84c7cf06
+Auth Status: User role verified: 2
+ GET /api/auth/status 200 in 774ms
+=== AUTH STATUS CHECK ===
+Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+Auth Status: User authenticated: bebdf69e-f75c-4383-a470-155c84c7cf06
+Auth Status: User role verified: 2
+ GET /api/auth/status 200 in 105ms
+=== AUTH STATUS CHECK ===
+Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+Auth Status: User authenticated: bebdf69e-f75c-4383-a470-155c84c7cf06
+Auth Status: User role verified: 2
+ GET /api/auth/status 200 in 111ms
+=== AUTH STATUS CHECK ===
+Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+Auth Status: User authenticated: bebdf69e-f75c-4383-a470-155c84c7cf06
+Auth Status: User role verified: 2
+ GET /api/auth/status 200 in 182ms
+ ○ Compiling /business/dashboard ...
+ ✓ Compiled /business/dashboard in 3s (1782 modules)
+=== AUTH STATUS CHECK ===
+Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+Auth Status: User authenticated: bebdf69e-f75c-4383-a470-155c84c7cf06
+ GET /business/dashboard 200 in 3989ms
+ GET /admin/settings 404 in 1982ms
+ GET /_next/static/css/app/layout.css?v=1753704174380 404 in 234ms
+ GET /_next/static/chunks/main-app.js?v=1753704174380 404 in 232ms
+ GET /_next/static/chunks/app/not-found.js 404 in 227ms
+ GET /_next/static/chunks/app-pages-internals.js 404 in 231ms
+Auth Status: User role verified: 2
+ GET /api/auth/status 200 in 4225ms
+ GET /favicon.ico 200 in 23ms
+=== AUTH STATUS CHECK ===
+Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+Auth Status: User authenticated: bebdf69e-f75c-4383-a470-155c84c7cf06
+Auth Status: User role verified: 2
+ GET /api/auth/status 200 in 86ms
+=== AUTH STATUS CHECK ===
+Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+Auth Status: User authenticated: bebdf69e-f75c-4383-a470-155c84c7cf06
+Auth Status: User role verified: 2
+ GET /api/auth/status 200 in 75ms
+ GET /_next/static/css/app/layout.css?v=1753704178607 404 in 93ms
+ GET /_next/static/chunks/main-app.js?v=1753704178607 404 in 164ms
+ GET / 200 in 378ms
+ GET /_next/static/chunks/app-pages-internals.js 404 in 203ms
+ GET /_next/static/chunks/app/not-found.js 404 in 94ms
+ GET /_next/static/chunks/app/page.js 404 in 54ms
+ GET /favicon.ico 200 in 18ms
+ GET /_next/static/css/app/layout.css?v=1753704181574 404 in 194ms
+ GET /_next/static/chunks/app-pages-internals.js 404 in 215ms
+ GET /_next/static/chunks/app/page.js 404 in 208ms
+ GET /_next/static/chunks/main-app.js?v=1753704181574 404 in 220ms
+ GET /_next/static/chunks/app/not-found.js 404 in 221ms
+ GET / 200 in 364ms
+ GET /favicon.ico 200 in 14ms
+ GET /_next/static/css/app/layout.css?v=1753704189525 404 in 97ms
+ GET /_next/static/chunks/main-app.js?v=1753704189525 404 in 152ms
+ GET /_next/static/chunks/app-pages-internals.js 404 in 150ms
+ GET / 200 in 325ms
+ GET /_next/static/chunks/app/not-found.js 404 in 258ms
+ GET /_next/static/chunks/app/page.js 404 in 235ms
+ GET /favicon.ico 200 in 17ms
+=== AUTH STATUS CHECK ===
+Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+Auth Status: User authenticated: bebdf69e-f75c-4383-a470-155c84c7cf06
+Auth Status: User role verified: 2
+ GET /api/auth/status 200 in 376ms
+=== AUTH STATUS CHECK ===
+Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+Auth Status: User authenticated: bebdf69e-f75c-4383-a470-155c84c7cf06
+Auth Status: User role verified: 2
+ GET /api/auth/status 200 in 273ms
+=== AUTH STATUS CHECK ===
+Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+Auth Status: User authenticated: bebdf69e-f75c-4383-a470-155c84c7cf06
+Auth Status: User role verified: 2
+ GET /api/auth/status 200 in 121ms
+=== AUTH STATUS CHECK ===
+Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+Auth Status: User authenticated: bebdf69e-f75c-4383-a470-155c84c7cf06
+Auth Status: User role verified: 2
+ GET /api/auth/status 200 in 89ms
+ GET /_next/static/css/app/layout.css?v=1753704200653 404 in 660ms
+ GET /_next/static/chunks/main-app.js?v=1753704200653 404 in 696ms
+ GET /_next/static/chunks/app/page.js 404 in 682ms
+ GET /_next/static/chunks/app-pages-internals.js 404 in 697ms
+ GET /_next/static/chunks/app/not-found.js 404 in 695ms
+ GET / 200 in 1279ms
+ GET /favicon.ico 200 in 31ms
+ GET /_next/static/css/app/layout.css?v=1753704207180 404 in 64ms
+ GET / 200 in 265ms
+ GET /_next/static/chunks/main-app.js?v=1753704207180 404 in 266ms
+ GET /_next/static/chunks/app-pages-internals.js 404 in 255ms
+ GET /_next/static/chunks/app/not-found.js 404 in 256ms
+ GET /_next/static/chunks/app/page.js 404 in 79ms
+ GET /favicon.ico 200 in 16ms
+=== AUTH STATUS CHECK ===
+Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+Auth Status: User authenticated: bebdf69e-f75c-4383-a470-155c84c7cf06
+Auth Status: User role verified: 2
+ GET /api/auth/status 200 in 479ms
+=== AUTH STATUS CHECK ===
+Using the user object as returned from supabase.auth.getSession() or from some supabase.auth.onAuthStateChange() events could be insecure! This value comes directly from the storage medium (usually cookies on the server) and may not be authentic. Use supabase.auth.getUser() instead which authenticates the data by contacting the Supabase Auth server.
+Auth Status: User authenticated: bebdf69e-f75c-4383-a470-155c84c7cf06
+Auth Status: User role verified: 2
+ GET /api/auth/status 200 in 121ms

@@ -2,26 +2,28 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { CreditCard, QrCode, Smartphone, TrendingUp, Users, Zap } from 'lucide-react'
+import { ThemeToggle } from '@/components/ui/theme-toggle'
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-slate-900 dark:to-slate-800 transition-colors duration-300">
       {/* Navigation */}
-      <header className="bg-white/95 backdrop-blur-sm border-b border-gray-100 sticky top-0 z-50 shadow-sm">
+      <header className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-b border-gray-100 dark:border-slate-700 sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-gray-900 tracking-tight">RewardJar</h1>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">RewardJar</h1>
             </div>
             <div className="flex items-center space-x-3">
+              <ThemeToggle />
               <Link href="/setup">
-                <Button variant="ghost" className="text-gray-600 hover:text-gray-900">Setup</Button>
+                <Button variant="ghost" className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">Setup</Button>
               </Link>
               <Link href="/auth/login">
-                <Button variant="outline" className="border-gray-300 text-gray-700 hover:bg-gray-50">Sign In</Button>
+                <Button variant="outline" className="border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800">Sign In</Button>
               </Link>
               <Link href="/auth/signup">
-                <Button className="bg-blue-600 hover:bg-blue-700 px-6">Start Free Trial</Button>
+                <Button className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 px-6">Start Free Trial</Button>
               </Link>
             </div>
           </div>

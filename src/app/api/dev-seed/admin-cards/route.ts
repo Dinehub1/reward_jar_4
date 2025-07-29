@@ -110,7 +110,7 @@ const CUSTOMER_CARDS = [
   {
     id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
     customer_id: '55555555-5555-5555-5555-555555555555',
-    stamp_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    membership_card_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
     membership_type: 'gym',
     total_sessions: 20,
     sessions_used: 5,
@@ -143,54 +143,73 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    console.log('🚀 ADMIN-CARDS API CALLED at', new Date().toISOString())
     console.log('🎯 Creating admin test data ecosystem...')
 
-    // 1. Create admin user
-    const { error: adminUserError } = await supabase
+    // 1. Use existing users from the database or create minimal test data
+    // Since users table has foreign key to auth.users, we'll use existing users
+    // or create them with a different approach
+    
+    console.log('📝 Note: Using existing users or creating test data without auth constraints')
+    
+    // Try to find existing admin user, or use service role approach
+    const { data: existingAdmin } = await supabase
       .from('users')
-      .upsert(ADMIN_USER, { onConflict: 'id' })
+      .select('*')
+      .eq('role_id', 1)
+      .limit(1)
+      .single()
 
-    if (adminUserError) {
-      console.error('Admin user creation error:', adminUserError)
-    }
-
-    // 2. Create business owner users
-    const { error: businessUsersError } = await supabase
+    const { data: existingBusiness } = await supabase
       .from('users')
-      .upsert(BUSINESS_OWNERS, { onConflict: 'id' })
+      .select('*')
+      .eq('role_id', 2)
+      .limit(1)
+      .single()
 
-    if (businessUsersError) {
-      console.error('Business users creation error:', businessUsersError)
-    }
-
-    // 3. Create customer user
-    const { error: customerUserError } = await supabase
+    const { data: existingCustomer } = await supabase
       .from('users')
-      .upsert(TEST_CUSTOMER_USER, { onConflict: 'id' })
+      .select('*')
+      .eq('role_id', 3)
+      .limit(1)
+      .single()
 
-    if (customerUserError) {
-      console.error('Customer user creation error:', customerUserError)
-    }
+    // Use existing users or skip user creation for now
+    const adminUserId = existingAdmin?.id || ADMIN_USER.id
+    const businessUserId = existingBusiness?.id || BUSINESS_OWNERS[0].id
+    const customerUserId = existingCustomer?.id || TEST_CUSTOMER_USER.id
 
-    // 4. Create test businesses
+    console.log('👥 Using user IDs:', { adminUserId, businessUserId, customerUserId })
+
+    // 2. Create test businesses using existing user IDs
+    const updatedBusinesses = TEST_BUSINESSES.map((business, index) => ({
+      ...business,
+      owner_id: index === 0 ? businessUserId : businessUserId // Use same business user for both
+    }))
+
     const { error: businessError } = await supabase
       .from('businesses')
-      .upsert(TEST_BUSINESSES, { onConflict: 'id' })
+      .upsert(updatedBusinesses, { onConflict: 'id' })
 
     if (businessError) {
       console.error('Business creation error:', businessError)
     }
 
-    // 5. Create customer profile
+    // 3. Create customer profile using existing user ID
+    const updatedCustomer = {
+      ...TEST_CUSTOMER,
+      user_id: customerUserId
+    }
+
     const { error: customerError } = await supabase
       .from('customers')
-      .upsert(TEST_CUSTOMER, { onConflict: 'id' })
+      .upsert(updatedCustomer, { onConflict: 'id' })
 
     if (customerError) {
       console.error('Customer creation error:', customerError)
     }
 
-    // 6. Create admin-created stamp cards
+    // 4. Create admin-created stamp cards first
     const { data: stampCards, error: stampError } = await supabase
       .from('stamp_cards')
       .upsert(ADMIN_STAMP_CARDS, { onConflict: 'id' })
@@ -198,9 +217,11 @@ export async function POST(request: NextRequest) {
 
     if (stampError) {
       console.error('Stamp cards creation error:', stampError)
+    } else {
+      console.log('✅ Stamp cards created successfully:', stampCards?.length)
     }
 
-    // 7. Create admin-created membership cards
+    // 5. Create admin-created membership cards
     const { data: membershipCards, error: membershipError } = await supabase
       .from('membership_cards')
       .upsert(ADMIN_MEMBERSHIP_CARDS, { onConflict: 'id' })
@@ -208,29 +229,104 @@ export async function POST(request: NextRequest) {
 
     if (membershipError) {
       console.error('Membership cards creation error:', membershipError)
+    } else {
+      console.log('✅ Membership cards created successfully:', membershipCards?.length)
     }
 
-    // 8. Create customer cards for testing
-    const { data: customerCards, error: customerCardsError } = await supabase
-      .from('customer_cards')
-      .upsert(CUSTOMER_CARDS, { onConflict: 'id' })
-      .select()
+    // 5b. Create corresponding stamp_cards entries for membership cards
+    // This is needed because customer_cards.stamp_card_id must reference stamp_cards.id
+    let membershipStampCards = null
+    if (membershipCards && membershipCards.length > 0) {
+      const membershipStampCardsData = membershipCards.map(membershipCard => ({
+        id: membershipCard.id, // Use same ID as membership card
+        business_id: membershipCard.business_id,
+        name: membershipCard.name,
+        total_stamps: membershipCard.total_sessions, // Map sessions to stamps for compatibility
+        reward_description: `Complete ${membershipCard.total_sessions} sessions to finish your membership`,
+        status: membershipCard.status
+      }))
 
-    if (customerCardsError) {
-      console.error('Customer cards creation error:', customerCardsError)
+      const { data: createdMembershipStampCards, error: membershipStampError } = await supabase
+        .from('stamp_cards')
+        .upsert(membershipStampCardsData, { onConflict: 'id' })
+        .select()
+
+      if (membershipStampError) {
+        console.error('Membership stamp cards creation error:', membershipStampError)
+      } else {
+        console.log('✅ Membership stamp cards created successfully:', createdMembershipStampCards?.length)
+        membershipStampCards = createdMembershipStampCards
+      }
+    }
+
+    // 6. Create customer cards for testing using actual created card IDs
+    console.log('🎯 Starting customer cards creation process...')
+    console.log('📊 Stamp cards result:', { count: stampCards?.length, ids: stampCards?.map(c => c.id) })
+    console.log('📊 Membership cards result:', { count: membershipCards?.length, ids: membershipCards?.map(c => c.id) })
+    const customerCardsToCreate = []
+    
+    // Create customer card for stamp card (if stamp card was created successfully)
+    if (stampCards && stampCards.length > 0) {
+      customerCardsToCreate.push({
+        id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+        customer_id: updatedCustomer.id,
+        stamp_card_id: stampCards[0].id, // Use actual created stamp card ID
+        current_stamps: 3,
+        membership_type: 'loyalty',
+        wallet_type: 'pwa'
+      })
+    }
+
+    // Create customer card for membership card (using corresponding stamp card)
+    if (membershipStampCards && membershipStampCards.length > 0) {
+      customerCardsToCreate.push({
+        id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+        customer_id: updatedCustomer.id,
+        stamp_card_id: membershipStampCards[0].id, // Use corresponding stamp card ID
+        membership_type: 'gym',
+        total_sessions: 20,
+        sessions_used: 5,
+        cost: 15000,
+        expiry_date: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
+        wallet_type: 'apple'
+      })
+    }
+
+    let customerCards = null
+    let customerCardsError = null
+
+    if (customerCardsToCreate.length > 0) {
+      console.log('🔨 About to create customer cards:', customerCardsToCreate)
+      const result = await supabase
+        .from('customer_cards')
+        .upsert(customerCardsToCreate, { onConflict: 'id' })
+        .select()
+      
+      customerCards = result.data
+      customerCardsError = result.error
+
+          if (customerCardsError) {
+      console.error('❌ Customer cards creation error:', customerCardsError)
+    } else {
+      console.log('✅ Customer cards created successfully:', customerCards?.length)
+      console.log('📋 Customer cards data:', customerCards)
+    }
+    } else {
+      console.log('⚠️ No customer cards created - stamp/membership cards creation failed')
     }
 
     return NextResponse.json({
       success: true,
       message: 'Admin test data ecosystem created successfully',
       data: {
-        adminUser: ADMIN_USER.email,
-        businesses: TEST_BUSINESSES.length,
-        businessOwners: BUSINESS_OWNERS.length,
+        adminUser: existingAdmin?.email || 'Using existing admin',
+        businesses: updatedBusinesses.length,
+        businessOwners: 'Using existing business users',
         stampCards: stampCards?.length || 0,
         membershipCards: membershipCards?.length || 0,
         customerCards: customerCards?.length || 0,
-        testCustomer: TEST_CUSTOMER.email
+        testCustomer: existingCustomer?.email || 'Using existing customer',
+        userIds: { adminUserId, businessUserId, customerUserId }
       },
       testUrls: {
         adminDashboard: '/admin',
@@ -242,7 +338,7 @@ export async function POST(request: NextRequest) {
         walletPreview: '/test/wallet-preview'
       },
       testIds: {
-        adminUserId: ADMIN_USER.id,
+        adminUserId: adminUserId,
         coffeeBusinessId: TEST_BUSINESSES[0].id,
         gymBusinessId: TEST_BUSINESSES[1].id,
         stampCardId: ADMIN_STAMP_CARDS[0].id,

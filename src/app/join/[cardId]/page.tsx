@@ -642,7 +642,7 @@ export default function JoinCardPage() {
     <div className={`min-h-screen bg-gradient-to-br ${theme.gradient} flex items-center justify-center py-12 px-4`}>
       <div className="max-w-md w-full space-y-6">
         {/* Main Card Preview - Always visible according to journeys.md */}
-        <Card className="w-full shadow-xl border-0">
+        <Card className="w-full shadow-xl border-0" data-testid="card-preview">
           <CardHeader className="text-center pb-4">
             {/* Business Logo Section */}
             <div className="flex items-center justify-between mb-4">

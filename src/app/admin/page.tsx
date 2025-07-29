@@ -1,236 +1,432 @@
-'use client'
-
+import { Suspense } from 'react'
 import Link from 'next/link'
-import AdminLayout from '@/components/layouts/AdminLayout'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Building, CreditCard, Users, Settings, Plus, Target, Dumbbell } from 'lucide-react'
+import { AdminLayout } from '@/components/layouts/AdminLayout'
+import { createAdminClient } from '@/lib/supabase/admin-client'
 
-export default function AdminDashboard() {
-  const adminActions = [
+// Icons (using emoji for simplicity)
+const icons = {
+  businesses: '🏢',
+  customers: '👥',
+  cards: '🎴',
+  alerts: '🚨',
+  support: '🛠️',
+  sandbox: '🧪',
+  analytics: '📊',
+  activity: '⚡',
+  growth: '📈',
+  revenue: '💰'
+}
+
+interface AdminStats {
+  totalBusinesses: number
+  totalCustomers: number
+  totalCards: number
+  totalStampCards: number
+  totalMembershipCards: number
+  flaggedBusinesses: number
+  recentActivity: number
+}
+
+interface Business {
+  id: string
+  name: string
+  contact_email: string
+  created_at: string
+  is_flagged?: boolean
+}
+
+async function getAdminDashboardStats(): Promise<AdminStats> {
+  const supabase = createAdminClient()
+  
+  console.log('🔍 ADMIN DASHBOARD - Starting getAdminDashboardStats()...')
+  
+  try {
+    // Fetch all counts in parallel using exact count
+    const [
+      { count: totalBusinesses },
+      { count: totalCustomers },
+      { count: totalCards },
+      { count: totalStampCards },
+      { count: totalMembershipCards }
+    ] = await Promise.all([
+      supabase.from('businesses').select('*', { count: 'exact', head: true }),
+      supabase.from('customers').select('*', { count: 'exact', head: true }),
+      supabase.from('customer_cards').select('*', { count: 'exact', head: true }),
+      supabase.from('stamp_cards').select('*', { count: 'exact', head: true }),
+      supabase.from('membership_cards').select('*', { count: 'exact', head: true })
+    ])
+
+    const stats: AdminStats = {
+      totalBusinesses: totalBusinesses || 0,
+      totalCustomers: totalCustomers || 0,
+      totalCards: totalCards || 0,
+      totalStampCards: totalStampCards || 0,
+      totalMembershipCards: totalMembershipCards || 0,
+      flaggedBusinesses: 0, // Will implement later
+      recentActivity: 0 // Will implement later
+    }
+
+    console.log('✅ ADMIN DASHBOARD - getAdminDashboardStats() results:', stats)
+
+    return stats
+  } catch (error) {
+    console.error('💥 ADMIN DASHBOARD - Error in getAdminDashboardStats():', error)
+    
+    // Return safe defaults
+    return {
+      totalBusinesses: 0,
+      totalCustomers: 0,
+      totalCards: 0,
+      totalStampCards: 0,
+      totalMembershipCards: 0,
+      flaggedBusinesses: 0,
+      recentActivity: 0
+    }
+  }
+}
+
+async function getAllBusinesses(): Promise<Business[]> {
+  const supabase = createAdminClient()
+  
+  console.log('🔍 ADMIN DASHBOARD - Starting getAllBusinesses()...')
+  
+  try {
+    const { data: businesses, error } = await supabase
+      .from('businesses')
+      .select('id, name, contact_email, created_at, is_flagged')
+      .order('created_at', { ascending: false })
+      .limit(10) // Limit for dashboard display
+
+    if (error) {
+      console.error('💥 ADMIN DASHBOARD - Error in getAllBusinesses():', error)
+      return []
+    }
+
+    console.log('✅ ADMIN DASHBOARD - getAllBusinesses() results:', businesses?.length || 0, 'businesses')
+
+    return businesses || []
+  } catch (error) {
+    console.error('💥 ADMIN DASHBOARD - Error in getAllBusinesses():', error)
+    return []
+  }
+}
+
+// Dashboard Cards Component
+function DashboardCards({ stats }: { stats: AdminStats }) {
+  console.log('🎯 DASHBOARD CARDS - Rendering with stats:', stats)
+
+  return (
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Total Businesses</CardTitle>
+          <span className="text-2xl">{icons.businesses}</span>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold text-blue-600">
+            {stats?.totalBusinesses || 0}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Active businesses registered
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
+          <span className="text-2xl">{icons.customers}</span>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold text-green-600">
+            {stats?.totalCustomers || 0}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Registered customer accounts
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Active Cards</CardTitle>
+          <span className="text-2xl">{icons.cards}</span>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold text-purple-600">
+            {stats?.totalCards || 0}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Customer cards in use
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Card Templates</CardTitle>
+          <span className="text-2xl">{icons.analytics}</span>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold text-orange-600">
+            {(stats?.totalStampCards || 0) + (stats?.totalMembershipCards || 0)}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {stats?.totalStampCards || 0} stamp + {stats?.totalMembershipCards || 0} membership
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+// Businesses Table Component
+function BusinessesTable({ businesses }: { businesses: Business[] }) {
+  console.log('🏢 BUSINESSES TABLE - Rendering with businesses:', businesses?.length || 0)
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center space-x-2">
+          <span>{icons.businesses}</span>
+          <span>Recent Businesses</span>
+        </CardTitle>
+        <CardDescription>Latest business registrations</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {businesses && businesses.length > 0 ? (
+          <div className="space-y-2">
+            {businesses.slice(0, 5).map((business) => (
+              <div key={business.id} className="flex justify-between items-center p-2 border rounded">
+                <div>
+                  <span className="font-medium">{business.name || 'Unknown Business'}</span>
+                  <div className="text-xs text-muted-foreground">
+                    {business.contact_email || 'No email'}
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  {business.is_flagged && (
+                    <Badge variant="destructive">Flagged</Badge>
+                  )}
+                  <Badge variant="outline">
+                    {business.created_at ? new Date(business.created_at).toLocaleDateString() : 'Unknown date'}
+                  </Badge>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-muted-foreground">No businesses found</p>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function QuickActions() {
+  const actions = [
     {
       title: 'Manage Businesses',
-      description: 'View and manage all businesses in the system',
+      description: 'View, edit, and control all business accounts',
       href: '/admin/businesses',
-      icon: Building,
+      icon: icons.businesses,
+      color: 'bg-blue-500'
+    },
+    {
+      title: 'View All Cards',
+      description: 'Manage stamp cards and membership cards',
+      href: '/admin/cards',
+      icon: icons.cards,
+      color: 'bg-green-500'
+    },
+    {
+      title: 'Customer Monitoring',
+      description: 'Track customer activity and detect anomalies',
+      href: '/admin/customers',
+      icon: icons.customers,
       color: 'bg-purple-500'
     },
     {
-      title: 'Manage Users',
-      description: 'View and manage user accounts and roles',
-      href: '/admin/users',
-      icon: Users,
+      title: 'System Alerts',
+      description: 'Monitor automated flags and anomalies',
+      href: '/admin/alerts',
+      icon: icons.alerts,
+      color: 'bg-red-500'
+    },
+    {
+      title: 'Support Tools',
+      description: 'Manual overrides and customer support',
+      href: '/admin/support',
+      icon: icons.support,
       color: 'bg-orange-500'
     },
     {
-      title: 'System Settings',
-      description: 'Configure system-wide settings and preferences',
-      href: '/admin/settings',
-      icon: Settings,
-      color: 'bg-gray-500'
+      title: 'Testing Sandbox',
+      description: 'Global preview mode for cards and flows',
+      href: '/admin/sandbox',
+      icon: icons.sandbox,
+      color: 'bg-cyan-500'
     }
   ]
+
+  return (
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {actions.map((action) => (
+        <Link key={action.href} href={action.href}>
+          <Card className="hover:shadow-md transition-shadow cursor-pointer">
+            <CardHeader>
+              <div className="flex items-center space-x-2">
+                <div className={`w-10 h-10 rounded-lg ${action.color} flex items-center justify-center text-white text-xl`}>
+                  {action.icon}
+                </div>
+                <div>
+                  <CardTitle className="text-lg">{action.title}</CardTitle>
+                  <CardDescription className="text-sm">
+                    {action.description}
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
+        </Link>
+      ))}
+    </div>
+  )
+}
+
+// Main Dashboard Component with proper data fetching
+async function DashboardContent() {
+  console.log('🚀 DASHBOARD CONTENT - Starting data fetch...')
+  
+  // Fetch data using the expected function names
+  const stats = await getAdminDashboardStats()
+  const businesses = await getAllBusinesses()
+  
+  console.log('📊 DASHBOARD CONTENT - Data fetched:', { stats, businessCount: businesses?.length })
+
+  return (
+    <div className="space-y-6">
+      {/* Dashboard Stats Cards */}
+      <DashboardCards stats={stats} />
+
+      {/* Recent Activity */}
+    <div className="grid gap-4 md:grid-cols-2">
+        <BusinessesTable businesses={businesses} />
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <span>{icons.analytics}</span>
+            <span>System Overview</span>
+          </CardTitle>
+          <CardDescription>Platform health and metrics</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <span>Total Businesses:</span>
+                <Badge variant="outline">{stats?.totalBusinesses || 0}</Badge>
+            </div>
+            <div className="flex justify-between">
+              <span>Active Customers:</span>
+                <Badge variant="outline">{stats?.totalCustomers || 0}</Badge>
+            </div>
+            <div className="flex justify-between">
+              <span>Customer Cards:</span>
+                <Badge variant="outline">{stats?.totalCards || 0}</Badge>
+            </div>
+            <div className="flex justify-between">
+              <span>Card Templates:</span>
+                <Badge variant="outline">{(stats?.totalStampCards || 0) + (stats?.totalMembershipCards || 0)}</Badge>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      </div>
+    </div>
+  )
+}
+
+export default async function AdminDashboard() {
+  console.log('🚀 ADMIN DASHBOARD - Main component rendering...')
 
   return (
     <AdminLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="border-b border-gray-200 pb-5">
-          <h1 className="text-3xl font-bold leading-6 text-gray-900">Admin Dashboard</h1>
-          <p className="mt-2 max-w-4xl text-sm text-gray-500">
-            Welcome to the RewardJar admin panel. Manage businesses, users, and system settings from here.
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
+          <p className="text-muted-foreground">
+            Centralized control center for RewardJar 4.0 platform
           </p>
         </div>
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Businesses</CardTitle>
-              <Building className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">10+</div>
-              <p className="text-xs text-muted-foreground">Active businesses</p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Stamp Cards</CardTitle>
-              <CreditCard className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">25+</div>
-              <p className="text-xs text-muted-foreground">Active loyalty programs</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Membership Cards</CardTitle>
-              <Dumbbell className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">15+</div>
-              <p className="text-xs text-muted-foreground">Active memberships</p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">50+</div>
-              <p className="text-xs text-muted-foreground">Registered users</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Tabs Section */}
-        <Tabs defaultValue="cards" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="cards" className="flex items-center space-x-2">
-              <span>🎴</span>
-              <span>Cards</span>
-            </TabsTrigger>
-            <TabsTrigger value="management" className="flex items-center space-x-2">
-              <Building className="h-4 w-4" />
-              <span>Management</span>
-            </TabsTrigger>
-            <TabsTrigger value="activity" className="flex items-center space-x-2">
-              <Users className="h-4 w-4" />
-              <span>Activity</span>
-            </TabsTrigger>
+        {/* Tabs for different views */}
+        <Tabs defaultValue="overview" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="actions">Quick Actions</TabsTrigger>
           </TabsList>
-
-          {/* Cards Tab */}
-          <TabsContent value="cards" className="space-y-6">
-            <div className="space-y-4">
-              <h2 className="text-lg font-medium text-gray-900">Card Management</h2>
-              
-              {/* View All Cards Section */}
-              <Card className="border-indigo-200 bg-indigo-50">
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <CreditCard className="h-5 w-5 mr-2 text-indigo-600" />
-                    All Cards Overview
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-indigo-700 mb-4">
-                    View and manage all stamp cards and membership cards across all businesses
-                  </p>
-                  <Link href="/admin/cards">
-                    <Button className="bg-indigo-600 hover:bg-indigo-700">
-                      <CreditCard className="h-4 w-4 mr-2" />
-                      View All Cards
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-
-              {/* Create Cards Section */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card className="hover:shadow-md transition-shadow border-green-200">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 rounded-lg bg-green-500">
-                        <Target className="h-5 w-5 text-white" />
-                      </div>
-                      <CardTitle className="text-base">Create Stamp Card</CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <p className="text-sm text-gray-500 mb-4">
-                      Create a new loyalty stamp card for a business
-                    </p>
-                    <Link href="/admin/cards/stamp/new">
-                      <Button size="sm" className="w-full bg-green-600 hover:bg-green-700">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Create Stamp Card
-                      </Button>
-                    </Link>
-                  </CardContent>
-                </Card>
-
-                <Card className="hover:shadow-md transition-shadow border-blue-200">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 rounded-lg bg-blue-500">
-                        <Dumbbell className="h-5 w-5 text-white" />
-                      </div>
-                      <CardTitle className="text-base">Create Membership Card</CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <p className="text-sm text-gray-500 mb-4">
-                      Create a new membership card for a business
-                    </p>
-                    <Link href="/admin/cards/membership/new">
-                      <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Create Membership Card
-                      </Button>
-                    </Link>
-                  </CardContent>
-                </Card>
+          
+          <TabsContent value="overview" className="space-y-4">
+            <Suspense fallback={
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                {[1, 2, 3, 4].map(i => (
+                  <Card key={i}>
+                    <CardHeader>
+                      <CardTitle>Loading...</CardTitle>
+            </CardHeader>
+            <CardContent>
+                      <div className="text-2xl font-bold">-</div>
+            </CardContent>
+          </Card>
+                ))}
               </div>
-            </div>
+            }>
+              <DashboardContent />
+            </Suspense>
           </TabsContent>
-
-          {/* Management Tab */}
-          <TabsContent value="management" className="space-y-6">
-            <div className="space-y-4">
-              <h2 className="text-lg font-medium text-gray-900">System Management</h2>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {adminActions.map((action) => {
-                  const Icon = action.icon
-                  return (
-                    <Card key={action.title} className="hover:shadow-md transition-shadow">
-                      <CardHeader className="pb-3">
-                        <div className="flex items-center space-x-3">
-                          <div className={`p-2 rounded-lg ${action.color}`}>
-                            <Icon className="h-5 w-5 text-white" />
-                          </div>
-                          <CardTitle className="text-base">{action.title}</CardTitle>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="pt-0">
-                        <p className="text-sm text-gray-500 mb-4">{action.description}</p>
-                        <Link href={action.href}>
-                          <Button size="sm" className="w-full">
-                            <Plus className="h-4 w-4 mr-2" />
-                            Manage
-                          </Button>
-                        </Link>
-                      </CardContent>
-                    </Card>
-                  )
-                })}
-              </div>
-            </div>
-          </TabsContent>
-
-          {/* Activity Tab */}
-          <TabsContent value="activity" className="space-y-6">
-            <div className="space-y-4">
-              <h2 className="text-lg font-medium text-gray-900">Recent Activity</h2>
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="text-center py-12">
-                    <div className="text-gray-400 text-sm">
-                      Activity monitoring will be implemented in future updates
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+          
+          <TabsContent value="actions" className="space-y-4">
+            <QuickActions />
           </TabsContent>
         </Tabs>
+
+        {/* System Status */}
+          <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <span>{icons.analytics}</span>
+              <span>System Status</span>
+            </CardTitle>
+            </CardHeader>
+            <CardContent>
+            <div className="grid gap-2 md:grid-cols-3">
+              <div className="flex items-center space-x-2">
+                <Badge variant="outline" className="bg-green-50 text-green-700 dark:bg-green-900 dark:text-green-300">
+                  ✅ Database
+                </Badge>
+                <span className="text-sm text-muted-foreground">Operational</span>
+        </div>
+              <div className="flex items-center space-x-2">
+                <Badge variant="outline" className="bg-green-50 text-green-700 dark:bg-green-900 dark:text-green-300">
+                  ✅ Wallets
+                </Badge>
+                <span className="text-sm text-muted-foreground">Apple, Google, PWA</span>
+                      </div>
+              <div className="flex items-center space-x-2">
+                <Badge variant="outline" className="bg-green-50 text-green-700 dark:bg-green-900 dark:text-green-300">
+                  ✅ APIs
+                </Badge>
+                <span className="text-sm text-muted-foreground">All endpoints</span>
+              </div>
+              </div>
+            </CardContent>
+          </Card>
       </div>
     </AdminLayout>
   )

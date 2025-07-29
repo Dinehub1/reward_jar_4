@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ArrowLeft, Save, CheckCircle, AlertCircle, Gift, Hash, Building, Star, ChevronDown } from 'lucide-react'
 import Link from 'next/link'
-import AdminLayout from '@/components/layouts/AdminLayout'
+import { AdminLayoutClient } from '@/components/layouts/AdminLayoutClient'
 
 // Form validation interfaces
 interface StampCardForm {
@@ -246,7 +246,7 @@ export default function AdminNewStampCard() {
   }
 
   return (
-    <AdminLayout>
+    <AdminLayoutClient>
       <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center space-x-4">
@@ -573,6 +573,6 @@ export default function AdminNewStampCard() {
         </div>
       )}
       </div>
-    </AdminLayout>
+    </AdminLayoutClient>
   )
 } 
