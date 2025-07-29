@@ -490,3 +490,9 @@
 {"cert_password_present":true,"cert_present":true,"key_present":true,"level":"error","message":"Apple Wallet certificate validation failed","pass_type_present":true,"team_id_present":true,"timestamp":"2025-07-29T15:03:01.118Z","wwdr_present":true}
 {"hasBeginMarker":true,"hasEndMarker":true,"hasNewlines":false,"length":1732,"level":"error","message":"Google Wallet private key validation failed","timestamp":"2025-07-29T15:03:07.484Z"}
 {"cert_password_present":true,"cert_present":true,"key_present":true,"level":"error","message":"Apple Wallet certificate validation failed","pass_type_present":true,"team_id_present":true,"timestamp":"2025-07-29T15:03:07.484Z","wwdr_present":true}
+{"hasBeginMarker":true,"hasEndMarker":true,"hasNewlines":false,"length":1732,"level":"error","message":"Google Wallet private key validation failed","timestamp":"2025-07-29T15:22:24.507Z"}
+{"cert_password_present":true,"cert_present":true,"key_present":true,"level":"error","message":"Apple Wallet certificate validation failed","pass_type_present":true,"team_id_present":true,"timestamp":"2025-07-29T15:22:24.513Z","wwdr_present":true}
+{"hasBeginMarker":true,"hasEndMarker":true,"hasNewlines":false,"length":1732,"level":"error","message":"Google Wallet private key validation failed","timestamp":"2025-07-29T15:24:17.370Z"}
+{"cert_password_present":true,"cert_present":true,"key_present":true,"level":"error","message":"Apple Wallet certificate validation failed","pass_type_present":true,"team_id_present":true,"timestamp":"2025-07-29T15:24:17.371Z","wwdr_present":true}
+{"hasBeginMarker":true,"hasEndMarker":true,"hasNewlines":false,"length":1732,"level":"error","message":"Google Wallet private key validation failed","timestamp":"2025-07-29T15:26:05.712Z"}
+{"hasBeginMarker":true,"hasEndMarker":true,"hasNewlines":false,"length":1732,"level":"error","message":"Google Wallet private key validation failed","timestamp":"2025-07-29T15:31:32.847Z"}
