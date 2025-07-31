@@ -53,20 +53,22 @@ export default function AdminNewStampCard() {
   const router = useRouter()
   const supabase = createClient()
 
-  // Fetch all businesses for admin selection
+  // Fetch all businesses for admin selection using admin API
   const fetchBusinesses = useCallback(async () => {
-    const { data: businessesData, error } = await supabase
-      .from('businesses')
-      .select('id, name, logo_url, description')
-      .eq('status', 'active')
-      .order('name')
-
-    if (error) {
-      throw new Error('Failed to load businesses')
+    try {
+      const response = await fetch('/api/admin/all-data')
+      const result = await response.json()
+      
+      if (result.success && result.data?.businesses) {
+        return result.data.businesses.filter(b => b.status === 'active')
+      } else {
+        throw new Error('Failed to load businesses from admin API')
+      }
+    } catch (error) {
+      console.error('Error fetching businesses:', error)
+      return []
     }
-
-    return businessesData || []
-  }, [supabase])
+  }, [])
 
   // Fetch business data and list of all businesses
   const fetchBusinessData = useCallback(async () => {

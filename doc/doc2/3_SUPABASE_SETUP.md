@@ -953,124 +953,166 @@ ORDER BY tablename, policyname;
 
 ---
 
-## 11. Server Component Usage & Authentication (UPDATED)
+## 11. Centralized Supabase Architecture (REFACTORED - Updated)
 
-### Proper Supabase Client Usage in Server Components ✅ FIXED
+### 🏗️ New Centralized Architecture ✅ IMPLEMENTED
 
-For server components (pages without 'use client'), always use the proper SSR client:
+RewardJar 4.0 now uses a centralized Supabase architecture that separates concerns and enforces security best practices:
 
-```typescript
-// ✅ CORRECT - Server Component Implementation
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+#### **1. Supabase Client Structure**
 
-export default async function AdminPage() {
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookies().get(name)?.value
-        },
-      },
-    }
-  )
-  
-  const { data: { user } } = await supabase.auth.getUser()
-  
-  if (!user) {
-    redirect('/auth/login')
-  }
-  
-  // Check admin role
-  const { data: userData } = await supabase
-    .from('users')
-    .select('role_id')
-    .eq('id', user.id)
-    .single()
-    
-  if (userData?.role_id !== 1) {
-    redirect('/')
-  }
-  
-  // Fetch admin data with proper error handling
-  const { data: businesses, error } = await supabase
-    .from('businesses')
-    .select(`
-      *,
-      users!businesses_owner_id_fkey(email),
-      stamp_cards(id),
-      customer_cards:stamp_cards(customer_cards(id))
-    `)
-    .order('created_at', { ascending: false })
-
-  if (error) {
-    console.error('Error fetching businesses:', error)
-    return <div>Error loading data</div>
-  }
-  
-  return <div>Admin content with {businesses?.length} businesses</div>
-}
+```
+src/lib/supabase/
+├── index.ts          # Centralized exports
+├── client.ts         # Client-side authentication only
+├── admin-client.ts   # Admin API routes only
+├── server-only.ts    # Server components with user context
+└── types.ts          # Shared database types
 ```
 
-### Updated Server-Only Utility ✅ IMPLEMENTED
+#### **2. Client-Side Usage (Authentication Only)**
 
 ```typescript
-// src/lib/supabase/server-only.ts
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
-
-export async function createClient() {
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookies().get(name)?.value
-        },
-      },
-    }
-  )
-}
-```
-
-### Client Component Authentication (Unchanged)
-
-For client components (with 'use client'), use the client-side auth:
-
-```typescript
-// ✅ CORRECT - Client Component
+// ✅ CORRECT - Client Component Authentication
 'use client'
-import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
-export default function ClientAdminComponent() {
-  const [isAdmin, setIsAdmin] = useState(false)
+export default function LoginPage() {
   const supabase = createClient()
   
-  useEffect(() => {
-    async function checkAdmin() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      
-      const { data: userData } = await supabase
-        .from('users')
-        .select('role_id')
-        .eq('id', user.id)
-        .single()
-        
-      setIsAdmin(userData?.role_id === 1)
-    }
-    
-    checkAdmin()
-  }, [supabase])
+  const handleLogin = async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    })
+    // Handle login result
+  }
   
-  if (!isAdmin) return <div>Access denied</div>
-  
-  return <div>Client admin content</div>
+  return <LoginForm onSubmit={handleLogin} />
 }
+```
+
+#### **3. Data Fetching via API Routes + SWR Hooks**
+
+```typescript
+// ✅ CORRECT - Component Data Fetching
+'use client'
+import { useAdminBusinesses, useAdminStats } from '@/lib/hooks/use-admin-data'
+
+export default function AdminDashboard() {
+  const { data: stats, error: statsError, isLoading: statsLoading } = useAdminStats()
+  const { data: businesses, error: businessError, isLoading: businessLoading } = useAdminBusinesses()
+  
+  if (statsLoading || businessLoading) return <div>Loading...</div>
+  if (statsError || businessError) return <div>Error loading data</div>
+  
+  return (
+    <div>
+      <h1>Total Businesses: {stats?.data?.totalBusinesses}</h1>
+      <BusinessList businesses={businesses?.data || []} />
+    </div>
+  )
+}
+```
+
+#### **4. Admin API Routes (Server-Side Only)**
+
+```typescript
+// ✅ CORRECT - Admin API Route
+import { NextRequest, NextResponse } from 'next/server'
+import { createAdminClient } from '@/lib/supabase/admin-client'
+import type { ApiResponse, Business } from '@/lib/supabase/types'
+
+export async function GET(request: NextRequest) {
+  try {
+    const supabase = createAdminClient()
+    
+    const { data: businesses, error } = await supabase
+      .from('businesses')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      return NextResponse.json(
+        { success: false, error: 'Failed to fetch businesses' } as ApiResponse<never>,
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: businesses
+    } as ApiResponse<Business[]>)
+  } catch (error) {
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' } as ApiResponse<never>,
+      { status: 500 }
+    )
+  }
+}
+```
+
+#### **5. Server Components (User Context)**
+
+```typescript
+// ✅ CORRECT - Server Component with User Context
+import { createServerClient } from '@/lib/supabase/server-only'
+import { redirect } from 'next/navigation'
+
+export default async function BusinessDashboard() {
+  const supabase = await createServerClient()
+  
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/auth/login')
+  
+  // This client respects RLS and user session
+  const { data: userBusinesses } = await supabase
+    .from('businesses')
+    .select('*')
+    .eq('owner_id', user.id)
+  
+  return <div>Your businesses: {userBusinesses?.length}</div>
+}
+```
+
+### 🛡️ Security Benefits
+
+1. **Client Components**: Can only authenticate, cannot access sensitive data
+2. **Admin API Routes**: Use service role key, bypass RLS for admin operations
+3. **Server Components**: Respect RLS, maintain user session context
+4. **Type Safety**: Centralized types prevent data structure mismatches
+5. **Environment Validation**: Startup validation ensures all required keys are present
+
+### 📊 Available SWR Hooks
+
+```typescript
+// Admin data hooks
+useAdminStats()              // Dashboard statistics
+useAdminBusinesses()         // All businesses
+useAdminCustomers()          // All customers
+useAdminStampCards()         // All stamp cards
+useAdminMembershipCards()    // All membership cards
+useAdminCustomerCards()      // All customer cards
+useAdminPanelData()          // Comprehensive panel data
+
+// Specific hooks
+useAdminBusiness(id)         // Single business with details
+useAdminBusinessCards(id)    // Cards for specific business
+useAdminAnalytics(type)      // Analytics data
+
+// Pagination hooks
+useAdminBusinessesPaginated(page, limit)
+useAdminCustomersPaginated(page, limit)
+```
+
+### 🔧 Environment Validation
+
+```typescript
+// ✅ AUTOMATIC - Startup Validation
+import { validateEnvVarsOrThrow } from '@/lib/env-validation'
+
+// In your app startup (layout.tsx or middleware)
+validateEnvVarsOrThrow() // Throws error if critical vars missing
 ```
 
 ### Data Loading Verification ✅ TESTED

@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server-only'
+import { createServerClient, getServerUser } from '@/lib/supabase/server'
 
 export async function GET(request: NextRequest) {
   try {
     console.log('=== BUSINESS DASHBOARD API START ===')
     
-    const supabase = await createClient()
+    const supabase = await createServerClient()
     
-    // Check authentication using getUser (more reliable in server context)
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    // Check authentication using centralized helper
+    const { user, error: userError } = await getServerUser()
     
     if (userError || !user) {
       console.error('Dashboard API: Authentication failed:', userError?.message)

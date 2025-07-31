@@ -1,26 +1,28 @@
-import { Suspense } from 'react'
-import Link from 'next/link'
+'use client'
+
+import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { AdminLayout } from '@/components/layouts/AdminLayout'
+import { AdminLayoutClient } from '@/components/layouts/AdminLayoutClient'
+import { useBusinesses, useAdminStatsCompat as useAdminStats } from '@/lib/hooks/use-admin-data'
+import { CardSkeleton, TableSkeleton } from '@/components/ui/skeleton'
 
+// Use types from the centralized service
 interface Business {
   id: string
   name: string
-  email: string
-  phone?: string
-  address?: string
-  city?: string
-  state?: string
-  zip_code?: string
+  contact_email: string | null
+  description?: string | null
+  owner_id?: string
   status: string
-  flagged?: boolean
+  is_flagged?: boolean | null
+  admin_notes?: string | null
   created_at: string
-  updated_at?: string
-  total_cards: number
-  active_cards: number
+  // Optional fields for compatibility
+  total_cards?: number
+  active_cards?: number
 }
 
 interface BusinessMetrics {
@@ -30,128 +32,112 @@ interface BusinessMetrics {
   newThisWeek: number
 }
 
-// Fetch businesses using the working API endpoint
-async function getBusinesses(): Promise<Business[]> {
-  console.log('🏢 BUSINESSES PAGE - Starting business data fetch via API...')
+export default function BusinessesPage() {
+  const { data: statsData, loading: statsLoading, error: statsError } = useAdminStats()
+  const { data: businessesData, loading: businessesLoading, error: businessesError, refetch } = useBusinesses()
 
-  try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/admin/all-data`, {
-      cache: 'no-store'
-    })
+  const loading = statsLoading || businessesLoading
+  const error = statsError || businessesError
 
-    if (!response.ok) {
-      throw new Error(`API request failed: ${response.status}`)
-    }
+  // Defensive programming: Ensure businessesData is always an array
+  const safeBusinessesData = Array.isArray(businessesData) ? businessesData : []
 
-    const data = await response.json()
-
-    if (!data.success) {
-      throw new Error(data.error || 'Failed to fetch businesses')
-    }
-
-    const businesses = data.data.businesses || []
-    console.log('✅ BUSINESSES PAGE - Fetched businesses via API:', businesses.length)
-
-    return businesses
-  } catch (error) {
-    console.error('❌ BUSINESSES PAGE - Error fetching businesses:', error)
-    return []
+  // Calculate business metrics from the data with safety checks
+  const businessMetrics: BusinessMetrics = {
+    totalBusinesses: safeBusinessesData.length || 0,
+    activeBusinesses: safeBusinessesData.filter(b => b?.status === 'active').length || 0,
+    flaggedBusinesses: safeBusinessesData.filter(b => b?.is_flagged === true).length || 0,
+    newThisWeek: safeBusinessesData.filter(b => {
+      try {
+        if (!b?.created_at) return false
+        const weekAgo = new Date()
+        weekAgo.setDate(weekAgo.getDate() - 7)
+        return new Date(b.created_at) > weekAgo
+      } catch (dateError) {
+        console.warn('Invalid date format for business:', b?.id, dateError)
+        return false
+      }
+    }).length || 0
   }
-}
 
-// Fetch business stats using the working API endpoint
-async function getBusinessStats(): Promise<BusinessMetrics> {
-  console.log('📈 BUSINESSES PAGE - Starting business stats fetch via API...')
+  if (loading) {
+    return (
+      <AdminLayoutClient>
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Business Management</h1>
+              <p className="text-muted-foreground">
+                Monitor and manage all business accounts on the platform
+              </p>
+            </div>
+            <Button disabled>Loading...</Button>
+          </div>
 
-  try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/admin/all-data`, {
-      cache: 'no-store'
-    })
-
-    if (!response.ok) {
-      throw new Error(`API request failed: ${response.status}`)
-    }
-
-    const data = await response.json()
-
-    if (!data.success) {
-      throw new Error(data.error || 'Failed to fetch business stats')
-    }
-
-    const metrics = data.data.metrics.businesses
-    console.log('✅ BUSINESSES PAGE - Business stats via API:', metrics)
-
-    return metrics
-  } catch (error) {
-    console.error('❌ BUSINESSES PAGE - Error fetching business stats:', error)
-    return {
-      totalBusinesses: 0,
-      activeBusinesses: 0,
-      flaggedBusinesses: 0,
-      newThisWeek: 0
-    }
+          {/* Skeleton for stats cards */}
+          <CardSkeleton count={4} />
+          
+          {/* Skeleton for table */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Business Directory</CardTitle>
+              <CardDescription>Loading business data...</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <TableSkeleton rows={5} columns={6} />
+            </CardContent>
+          </Card>
+        </div>
+      </AdminLayoutClient>
+    )
   }
-}
 
-function BusinessRow({ business }: { business: Business }) {
+  if (error) {
+    return (
+      <AdminLayoutClient>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center max-w-md">
+            <div className="text-red-600 mb-4">
+              <div className="text-lg font-semibold">Error Loading Businesses</div>
+              <div className="text-sm mt-2">{error}</div>
+            </div>
+            <div className="space-x-2">
+              <Button onClick={() => refetch()} variant="outline">
+                Try Again
+              </Button>
+              <Button onClick={() => window.location.reload()}>
+                Refresh Page
+              </Button>
+            </div>
+          </div>
+        </div>
+      </AdminLayoutClient>
+    )
+  }
+
   return (
-    <tr className="border-b hover:bg-gray-50">
-      <td className="px-4 py-3">
-        <div>
-          <div className="font-medium">{business.name}</div>
-          <div className="text-sm text-gray-500">{business.id.slice(0, 8)}...</div>
+    <AdminLayoutClient>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Business Management</h1>
+            <p className="text-muted-foreground">
+              Monitor and manage all business accounts on the platform
+            </p>
+          </div>
+          <Button onClick={() => refetch()} disabled={loading}>
+            {loading ? 'Refreshing...' : 'Refresh Data'}
+          </Button>
         </div>
-      </td>
-      <td className="px-4 py-3">
-        <div>
-          <div className="text-sm">{business.email}</div>
-          {business.phone && (
-            <div className="text-sm text-gray-500">{business.phone}</div>
-          )}
-        </div>
-      </td>
-      <td className="px-4 py-3">
-        <Badge variant={business.status === 'active' ? 'default' : 'secondary'}>
-          {business.status}
-        </Badge>
-        {business.flagged && (
-          <Badge variant="destructive" className="ml-1">
-            Flagged
-          </Badge>
-        )}
-      </td>
-      <td className="px-4 py-3 text-center">
-        <div className="text-sm">
-          <div>{business.total_cards} total</div>
-          <div className="text-gray-500">{business.active_cards} active</div>
-        </div>
-      </td>
-      <td className="px-4 py-3 text-center">
-        <div className="text-sm">
-          <div>{business.active_cards}</div>
-          <div className="text-gray-500">enrolled</div>
-        </div>
-      </td>
-      <td className="px-4 py-3">
-        <div className="text-sm">
-          {new Date(business.created_at).toLocaleDateString()}
-        </div>
-      </td>
-      <td className="px-4 py-3">
-        <div className="flex space-x-2">
-          <Link href={`/admin/businesses/${business.id}`}>
-            <Button variant="outline" size="sm">View</Button>
-          </Link>
-          <Button variant="outline" size="sm">Edit</Button>
-        </div>
-      </td>
-    </tr>
+
+        <BusinessStats stats={businessMetrics} />
+        <BusinessesTable businesses={safeBusinessesData} />
+      </div>
+    </AdminLayoutClient>
   )
 }
 
-async function BusinessStats() {
-  const stats = await getBusinessStats()
-
+function BusinessStats({ stats }: { stats: BusinessMetrics }) {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       <Card>
@@ -161,9 +147,7 @@ async function BusinessStats() {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{stats.totalBusinesses}</div>
-          <p className="text-xs text-muted-foreground">
-            +{stats.newThisWeek} from last month
-          </p>
+          <p className="text-xs text-muted-foreground">Registered businesses</p>
         </CardContent>
       </Card>
 
@@ -173,117 +157,151 @@ async function BusinessStats() {
           <span className="text-2xl">✅</span>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats.activeBusinesses}</div>
-          <p className="text-xs text-muted-foreground">
-            {stats.totalBusinesses > 0 ? Math.round((stats.activeBusinesses / stats.totalBusinesses) * 100) : 0}% active rate
-          </p>
+          <div className="text-2xl font-bold text-green-600">{stats.activeBusinesses}</div>
+          <p className="text-xs text-muted-foreground">Currently active</p>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Flagged Businesses</CardTitle>
-          <span className="text-2xl">🚩</span>
+          <span className="text-2xl">🚨</span>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats.flaggedBusinesses}</div>
-          <p className="text-xs text-muted-foreground">
-            Require attention
-          </p>
+          <div className="text-2xl font-bold text-red-600">{stats.flaggedBusinesses}</div>
+          <p className="text-xs text-muted-foreground">Require attention</p>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">New This Week</CardTitle>
-          <span className="text-2xl">🆕</span>
+          <span className="text-2xl">📈</span>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats.newThisWeek}</div>
-          <p className="text-xs text-muted-foreground">
-            +{stats.newThisWeek > 0 ? Math.round((stats.newThisWeek / Math.max(stats.totalBusinesses, 1)) * 100) : 0}% from last week
-          </p>
+          <div className="text-2xl font-bold text-blue-600">{stats.newThisWeek}</div>
+          <p className="text-xs text-muted-foreground">Recent signups</p>
         </CardContent>
       </Card>
     </div>
   )
 }
 
-async function BusinessesTable() {
-  const businesses = await getBusinesses()
+function BusinessesTable({ businesses }: { businesses: Business[] }) {
+  const [searchTerm, setSearchTerm] = useState('')
+
+  // Defensive programming: Ensure businesses is always an array
+  const safeBusinesses = Array.isArray(businesses) ? businesses : []
+
+  const filteredBusinesses = safeBusinesses.filter(business => {
+    if (!business) return false
+    
+    try {
+      const name = business.name?.toLowerCase() || ''
+      const email = business.contact_email?.toLowerCase() || ''
+      const search = searchTerm.toLowerCase()
+      
+      return name.includes(search) || email.includes(search)
+    } catch (filterError) {
+      console.warn('Error filtering business:', business?.id, filterError)
+      return false
+    }
+  })
 
   return (
     <Card>
       <CardHeader>
-        <div className="flex justify-between items-center">
-          <div>
-            <CardTitle>All Businesses</CardTitle>
-            <CardDescription>
-              Manage and monitor all business accounts
-            </CardDescription>
-          </div>
-          <div className="flex space-x-2">
-            <Input placeholder="Search businesses..." className="w-64" />
-            <Button>Add Business</Button>
-          </div>
-        </div>
+        <CardTitle>Business Directory</CardTitle>
+        <CardDescription>
+          Manage all business accounts and their status ({safeBusinesses.length} total)
+        </CardDescription>
+        <Input
+          placeholder="Search businesses..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="max-w-sm"
+        />
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full border-collapse">
             <thead>
-              <tr className="border-b bg-gray-50">
-                <th className="px-4 py-3 text-left font-medium">Business</th>
-                <th className="px-4 py-3 text-left font-medium">Contact</th>
-                <th className="px-4 py-3 text-left font-medium">Status</th>
-                <th className="px-4 py-3 text-center font-medium">Cards</th>
-                <th className="px-4 py-3 text-center font-medium">Customers</th>
-                <th className="px-4 py-3 text-left font-medium">Created</th>
-                <th className="px-4 py-3 text-left font-medium">Actions</th>
+              <tr className="border-b">
+                <th className="text-left p-2">Business</th>
+                <th className="text-left p-2">Contact</th>
+                <th className="text-left p-2">Location</th>
+                <th className="text-left p-2">Cards</th>
+                <th className="text-left p-2">Status</th>
+                <th className="text-left p-2">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {businesses.length > 0 ? (
-                businesses.map((business) => (
-                  <BusinessRow key={business.id} business={business} />
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
-                    No businesses found
-                  </td>
-                </tr>
-              )}
+              {filteredBusinesses.map((business) => {
+                if (!business?.id) {
+                  console.warn('Business without ID found:', business)
+                  return null
+                }
+                
+                return (
+                  <tr key={business.id} className="border-b hover:bg-muted/50">
+                    <td className="p-2">
+                      <div>
+                        <div className="font-medium">{business.name || 'Unnamed Business'}</div>
+                        <div className="text-sm text-muted-foreground">
+                          ID: {business.id.slice(0, 8)}...
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-2">
+                      <div>
+                        <div className="text-sm">{business.contact_email || 'No email'}</div>
+                        <div className="text-sm text-muted-foreground">ID: {business.id.slice(0, 8)}...</div>
+                      </div>
+                    </td>
+                    <td className="p-2">
+                      <div className="text-sm">
+                        {business.description || 'No description'}
+                      </div>
+                    </td>
+                    <td className="p-2">
+                      <div className="text-sm">
+                        <div>{business.total_cards || 0} total</div>
+                        <div className="text-muted-foreground">{business.active_cards || 0} active</div>
+                      </div>
+                    </td>
+                    <td className="p-2">
+                      <div className="flex gap-1">
+                        <Badge variant={business.status === 'active' ? 'default' : 'secondary'}>
+                          {business.status || 'unknown'}
+                        </Badge>
+                        {business.is_flagged && (
+                          <Badge variant="destructive">Flagged</Badge>
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-2">
+                      <Button variant="outline" size="sm">
+                        View Details
+                      </Button>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
+          
+          {filteredBusinesses.length === 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+              {searchTerm 
+                ? `No businesses match "${searchTerm}"` 
+                : safeBusinesses.length === 0 
+                  ? 'No businesses found in the system' 
+                  : 'No businesses match your search'
+              }
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
-  )
-}
-
-export default function AdminBusinesses() {
-  return (
-    <AdminLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Business Management</h1>
-          <p className="text-muted-foreground">
-            View, control, and monitor all business accounts
-          </p>
-        </div>
-
-        {/* Stats */}
-        <Suspense fallback={<div>Loading stats...</div>}>
-          <BusinessStats />
-        </Suspense>
-
-        {/* Businesses Table */}
-        <Suspense fallback={<div>Loading businesses...</div>}>
-          <BusinessesTable />
-        </Suspense>
-      </div>
-    </AdminLayout>
   )
 } 

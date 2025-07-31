@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server-only'
+import { createServerClient, getServerUser, getServerSession } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    const supabase = await createClient()
+    const supabase = await createServerClient()
 
     // Check if stamp card exists
     const { data: stampCard, error: cardError } = await supabase

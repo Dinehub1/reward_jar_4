@@ -1,221 +1,166 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase'
+import { useAdminAuth } from '@/lib/hooks/use-admin-auth'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 
 interface AdminLayoutClientProps {
-  children: React.ReactNode
+  children: ReactNode
+  requireAuth?: boolean
 }
 
+// Admin Sidebar Component
 function AdminSidebar() {
-  const navigation = [
-    {
-      name: 'Dashboard',
-      href: '/admin',
-      icon: '📊',
-      description: 'System overview and metrics'
-    },
-    {
-      name: 'Businesses',
-      href: '/admin/businesses',
-      icon: '🏢',
-      description: 'Manage all business accounts'
-    },
-    {
-      name: 'Customers',
-      href: '/admin/customers',
-      icon: '👥',
-      description: 'Monitor customer activity'
-    },
-    {
-      name: 'Cards',
-      href: '/admin/cards',
-      icon: '🎴',
-      description: 'Manage all loyalty cards'
-    },
-    {
-      name: 'Alerts',
-      href: '/admin/alerts',
-      icon: '🚨',
-      description: 'System alerts and notifications'
-    },
-    {
-      name: 'Support',
-      href: '/admin/support',
-      icon: '🛠️',
-      description: 'Customer support tools'
-    }
+  const router = useRouter()
+
+  const menuItems = [
+    { href: '/admin', label: 'Dashboard', icon: '📊' },
+    { href: '/admin/businesses', label: 'Businesses', icon: '🏢' },
+    { href: '/admin/customers', label: 'Customers', icon: '👥' },
+    { href: '/admin/cards', label: 'Cards', icon: '🎴' },
+    { href: '/admin/alerts', label: 'Alerts', icon: '🚨' },
+    { href: '/admin/support', label: 'Support', icon: '💬' },
   ]
 
   return (
-    <div className="hidden md:flex md:w-64 md:flex-col">
-      <div className="flex flex-col flex-grow pt-5 bg-white dark:bg-gray-900 overflow-y-auto border-r border-gray-200 dark:border-gray-700">
-        <div className="flex items-center flex-shrink-0 px-4">
-          <Link href="/admin" className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">RJ</span>
-              </div>
-            </div>
-            <div className="ml-3">
-              <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                RewardJar
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Admin Panel
-              </p>
-            </div>
+    <div className="w-64 bg-card border-r min-h-screen">
+      <div className="p-6">
+        <h2 className="text-xl font-bold mb-6">Admin Panel</h2>
+        <nav className="space-y-2">
+          {menuItems.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="flex items-center space-x-3 px-3 py-2 rounded-md hover:bg-muted transition-colors"
+            >
+              <span className="text-lg">{item.icon}</span>
+              <span>{item.label}</span>
+            </Link>
+          ))}
+        </nav>
+      </div>
+    </div>
+  )
+}
+
+// Admin Header Component
+function AdminHeader() {
+  return (
+    <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="flex h-14 items-center px-6">
+        <div className="flex items-center space-x-4 ml-auto">
+          <ThemeToggle />
+          <Link
+            href="/auth/login"
+            className="text-sm font-medium text-muted-foreground hover:text-foreground"
+          >
+            Logout
           </Link>
         </div>
-        <div className="mt-8 flex-grow flex flex-col">
-          <nav className="flex-1 px-2 space-y-1">
-            {navigation.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className="group flex items-center px-2 py-2 text-sm font-medium rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition-colors"
-              >
-                <span className="mr-3 text-lg">{item.icon}</span>
-                <div className="flex-1">
-                  <div className="text-sm font-medium">{item.name}</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300">
-                    {item.description}
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </nav>
-        </div>
       </div>
-    </div>
+    </header>
   )
 }
 
-function AdminHeader({ user }: { user: any }) {
+// Loading State Component
+function LoadingState() {
   return (
-    <div className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
-          <div className="flex items-center">
-            <div className="flex-shrink-0 md:hidden">
-              <Link href="/admin" className="flex items-center">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">RJ</span>
-                </div>
-                <span className="ml-2 text-lg font-semibold text-gray-900 dark:text-white">
-                  RewardJar Admin
-                </span>
-              </Link>
+    <div className="flex min-h-screen">
+      <AdminSidebar />
+      <div className="flex-1">
+        <AdminHeader />
+        <main className="p-6">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+              <div className="text-lg">Loading...</div>
             </div>
           </div>
-          <div className="flex items-center space-x-4">
-            <ThemeToggle />
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
-                <span className="text-blue-600 dark:text-blue-300 font-medium text-sm">
-                  {user?.email?.charAt(0).toUpperCase() || 'A'}
-                </span>
-              </div>
-              <div className="hidden sm:block">
-                <div className="text-sm font-medium text-gray-900 dark:text-white">
-                  Admin User
-                </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">
-                  {user?.email || 'admin@rewardjar.com'}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        </main>
       </div>
     </div>
   )
 }
 
-export function AdminLayoutClient({ children }: AdminLayoutClientProps) {
-  const [isAdmin, setIsAdmin] = useState(false)
-  const [authLoading, setAuthLoading] = useState(true)
-  const [user, setUser] = useState<any>(null)
+// Access Denied State Component
+function AccessDeniedState() {
+  return (
+    <div className="flex min-h-screen items-center justify-center">
+      <div className="text-center">
+        <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
+        <p className="text-muted-foreground mb-4">You don't have permission to access this page.</p>
+        <Link href="/auth/login" className="text-primary hover:underline">
+          Sign In
+        </Link>
+      </div>
+    </div>
+  )
+}
+
+// Main Admin Layout Component
+export function AdminLayoutClient({ children, requireAuth = true }: AdminLayoutClientProps) {
+  const { isAdmin, isLoading, user, error, signOut } = useAdminAuth(requireAuth)
   const router = useRouter()
 
-  useEffect(() => {
-    async function checkAdminAuth() {
-      try {
-        const supabase = createClient()
-        const { data: { user: authUser } } = await supabase.auth.getUser()
-        
-        if (!authUser) {
-          // In development mode, allow access for testing
-          console.log('🧪 ADMIN ACCESS - Development mode: bypassing authentication')
-          setUser({ email: 'dev-admin@rewardjar.com' })
-          setIsAdmin(true)
-          setAuthLoading(false)
-          return
-        }
+  // Debug logging for troubleshooting
+  console.log('🔍 AdminLayoutClient Debug:', {
+    isAdmin,
+    isLoading,
+    user: user ? { id: user.id, email: user.email } : null,
+    error,
+    requireAuth
+  })
 
-        const { data: userData } = await supabase
-          .from('users')
-          .select('role_id')
-          .eq('id', authUser.id)
-          .single()
-
-        if (userData?.role_id !== 1) {
-          router.push('/')
-          return
-        }
-
-        setUser(authUser)
-        setIsAdmin(true)
-      } catch (error) {
-        console.error('Auth check failed:', error)
-        // In development mode, allow access for testing
-        console.log('🧪 ADMIN ACCESS - Development mode: bypassing authentication due to error')
-        setUser({ email: 'dev-admin@rewardjar.com' })
-        setIsAdmin(true)
-      } finally {
-        setAuthLoading(false)
-      }
-    }
-
-    checkAdminAuth()
-  }, [router])
-
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Checking admin access...</p>
-        </div>
-      </div>
-    )
+  if (isLoading) {
+    return <LoadingState />
   }
 
-  if (!isAdmin) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-foreground mb-2">Access Denied</h1>
-          <p className="text-muted-foreground">Admin access required</p>
-        </div>
-      </div>
-    )
+  if (requireAuth && !isAdmin) {
+    console.log('❌ AdminLayoutClient: Access denied - redirecting to login')
+    // Instead of showing access denied, redirect to login
+    router.push('/auth/login?error=admin_required')
+    return <LoadingState />
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-background">
+      {/* Admin Header */}
+      <header className="border-b bg-card">
+        <div className="flex h-16 items-center justify-between px-6">
+          <div className="flex items-center space-x-4">
+            <Link href="/admin" className="text-xl font-bold text-primary">
+              RewardJar Admin
+            </Link>
+          </div>
+          <div className="flex items-center space-x-4">
+            {user && (
+              <span className="text-sm text-muted-foreground">
+                {user.email}
+              </span>
+            )}
+            <ThemeToggle />
+            <button
+              onClick={() => signOut()}
+              className="text-sm text-muted-foreground hover:text-foreground"
+            >
+              Sign Out
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Layout */}
       <div className="flex">
         <AdminSidebar />
-        <div className="flex-1 flex flex-col">
-          <AdminHeader user={user} />
-          <main className="flex-1">
-            {children}
-          </main>
-        </div>
+        <main className="flex-1 p-6">
+          {children}
+        </main>
       </div>
     </div>
   )
-} 
+}
+
+// Default export for backward compatibility
+export default AdminLayoutClient 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server-only'
+import { createServerClient, getServerUser, getServerSession } from '@/lib/supabase/server'
 
 export async function GET(
   request: NextRequest,
@@ -7,7 +7,7 @@ export async function GET(
 ) {
   try {
     const resolvedParams = await params
-    const supabase = await createClient()
+    const supabase = await createServerClient()
     const customerCardId = resolvedParams.customerCardId
 
     // Get customer card details for manifest customization

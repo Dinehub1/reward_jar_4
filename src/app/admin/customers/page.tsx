@@ -1,11 +1,13 @@
-import { Suspense } from 'react'
+'use client'
+
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { AdminLayout } from '@/components/layouts/AdminLayout'
-import { createAdminClient } from '@/lib/supabase/admin-client'
+import { AdminLayoutClient } from '@/components/layouts/AdminLayoutClient'
+import { useCustomers, useAdminStatsCompat as useAdminStats } from '@/lib/hooks/use-admin-data'
 import { 
   Users, 
   UserPlus, 
@@ -23,25 +25,7 @@ interface Customer {
   email: string
   created_at: string
   user_id: string
-  customer_cards: Array<{
-    id: string
-    current_stamps: number
-    sessions_used: number
-    stamp_card_id: string | null
-    membership_card_id: string | null
-    stamp_cards?: {
-      name: string
-      businesses: {
-        name: string
-      }
-    }
-    membership_cards?: {
-      name: string
-      businesses: {
-        name: string
-      }
-    }
-  }>
+  customer_cards: Array<any>
   _count?: {
     customer_cards: number
     rewards: number
@@ -54,221 +38,74 @@ interface Customer {
   }
 }
 
-async function getCustomers() {
-  console.log('👥 CUSTOMERS PAGE - Starting customer data fetch via API...')
+interface CustomerMetrics {
+  totalCustomers: number
+  activeCustomers: number
+  newThisWeek: number
+  anomalies: number
+}
 
-  try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/admin/all-data`, {
-      cache: 'no-store'
-    })
+function CustomerStats() {
+  const { data: statsData, loading: statsLoading } = useAdminStats()
+  const { data: customersData, loading: customersLoading } = useCustomers()
 
-    if (!response.ok) {
-      throw new Error(`API request failed: ${response.status}`)
-    }
+  const loading = statsLoading || customersLoading
+  const safeCustomersData = Array.isArray(customersData) ? customersData : []
 
-    const data = await response.json()
-
-    if (!data.success) {
-      throw new Error(data.error || 'Failed to fetch customers')
-    }
-
-    const customers = data.data.customers || []
-    console.log('✅ CUSTOMERS PAGE - Fetched customers via API:', customers.length)
-
-    // Process customers to match expected interface
-    return customers.map((customer: any) => ({
-      ...customer,
-      customer_cards: [], // Simplified for now
-      _count: {
-        customer_cards: customer.total_cards || 0,
-        rewards: 0,
-        session_usage: customer.total_stamps || 0
-      },
-      _flags: {
-        hasRecentErrors: false,
-        hasAbnormalActivity: customer.total_stamps > 20,
-        isNewCustomer: (Date.now() - new Date(customer.created_at).getTime()) < (7 * 24 * 60 * 60 * 1000)
+  // Calculate customer metrics with safety checks
+  const customerMetrics: CustomerMetrics = {
+    totalCustomers: statsData?.totalCustomers || safeCustomersData.length || 0,
+    activeCustomers: safeCustomersData.filter(c => {
+      try {
+        if (!c?.created_at) return false
+        const monthAgo = new Date()
+        monthAgo.setDate(monthAgo.getDate() - 30)
+        return new Date(c.created_at) > monthAgo
+      } catch {
+        return false
       }
-    }))
-  } catch (error) {
-    console.error('❌ CUSTOMERS PAGE - Error fetching customers:', error)
-    return []
+    }).length || 0,
+    newThisWeek: safeCustomersData.filter(c => {
+      try {
+        if (!c?.created_at) return false
+        const weekAgo = new Date()
+        weekAgo.setDate(weekAgo.getDate() - 7)
+        return new Date(c.created_at) > weekAgo
+      } catch {
+        return false
+      }
+    }).length || 0,
+    anomalies: safeCustomersData.filter(c => c?._flags?.hasAbnormalActivity).length || 0
   }
-}
 
-async function getCustomerStats() {
-  console.log('📈 CUSTOMERS PAGE - Starting customer stats fetch via API...')
-
-  try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/admin/all-data`, {
-      cache: 'no-store'
-    })
-
-    if (!response.ok) {
-      throw new Error(`API request failed: ${response.status}`)
-    }
-
-    const data = await response.json()
-
-    if (!data.success) {
-      throw new Error(data.error || 'Failed to fetch customer stats')
-    }
-
-    const metrics = data.data.metrics.customers
-    const customers = data.data.customers || []
-    
-    console.log('✅ CUSTOMERS PAGE - Customer stats via API:', metrics)
-
-    return {
-      totalCustomers: metrics.totalCustomers,
-      activeCustomers: metrics.activeCustomers,
-      newThisWeek: metrics.newThisWeek,
-      recentCustomers: customers.slice(0, 5),
-      topCustomers: customers.slice(0, 5)
-    }
-  } catch (error) {
-    console.error('❌ CUSTOMERS PAGE - Error fetching customer stats:', error)
-    return {
-      totalCustomers: 0,
-      activeCustomers: 0,
-      newThisWeek: 0,
-      recentCustomers: [],
-      topCustomers: []
-    }
+  if (loading) {
+    return (
+      <div className="grid gap-4 md:grid-cols-4">
+        {[...Array(4)].map((_, i) => (
+          <Card key={i}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div className="h-4 w-20 bg-muted animate-pulse rounded" />
+              <div className="h-6 w-6 bg-muted animate-pulse rounded" />
+            </CardHeader>
+            <CardContent>
+              <div className="h-8 w-12 bg-muted animate-pulse rounded mb-2" />
+              <div className="h-3 w-24 bg-muted animate-pulse rounded" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    )
   }
-}
-
-function CustomerRow({ customer }: { customer: Customer }) {
-  return (
-    <tr className="border-b hover:bg-gray-50">
-      <td className="px-4 py-3">
-        <div className="flex items-center space-x-2">
-          <div>
-            <div className="font-medium">{customer.name}</div>
-            <div className="text-sm text-gray-500">{customer.email}</div>
-          </div>
-          <div className="flex space-x-1">
-            {customer._flags?.isNewCustomer && (
-              <Badge className="bg-blue-100 text-blue-800">New</Badge>
-            )}
-            {customer._flags?.hasAbnormalActivity && (
-              <Badge className="bg-orange-100 text-orange-800">High Activity</Badge>
-            )}
-            {customer._flags?.hasRecentErrors && (
-              <Badge className="bg-red-100 text-red-800">Errors</Badge>
-            )}
-          </div>
-        </div>
-      </td>
-      <td className="px-4 py-3 text-center">
-        <div className="text-sm">
-          <div className="font-medium">{customer._count?.customer_cards || 0}</div>
-          <div className="text-gray-500">cards</div>
-        </div>
-      </td>
-      <td className="px-4 py-3 text-center">
-        <div className="text-sm">
-          <div className="font-medium">{customer._count?.rewards || 0}</div>
-          <div className="text-gray-500">rewards</div>
-        </div>
-      </td>
-      <td className="px-4 py-3 text-center">
-        <div className="text-sm">
-          <div className="font-medium">{customer._count?.session_usage || 0}</div>
-          <div className="text-gray-500">sessions</div>
-        </div>
-      </td>
-      <td className="px-4 py-3">
-        <div className="text-sm text-gray-500">
-          {new Date(customer.created_at).toLocaleDateString()}
-        </div>
-      </td>
-      <td className="px-4 py-3">
-        <div className="flex space-x-1">
-          <Button variant="outline" size="sm">
-            View Details
-          </Button>
-          <Button variant="outline" size="sm" className="text-blue-600">
-            Support
-          </Button>
-        </div>
-      </td>
-    </tr>
-  )
-}
-
-async function CustomersTable() {
-  const customers = await getCustomers()
-
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex justify-between items-center">
-          <div>
-            <CardTitle>All Customers</CardTitle>
-            <CardDescription>
-              Monitor customer activity and detect anomalies
-            </CardDescription>
-          </div>
-          <div className="flex space-x-2">
-            <Input placeholder="Search customers..." className="w-64" />
-            <Button variant="outline">Export</Button>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b bg-gray-50">
-                <th className="px-4 py-3 text-left font-medium">Customer</th>
-                <th className="px-4 py-3 text-center font-medium">Cards</th>
-                <th className="px-4 py-3 text-center font-medium">Rewards</th>
-                <th className="px-4 py-3 text-center font-medium">Sessions</th>
-                <th className="px-4 py-3 text-left font-medium">Joined</th>
-                <th className="px-4 py-3 text-left font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {customers.length > 0 ? (
-                customers.map((customer) => (
-                  <CustomerRow key={customer.id} customer={customer} />
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                    No customers found
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-async function CustomerStats() {
-  const stats = await getCustomerStats()
-  const customers = await getCustomers()
-  
-  // Calculate anomalies count from customer flags
-  const anomaliesCount = customers.reduce((count, customer) => {
-    return count + 
-      (customer._flags?.hasRecentErrors ? 1 : 0) +
-      (customer._flags?.hasAbnormalActivity ? 1 : 0)
-  }, 0) + 3 // Add 3 for the hardcoded anomalies in AnomalyDetection component
 
   return (
     <div className="grid gap-4 md:grid-cols-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
-          <span className="text-2xl">👥</span>
+          <Users className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats.totalCustomers}</div>
+          <div className="text-2xl font-bold">{customerMetrics.totalCustomers}</div>
           <p className="text-xs text-muted-foreground">
             Registered users
           </p>
@@ -278,10 +115,10 @@ async function CustomerStats() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Active Customers</CardTitle>
-          <span className="text-2xl">✅</span>
+          <TrendingUp className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats.activeCustomers}</div>
+          <div className="text-2xl font-bold">{customerMetrics.activeCustomers}</div>
           <p className="text-xs text-muted-foreground">
             Active in last 30 days
           </p>
@@ -291,10 +128,10 @@ async function CustomerStats() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">New This Week</CardTitle>
-          <span className="text-2xl">🆕</span>
+          <UserPlus className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats.newThisWeek}</div>
+          <div className="text-2xl font-bold">{customerMetrics.newThisWeek}</div>
           <p className="text-xs text-muted-foreground">
             New customers this week
           </p>
@@ -304,10 +141,10 @@ async function CustomerStats() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Anomalies</CardTitle>
-          <span className="text-2xl">🚨</span>
+          <AlertTriangle className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{anomaliesCount}</div>
+          <div className="text-2xl font-bold">{customerMetrics.anomalies}</div>
           <p className="text-xs text-muted-foreground">
             Require attention
           </p>
@@ -318,27 +155,27 @@ async function CustomerStats() {
 }
 
 function AnomalyDetection() {
-  const anomalies = [
+  const mockAnomalies = [
     {
+      id: '1',
       type: 'High Activity',
       description: 'Customer with 50+ sessions in 24 hours',
       customer: 'john.doe@example.com',
-      severity: 'medium',
-      timestamp: '2 hours ago'
+      time: '2 hours ago'
     },
     {
+      id: '2',
       type: 'Repeated Errors',
       description: 'Multiple failed reward redemptions',
       customer: 'jane.smith@example.com',
-      severity: 'high',
-      timestamp: '4 hours ago'
+      time: '4 hours ago'
     },
     {
+      id: '3',
       type: 'Duplicate Stamps',
       description: 'Potential stamp duplication attempt',
       customer: 'user123@example.com',
-      severity: 'high',
-      timestamp: '6 hours ago'
+      time: '6 hours ago'
     }
   ]
 
@@ -346,38 +183,143 @@ function AnomalyDetection() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center space-x-2">
-          <span>🚨</span>
+          <AlertTriangle className="h-5 w-5 text-orange-500" />
           <span>Anomaly Detection</span>
         </CardTitle>
         <CardDescription>Automated flags for unusual customer behavior</CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {anomalies.map((anomaly, index) => (
-            <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
-              <div className="flex items-center space-x-4">
-                <Badge 
-                  className={
-                    anomaly.severity === 'high' 
-                      ? 'bg-red-100 text-red-800' 
-                      : 'bg-orange-100 text-orange-800'
-                  }
-                >
-                  {anomaly.type}
-                </Badge>
-                <div>
-                  <div className="font-medium">{anomaly.description}</div>
-                  <div className="text-sm text-gray-500">{anomaly.customer}</div>
-                </div>
-              </div>
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-500">{anomaly.timestamp}</span>
-                <Button variant="outline" size="sm">
-                  Investigate
-                </Button>
+      <CardContent className="space-y-4">
+        {mockAnomalies.map((anomaly) => (
+          <div key={anomaly.id} className="flex items-center justify-between p-4 border rounded-lg">
+            <div className="flex items-center space-x-4">
+              <Badge variant={anomaly.type === 'High Activity' ? 'default' : 'destructive'}>
+                {anomaly.type}
+              </Badge>
+              <div>
+                <h3 className="font-medium">{anomaly.description}</h3>
+                <p className="text-sm text-muted-foreground">{anomaly.customer}</p>
               </div>
             </div>
-          ))}
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-muted-foreground">{anomaly.time}</span>
+              <Button variant="outline" size="sm">Investigate</Button>
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  )
+}
+
+function CustomersTable() {
+  const { data: customersData, loading, error, refetch } = useCustomers()
+  const [searchTerm, setSearchTerm] = useState('')
+
+  const safeCustomersData = Array.isArray(customersData) ? customersData : []
+  
+  const filteredCustomers = safeCustomersData.filter(customer => 
+    customer?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    customer?.email?.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>All Customers</CardTitle>
+          <CardDescription>Monitor customer activity and detect anomalies</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="h-10 w-full bg-muted animate-pulse rounded" />
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-16 w-full bg-muted animate-pulse rounded" />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>All Customers</CardTitle>
+          <CardDescription>Monitor customer activity and detect anomalies</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-2" />
+            <p className="text-lg font-medium">Error loading customers</p>
+            <p className="text-muted-foreground mb-4">{error}</p>
+            <Button onClick={() => refetch()}>Retry</Button>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>All Customers</CardTitle>
+        <CardDescription>Monitor customer activity and detect anomalies</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          <Input
+            placeholder="Search customers..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-sm"
+          />
+          
+          {filteredCustomers.length === 0 ? (
+            <div className="text-center py-8">
+              <Users className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+              <p className="text-lg font-medium">No customers found</p>
+              <p className="text-muted-foreground">
+                {searchTerm ? 'Try adjusting your search terms' : 'No customers have been registered yet'}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {filteredCustomers.slice(0, 10).map((customer) => (
+                <div key={customer.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                      <Users className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium">{customer.name || 'Unknown'}</h3>
+                      <p className="text-sm text-muted-foreground">{customer.email}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Joined: {customer.created_at ? new Date(customer.created_at).toLocaleDateString() : 'Unknown'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Badge variant="outline">
+                      {customer.customer_cards?.length || 0} cards
+                    </Badge>
+                    <Button variant="outline" size="sm">
+                      <Eye className="h-4 w-4 mr-1" />
+                      View
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              
+              {filteredCustomers.length > 10 && (
+                <div className="text-center py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Showing 10 of {filteredCustomers.length} customers
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -386,29 +328,31 @@ function AnomalyDetection() {
 
 export default function AdminCustomers() {
   return (
-    <AdminLayout>
+    <AdminLayoutClient>
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Customer Monitoring</h1>
-          <p className="text-muted-foreground">
-            Track customer activity and detect anomalies
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Customer Monitoring</h1>
+            <p className="text-muted-foreground">
+              Track customer activity and detect anomalies
+            </p>
+          </div>
+          <Button>
+            <UserPlus className="h-4 w-4 mr-2" />
+            Add Customer
+          </Button>
         </div>
 
         {/* Stats */}
-        <Suspense fallback={<div>Loading stats...</div>}>
-          <CustomerStats />
-        </Suspense>
+        <CustomerStats />
 
         {/* Anomaly Detection */}
         <AnomalyDetection />
 
         {/* Customers Table */}
-        <Suspense fallback={<div>Loading customers...</div>}>
-          <CustomersTable />
-        </Suspense>
+        <CustomersTable />
       </div>
-    </AdminLayout>
+    </AdminLayoutClient>
   )
 } 

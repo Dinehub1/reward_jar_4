@@ -1,87 +1,166 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server-only'
+import { createAdminClient } from '@/lib/supabase/admin-client'
+import type { StampCard, MembershipCard, ApiResponse } from '@/lib/supabase/types'
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    const supabase = createAdminClient()
+    const url = new URL(request.url)
+    const cardType = url.searchParams.get('type') as 'stamp' | 'membership' | null
     
-    // Check authentication
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-    }
+    console.log('🎫 ADMIN CARDS API - Fetching cards:', { cardType })
 
-    // Check if user is admin (role_id = 1)
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('role_id')
-      .eq('id', user.id)
-      .single()
-
-    if (userError || !userData || userData.role_id !== 1) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
-    }
-
-    // Get all stamp cards with business info
-    const { data: stampCards, error: stampError } = await supabase
-      .from('stamp_cards')
-      .select(`
-        *,
-        businesses (
+    if (cardType === 'stamp') {
+      // Get only stamp cards
+      const { data: stampCards, error } = await supabase
+        .from('stamp_cards')
+        .select(`
           id,
-          name
+          business_id,
+          name,
+          total_stamps,
+          reward_description,
+          status,
+          created_at,
+          businesses (
+            id,
+            name,
+            contact_email
+          )
+        `)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('💥 ADMIN CARDS API - Error fetching stamp cards:', error)
+        return NextResponse.json(
+          { success: false, error: 'Failed to fetch stamp cards' } as ApiResponse<never>,
+          { status: 500 }
         )
-      `)
-      .order('created_at', { ascending: false })
-
-    if (stampError) {
-      console.error('Error fetching stamp cards:', stampError)
-      return NextResponse.json({ error: 'Failed to fetch stamp cards' }, { status: 500 })
-    }
-
-    // Get all membership cards with business info
-    const { data: membershipCards, error: membershipError } = await supabase
-      .from('membership_cards')
-      .select(`
-        *,
-        businesses (
-          id,
-          name
-        )
-      `)
-      .order('created_at', { ascending: false })
-
-    if (membershipError) {
-      console.error('Error fetching membership cards:', membershipError)
-      return NextResponse.json({ error: 'Failed to fetch membership cards' }, { status: 500 })
-    }
-
-    // Format the response
-    const allCards = [
-      ...(stampCards?.map(card => ({
-        ...card,
-        type: 'stamp',
-        business_name: (card.businesses as any)?.name || 'Unknown Business'
-      })) || []),
-      ...(membershipCards?.map(card => ({
-        ...card,
-        type: 'membership',
-        business_name: (card.businesses as any)?.name || 'Unknown Business'
-      })) || [])
-    ]
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        stampCards: stampCards || [],
-        membershipCards: membershipCards || [],
-        allCards: allCards,
-        totalCards: allCards.length
       }
-    })
+
+      return NextResponse.json({
+        success: true,
+        data: stampCards || []
+      } as ApiResponse<StampCard[]>)
+
+    } else if (cardType === 'membership') {
+      // Get only membership cards
+      const { data: membershipCards, error } = await supabase
+        .from('membership_cards')
+        .select(`
+          id,
+          business_id,
+          name,
+          membership_type,
+          total_sessions,
+          cost,
+          duration_days,
+          status,
+          created_at,
+          updated_at,
+          businesses (
+            id,
+            name,
+            contact_email
+          )
+        `)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('💥 ADMIN CARDS API - Error fetching membership cards:', error)
+        return NextResponse.json(
+          { success: false, error: 'Failed to fetch membership cards' } as ApiResponse<never>,
+          { status: 500 }
+        )
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: membershipCards || []
+      } as ApiResponse<MembershipCard[]>)
+
+    } else {
+      // Get both types of cards
+      const [stampResult, membershipResult] = await Promise.all([
+        supabase
+          .from('stamp_cards')
+          .select(`
+            id,
+            business_id,
+            name,
+            total_stamps,
+            reward_description,
+            status,
+            created_at,
+            businesses (
+              id,
+              name,
+              contact_email
+            )
+          `)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('membership_cards')
+          .select(`
+            id,
+            business_id,
+            name,
+            membership_type,
+            total_sessions,
+            cost,
+            duration_days,
+            status,
+            created_at,
+            updated_at,
+            businesses (
+              id,
+              name,
+              contact_email
+            )
+          `)
+          .order('created_at', { ascending: false })
+      ])
+
+      if (stampResult.error) {
+        console.error('💥 ADMIN CARDS API - Error fetching stamp cards:', stampResult.error)
+        return NextResponse.json(
+          { success: false, error: 'Failed to fetch stamp cards' } as ApiResponse<never>,
+          { status: 500 }
+        )
+      }
+
+      if (membershipResult.error) {
+        console.error('💥 ADMIN CARDS API - Error fetching membership cards:', membershipResult.error)
+        return NextResponse.json(
+          { success: false, error: 'Failed to fetch membership cards' } as ApiResponse<never>,
+          { status: 500 }
+        )
+      }
+
+      console.log('✅ ADMIN CARDS API - Successfully fetched:', {
+        stampCards: stampResult.data?.length || 0,
+        membershipCards: membershipResult.data?.length || 0
+      })
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          stampCards: stampResult.data || [],
+          membershipCards: membershipResult.data || [],
+          total: (stampResult.data?.length || 0) + (membershipResult.data?.length || 0)
+        }
+      } as ApiResponse<{
+        stampCards: StampCard[]
+        membershipCards: MembershipCard[]
+        total: number
+      }>)
+    }
 
   } catch (error) {
-    console.error('Error in admin cards API:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    console.error('💥 ADMIN CARDS API - Unexpected error:', error)
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' } as ApiResponse<never>,
+      { status: 500 }
+    )
   }
 } 

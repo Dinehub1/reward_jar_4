@@ -1,4 +1,6 @@
-import { Suspense } from 'react'
+'use client'
+
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -6,68 +8,18 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { AdminLayout } from '@/components/layouts/AdminLayout'
-import { createClient } from '@/lib/supabase/server-only'
+import { AdminLayoutClient } from '@/components/layouts/AdminLayoutClient'
 
 interface SupportLog {
   id: string
-  admin_id: string
-  action: string
-  target_type: 'customer' | 'business' | 'card'
-  target_id: string
-  target_name: string
-  comment: string
+  type: 'ticket' | 'bug_report' | 'feature_request'
+  title: string
+  description: string
+  status: 'open' | 'in_progress' | 'resolved' | 'closed'
+  priority: 'low' | 'medium' | 'high' | 'urgent'
   created_at: string
-  admin_email?: string
-}
-
-async function getSupportLogs() {
-  const supabase = createClient()
-  
-  try {
-    // Note: This would need the admin_support_logs table to be created
-    // For now, we'll return mock data
-    const mockLogs: SupportLog[] = [
-      {
-        id: '1',
-        admin_id: 'admin-1',
-        action: 'add_stamp',
-        target_type: 'customer',
-        target_id: 'customer-1',
-        target_name: 'John Doe',
-        comment: 'Added stamp due to QR scan failure',
-        created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-        admin_email: 'admin@rewardjar.com'
-      },
-      {
-        id: '2',
-        admin_id: 'admin-1',
-        action: 'extend_membership',
-        target_type: 'customer',
-        target_id: 'customer-2',
-        target_name: 'Jane Smith',
-        comment: 'Extended membership due to system downtime',
-        created_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-        admin_email: 'admin@rewardjar.com'
-      },
-      {
-        id: '3',
-        admin_id: 'admin-1',
-        action: 'force_reward',
-        target_type: 'customer',
-        target_id: 'customer-3',
-        target_name: 'Bob Johnson',
-        comment: 'Manually triggered reward redemption',
-        created_at: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-        admin_email: 'admin@rewardjar.com'
-      }
-    ]
-    
-    return mockLogs
-  } catch (error) {
-    console.error('Error fetching support logs:', error)
-    return []
-  }
+  customer_email?: string
+  business_name?: string
 }
 
 function ManualStampTool() {
@@ -341,7 +293,39 @@ function CardResetTool() {
 }
 
 async function SupportLogs() {
-  const logs = await getSupportLogs()
+  // Mock data for support logs
+  const mockLogs: SupportLog[] = [
+    {
+      id: '1',
+      type: 'ticket',
+      title: 'Customer unable to redeem stamps',
+      description: 'Customer reports difficulty scanning QR codes for stamp redemption. System logs indicate intermittent connectivity.',
+      status: 'open',
+      priority: 'high',
+      created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+      customer_email: 'customer1@example.com'
+    },
+    {
+      id: '2',
+      type: 'bug_report',
+      title: 'Membership expiry date not updating',
+      description: 'Several customers have reported that their membership expiry dates are not being updated correctly after card usage.',
+      status: 'in_progress',
+      priority: 'medium',
+      created_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+      customer_email: 'customer2@example.com'
+    },
+    {
+      id: '3',
+      type: 'feature_request',
+      title: 'Integration with third-party loyalty platforms',
+      description: 'Customers are requesting the ability to import loyalty points from external platforms directly into their RewardJar cards.',
+      status: 'resolved',
+      priority: 'low',
+      created_at: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+      customer_email: 'customer3@example.com'
+    }
+  ]
 
   return (
     <Card>
@@ -356,32 +340,32 @@ async function SupportLogs() {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {logs.length > 0 ? (
-            logs.map((log) => (
+          {mockLogs.length > 0 ? (
+            mockLogs.map((log) => (
               <div key={log.id} className="flex items-center justify-between p-4 border rounded-lg">
                 <div className="flex items-center space-x-4">
                   <Badge 
                     className={
-                      log.action === 'force_reward' 
-                        ? 'bg-green-100 text-green-800'
-                        : log.action === 'add_stamp'
-                        ? 'bg-blue-100 text-blue-800'
-                        : 'bg-orange-100 text-orange-800'
+                      log.type === 'bug_report' 
+                        ? 'bg-red-100 text-red-800'
+                        : log.type === 'feature_request'
+                        ? 'bg-purple-100 text-purple-800'
+                        : 'bg-blue-100 text-blue-800'
                     }
                   >
-                    {log.action.replace('_', ' ')}
+                    {log.type.replace('_', ' ')}
                   </Badge>
                   <div>
                     <div className="font-medium">
-                      {log.target_name} ({log.target_type})
+                      {log.title}
                     </div>
                     <div className="text-sm text-gray-500">
-                      {log.comment}
+                      {log.description}
                     </div>
                   </div>
                 </div>
                 <div className="text-right text-sm text-gray-500">
-                  <div>{log.admin_email}</div>
+                  <div>{log.customer_email}</div>
                   <div>{new Date(log.created_at).toLocaleString()}</div>
                 </div>
               </div>
@@ -457,7 +441,7 @@ function SupportStats() {
 
 export default function AdminSupport() {
   return (
-    <AdminLayout>
+    <AdminLayoutClient>
       <div className="space-y-6">
         {/* Header */}
         <div>
@@ -487,12 +471,10 @@ export default function AdminSupport() {
           </TabsContent>
           
           <TabsContent value="logs">
-            <Suspense fallback={<div>Loading support logs...</div>}>
-              <SupportLogs />
-            </Suspense>
+            <SupportLogs />
           </TabsContent>
         </Tabs>
       </div>
-    </AdminLayout>
+    </AdminLayoutClient>
   )
 } 

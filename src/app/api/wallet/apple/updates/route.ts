@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server-only'
+import { createServerClient, getServerUser, getServerSession } from '@/lib/supabase/server'
 
 // Apple Wallet Update Service
 // This endpoint handles Apple Wallet pass updates when data changes
@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/server-only'
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    const supabase = await createServerClient()
     
     // Parse the request body (Apple sends pass identifiers)
     const body = await request.json()
@@ -272,7 +272,7 @@ export async function POST(request: NextRequest) {
 // GET endpoint for Apple Wallet to check for updates
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    const supabase = await createServerClient()
     
     // Get pass identifiers from query parameters
     const passTypeIdentifier = request.nextUrl.searchParams.get('passTypeIdentifier')

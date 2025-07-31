@@ -17,14 +17,19 @@ export interface AuthResult {
 
 /**
  * Check authentication and get user role (CLIENT-SIDE VERSION)
- * This version works in client components and uses fetch to call our API
+ * Uses direct client-side Supabase calls instead of the hanging API
  */
 export async function checkAuth(): Promise<AuthResult> {
   try {
-    // Use our auth status API which handles server-side logic
-    const response = await fetch('/api/auth/status')
+    console.log('🔍 AUTH CHECK - Using direct client-side authentication')
     
-    if (!response.ok) {
+    const supabase = createClient()
+    
+    // Get current session
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    
+    if (sessionError) {
+      console.error('Auth: Session error:', sessionError)
       return {
         user: null,
         isAuthenticated: false,
@@ -33,20 +38,53 @@ export async function checkAuth(): Promise<AuthResult> {
         isCustomer: false
       }
     }
-    
-    const result = await response.json()
-    
-    // Handle new API response format
-    const isAuthenticated = result.authenticated || false
-    const userRole = result.role
-    const user = result.user ? {
-      ...result.user,
-      role_id: userRole
-    } : null
+
+    if (!session?.user) {
+      console.log('Auth: No authenticated user')
+      return {
+        user: null,
+        isAuthenticated: false,
+        isAdmin: false,
+        isBusiness: false,
+        isCustomer: false
+      }
+    }
+
+    console.log('Auth: User authenticated:', session.user.id)
+
+    // Get user role from database
+    const { data: userData, error: roleError } = await supabase
+      .from('users')
+      .select('role_id')
+      .eq('id', session.user.id)
+      .single()
+
+    if (roleError) {
+      console.error('Auth: Role lookup error:', roleError)
+      // Return authenticated but without role information
+      return {
+        user: {
+          id: session.user.id,
+          email: session.user.email || '',
+          role_id: 0
+        },
+        isAuthenticated: true,
+        isAdmin: false,
+        isBusiness: false,
+        isCustomer: false
+      }
+    }
+
+    const userRole = userData?.role_id || 0
+    console.log('Auth: User role verified:', userRole)
     
     return {
-      user: user,
-      isAuthenticated: isAuthenticated,
+      user: {
+        id: session.user.id,
+        email: session.user.email || '',
+        role_id: userRole
+      },
+      isAuthenticated: true,
       isAdmin: userRole === 1,
       isBusiness: userRole === 2,
       isCustomer: userRole === 3

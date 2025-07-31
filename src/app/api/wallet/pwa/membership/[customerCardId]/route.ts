@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server-only'
+import { createServerClient, getServerUser, getServerSession } from '@/lib/supabase/server'
 import validateUUID from 'uuid-validate'
 
 export async function GET(
@@ -17,7 +17,7 @@ export async function GET(
       )
     }
 
-    const supabase = await createClient()
+    const supabase = await createServerClient()
     
     // Get membership card details
     const { data: customerCard, error } = await supabase

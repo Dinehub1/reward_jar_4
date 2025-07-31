@@ -1,32 +1,40 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { getAuthStatus } from '@/lib/auth-protection'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { ArrowLeft, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react'
 
-// Form validation schema
-const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(1, 'Password is required')
-})
+// Simple form validation
+const validateEmail = (email: string) => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
+}
 
-type LoginForm = z.infer<typeof loginSchema>
+const validateForm = (email: string, password: string) => {
+  const errors: { email?: string; password?: string } = {}
+  
+  if (!email) {
+    errors.email = 'Email is required'
+  } else if (!validateEmail(email)) {
+    errors.email = 'Please enter a valid email address'
+  }
+  
+  if (!password) {
+    errors.password = 'Password is required'
+  }
+  
+  return errors
+}
 
 // Separate client component for search params logic
 function LoginContent() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [formErrors, setFormErrors] = useState<{ email?: string; password?: string }>({})
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
@@ -66,27 +74,29 @@ function LoginContent() {
     }
   }, [searchParams])
 
-  const form = useForm<LoginForm>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: '',
-      password: ''
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    // Validate form
+    const errors = validateForm(email, password)
+    setFormErrors(errors)
+    
+    if (Object.keys(errors).length > 0) {
+      return
     }
-  })
 
-  const onSubmit = async (data: LoginForm) => {
     setIsSubmitting(true)
     setError(null)
     setSuccessMessage(null)
 
     try {
       console.log('=== LOGIN ATTEMPT START ===')
-      console.log('Email:', data.email)
+      console.log('Email:', email)
 
       // Step 1: Attempt login
       const { data: loginResult, error: signInError } = await supabase.auth.signInWithPassword({
-        email: data.email,
-        password: data.password
+        email,
+        password
       })
 
       if (signInError) {
@@ -100,15 +110,15 @@ function LoginContent() {
 
       console.log('✅ Login successful for user:', loginResult.user.id)
 
-      // Step 2: Check user role and redirect accordingly
-      console.log('🔍 Checking user role...')
-      const authStatus = await getAuthStatus()
+      // Step 2: Get user role directly (simplified auth check)
+      const { data: userData, error: roleError } = await supabase
+        .from('users')
+        .select('role_id')
+        .eq('id', loginResult.user.id)
+        .single()
 
-      if (!authStatus.isAuthenticated) {
-        throw new Error('Authentication verification failed after login')
-      }
-
-      console.log('👤 User authenticated with role_id:', authStatus.user?.role_id)
+      const userRole = userData?.role_id || 0
+      console.log('👤 User role:', userRole)
 
       // Show success message
       setSuccessMessage('Login successful! Redirecting...')
@@ -121,17 +131,18 @@ function LoginContent() {
         router.push(decodeURIComponent(nextUrl))
       } else {
         // Redirect based on role
-        if (authStatus.isAdmin) {
+        if (userRole === 1) {
           console.log('🔧 Redirecting to admin dashboard')
           router.push('/admin')
-        } else if (authStatus.isBusiness) {
+        } else if (userRole === 2) {
           console.log('🏢 Redirecting to business dashboard')
           router.push('/business/dashboard')
-        } else if (authStatus.isCustomer) {
+        } else if (userRole === 3) {
           console.log('👤 Redirecting to customer dashboard')
           router.push('/customer/dashboard')
         } else {
-          throw new Error(`Invalid user role: ${authStatus.user?.role_id}`)
+          console.log('🏠 Redirecting to home (unknown role)')
+          router.push('/')
         }
       }
 
@@ -144,8 +155,6 @@ function LoginContent() {
           setError('Invalid email or password. Please try again.')
         } else if (err.message.includes('Email not confirmed')) {
           setError('Please check your email and click the confirmation link before logging in.')
-        } else if (err.message.includes('Invalid user role')) {
-          setError('Your account role is not properly configured. Please contact support.')
         } else {
           setError(err.message)
         }
@@ -174,7 +183,7 @@ function LoginContent() {
           <div className="bg-red-50 border border-red-200 rounded-md p-4">
             <div className="flex">
               <div className="flex-shrink-0">
-                <AlertCircle className="h-5 w-5 text-red-400" />
+                <span className="text-red-400 text-lg">⚠️</span>
               </div>
               <div className="ml-3">
                 <p className="text-sm text-red-700">{error}</p>
@@ -187,7 +196,7 @@ function LoginContent() {
           <div className="bg-green-50 border border-green-200 rounded-md p-4">
             <div className="flex">
               <div className="flex-shrink-0">
-                <CheckCircle className="h-5 w-5 text-green-400" />
+                <span className="text-green-400 text-lg">✅</span>
               </div>
               <div className="ml-3">
                 <p className="text-sm text-green-700">{successMessage}</p>
@@ -196,63 +205,65 @@ function LoginContent() {
           </div>
         )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Sign In</CardTitle>
-            <CardDescription>
+        <div className="bg-white shadow rounded-lg">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h3 className="text-lg font-medium text-gray-900">Sign In</h3>
+            <p className="mt-1 text-sm text-gray-600">
               Enter your email and password to access your account
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            </p>
+          </div>
+          <div className="px-6 py-6">
+            <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-gray-400" />
+                    <span className="text-gray-400">📧</span>
                   </div>
-                  <Input
+                  <input
                     id="email"
                     type="email"
-                    placeholder="Enter your email"
-                    className="pl-10"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="kukrejajaydeep@gmail.com"
+                    className="pl-10 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     data-testid="email-input"
-                    {...form.register('email')}
                   />
                 </div>
-                {form.formState.errors.email && (
-                  <p className="text-sm text-red-600">{form.formState.errors.email.message}</p>
+                {formErrors.email && (
+                  <p className="text-sm text-red-600">{formErrors.email}</p>
                 )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-400" />
+                    <span className="text-gray-400">🔒</span>
                   </div>
-                  <Input
+                  <input
                     id="password"
                     type="password"
-                    placeholder="Enter your password"
-                    className="pl-10"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="pl-10 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     data-testid="password-input"
-                    {...form.register('password')}
                   />
                 </div>
-                {form.formState.errors.password && (
-                  <p className="text-sm text-red-600">{form.formState.errors.password.message}</p>
+                {formErrors.password && (
+                  <p className="text-sm text-red-600">{formErrors.password}</p>
                 )}
               </div>
 
-              <Button 
+              <button 
                 type="submit" 
-                className="w-full"
+                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={isSubmitting}
                 data-testid="login-button"
               >
                 {isSubmitting ? 'Signing In...' : 'Sign In'}
-              </Button>
+              </button>
             </form>
 
             <div className="mt-6 text-center">
@@ -272,12 +283,12 @@ function LoginContent() {
                 </Link>
               </p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         <div className="text-center">
           <Link href="/" className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700">
-            <ArrowLeft className="w-4 h-4 mr-2" />
+            <span className="mr-2">←</span>
             Back to Home
           </Link>
         </div>
@@ -287,15 +298,5 @@ function LoginContent() {
 }
 
 export default function LoginPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="text-lg font-medium text-gray-900">Loading...</div>
-        </div>
-      </div>
-    }>
-      <LoginContent />
-    </Suspense>
-  )
+  return <LoginContent />
 }

@@ -753,72 +753,135 @@ const businessAPIEndpoints = [
 ];
 ```
 
-### Supabase SSR Implementation ✅ UPDATED
+### Centralized Data Architecture ✅ REFACTORED
 
-#### Server Components (Admin/Business Pages)
+#### **1. Business Data Fetching via SWR Hooks**
 ```typescript
-// ✅ CORRECT - Server Component Implementation
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+// ✅ CORRECT - Business Dashboard with SWR
+'use client'
+import { useBusinessData, useBusinessCards } from '@/lib/hooks/use-business-data'
 
-export default async function BusinessDashboard() {
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookies().get(name)?.value
-        },
-      },
-    }
+export default function BusinessDashboard() {
+  const { data: businessData, error, isLoading } = useBusinessData()
+  const { data: cards, mutate: revalidateCards } = useBusinessCards()
+  
+  if (isLoading) return <BusinessDashboardSkeleton />
+  if (error) return <ErrorState error={error} />
+  
+  return (
+    <div>
+      <BusinessMetrics data={businessData?.data} />
+      <BusinessCards cards={cards?.data || []} onUpdate={revalidateCards} />
+    </div>
   )
-
-  // Fetch business data with proper error handling
-  const { data: businessData, error } = await supabase
-    .from('businesses')
-    .select(`
-      *,
-      stamp_cards(
-        id,
-        name,
-        customer_cards(id, current_stamps)
-      )
-    `)
-    .eq('owner_id', userId)
-    .single()
-
-  if (error) {
-    console.error('Error fetching business data:', error)
-    return <div>Error loading dashboard</div>
-  }
-
-  return <BusinessDashboardContent data={businessData} />
 }
 ```
 
-#### Client Components (Interactive Features)
+#### **2. Business API Routes**
 ```typescript
-// ✅ CORRECT - Client Component for Interactive Features
-'use client'
-import { createClient } from '@/lib/supabase/client'
+// ✅ CORRECT - Business API Route
+import { NextRequest, NextResponse } from 'next/server'
+import { createServerClient } from '@/lib/supabase/server-only'
+import type { ApiResponse, Business } from '@/lib/supabase/types'
 
-export default function InteractiveBusinessFeature() {
-  const supabase = createClient()
+export async function GET(request: NextRequest) {
+  try {
+    const supabase = await createServerClient()
+    
+    // Get authenticated user
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      )
+    }
+
+    // Fetch user's business data (RLS enforced)
+    const { data: business, error } = await supabase
+      .from('businesses')
+      .select(`
+        *,
+        stamp_cards(id, name, customer_cards(id, current_stamps)),
+        membership_cards(id, name, customer_cards(id, sessions_used))
+      `)
+      .eq('owner_id', user.id)
+      .single()
+
+    if (error) {
+      return NextResponse.json(
+        { success: false, error: 'Failed to fetch business data' },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: business
+    } as ApiResponse<Business>)
+  } catch (error) {
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+```
+
+#### **3. Authentication-Only Client Components**
+```typescript
+// ✅ CORRECT - Client Component for Authentication
+'use client'
+import { createAuthClient } from '@/lib/supabase/client'
+
+export default function BusinessAuthComponent() {
+  const { auth } = createAuthClient() // Prevents accidental data access
   
-  // Client-side interactions, real-time subscriptions, etc.
+  const handleLogout = async () => {
+    await auth.signOut()
+    router.push('/auth/login')
+  }
+  
+  // Real-time subscriptions for notifications
   useEffect(() => {
     const subscription = supabase
-      .channel('business_updates')
+      .channel('business_notifications')
       .on('postgres_changes', {
-        event: '*',
+        event: 'INSERT',
         schema: 'public',
-        table: 'customer_cards'
-      }, handleUpdate)
+        table: 'customer_cards',
+        filter: `business_id=eq.${businessId}`
+      }, handleNewCustomer)
       .subscribe()
 
     return () => subscription.unsubscribe()
-  }, [])
+  }, [businessId])
+}
+```
+
+#### **4. Server Components (User Context)**
+```typescript
+// ✅ CORRECT - Server Component with User Session
+import { createServerClient } from '@/lib/supabase/server-only'
+import { redirect } from 'next/navigation'
+
+export default async function BusinessPage() {
+  const supabase = await createServerClient()
+  
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/auth/login')
+  
+  // Check if user has business role
+  const { data: userData } = await supabase
+    .from('users')
+    .select('role_id')
+    .eq('id', user.id)
+    .single()
+    
+  if (userData?.role_id !== 2) redirect('/') // Not a business user
+  
+  // This component can render with user context
+  return <BusinessDashboardClient userId={user.id} />
 }
 ```
 

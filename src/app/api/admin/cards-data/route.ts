@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createServerClient } from '@/lib/supabase/server'
 
 export async function GET(request: NextRequest) {
   console.log('🎯 ADMIN CARDS DATA - Fetching card templates...')
@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
       throw new Error('Missing Supabase configuration')
     }
     
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    const supabase = createServerClient(supabaseUrl, supabaseKey)
     
     // First, let's check if we can access the tables at all
     const { data: stampCardCount, error: countError } = await supabase

@@ -1,14 +1,27 @@
 import { createClient } from '@supabase/supabase-js'
+import type { Database } from './types'
 
 /**
  * 🔐 ADMIN-ONLY SUPABASE CLIENT 🔐
  * 
  * This client uses the service role key and bypasses RLS to access all system data.
- * ONLY use this in admin contexts where you need to see all businesses, customers, etc.
  * 
- * DO NOT USE IN REGULAR USER CONTEXTS!
+ * ⚠️ CRITICAL SECURITY NOTICE:
+ * - ONLY use this in API routes under /api/admin/*
+ * - NEVER use in client components or browser code
+ * - NEVER expose this client to the frontend
  * 
- * Updated for Next.js 15+ compatibility with proper cookie handling.
+ * ✅ ALLOWED USAGE:
+ * - Server-side API routes (/api/admin/*)
+ * - Admin data operations
+ * - System-wide analytics and reporting
+ * - Database maintenance operations
+ * 
+ * 🚫 FORBIDDEN USAGE:
+ * - Client components
+ * - Browser JavaScript
+ * - Public API endpoints
+ * - User-facing operations
  */
 
 export function createAdminClient() {
@@ -16,31 +29,63 @@ export function createAdminClient() {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   
   if (!supabaseUrl) {
-    throw new Error('NEXT_PUBLIC_SUPABASE_URL is required for admin client')
+    throw new Error('🚨 ADMIN CLIENT ERROR: NEXT_PUBLIC_SUPABASE_URL is required')
   }
   
   if (!serviceRoleKey) {
-    console.warn('⚠️ SUPABASE_SERVICE_ROLE_KEY not found - admin client may have limited access')
-    // Use anon key as fallback for development
-    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    if (!anonKey) {
-      throw new Error('Neither SUPABASE_SERVICE_ROLE_KEY nor NEXT_PUBLIC_SUPABASE_ANON_KEY is available')
+    // In development, provide helpful error message
+    if (process.env.NODE_ENV === 'development') {
+      console.error('🚨 ADMIN CLIENT ERROR: SUPABASE_SERVICE_ROLE_KEY not found')
+      console.error('💡 Add SUPABASE_SERVICE_ROLE_KEY to your .env.local file')
+      console.error('📖 See doc/doc2/3_SUPABASE_SETUP.md for setup instructions')
     }
     
-    return createClient(supabaseUrl, anonKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    })
+    throw new Error('🚨 ADMIN CLIENT ERROR: SUPABASE_SERVICE_ROLE_KEY is required for admin operations')
   }
   
-  return createClient(supabaseUrl, serviceRoleKey, {
+  return createClient<Database>(supabaseUrl, serviceRoleKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false
+    },
+    global: {
+      headers: {
+        'x-client-info': 'rewardjar-admin',
+        'x-admin-client': 'true'
+      }
     }
   })
+}
+
+/**
+ * Validates that we're in a server-side context before creating admin client
+ * This helps prevent accidental usage in client components
+ */
+export function createSecureAdminClient() {
+  // Check if we're in a server context
+  if (typeof window !== 'undefined') {
+    throw new Error('🚨 SECURITY VIOLATION: Admin client cannot be used in browser/client context')
+  }
+  
+  // Additional check for API routes
+  if (process.env.NODE_ENV === 'production' && !process.env.VERCEL) {
+    console.warn('⚠️ Admin client being used outside of Vercel production environment')
+  }
+  
+  return createAdminClient()
+}
+
+/**
+ * Admin client with additional safety checks for development
+ * Use this in development to catch potential security issues early
+ */
+export function createDevAdminClient() {
+  if (process.env.NODE_ENV !== 'development') {
+    throw new Error('createDevAdminClient can only be used in development')
+  }
+  
+  console.log('🧪 DEV ADMIN CLIENT: Creating admin client for development use')
+  return createAdminClient()
 }
 
 export default createAdminClient 

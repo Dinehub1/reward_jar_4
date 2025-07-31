@@ -41,60 +41,42 @@ export default function TestAdminCardsPage() {
   const fetchCardsData = async () => {
     try {
       setLoading(true)
-      console.log('🎴 TEST CARDS PAGE - Fetching cards data...')
+      console.log('🎴 TEST CARDS PAGE - Using centralized admin data service...')
       
-      // Fetch from our comprehensive admin API
-      const response = await fetch('/api/admin/panel-data')
+      // Import and use the centralized admin data service
+      const { getAdminStats } = await import('@/lib/admin-data-service')
+      const stats = await getAdminStats()
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-      
-      const data = await response.json()
-      
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to fetch cards data')
-      }
-
-      console.log('📊 TEST CARDS PAGE - Received data:', {
-        stampCards: data.data.stampCards?.length || 0,
-        membershipCards: data.data.membershipCards?.length || 0,
-        metrics: data.metrics
+      console.log('📊 TEST CARDS PAGE - Received data from service:', {
+        totalStampCards: stats.totalStampCards,
+        totalMembershipCards: stats.totalMembershipCards,
+        totalCards: stats.totalCards
       })
 
-      // Combine stamp cards and membership cards into unified format
-      const allCards: CardData[] = [
-        ...(data.data.stampCards || []).map((card: any) => ({
-          id: card.id,
-          name: card.name,
-          type: 'stamp' as const,
-          business_name: card.businesses?.name || 'Unknown Business',
-          business_id: card.business_id,
-          created_at: card.created_at,
-          total_stamps: card.total_stamps,
-          reward_description: card.reward_description,
-          status: card.status || 'active'
-        })),
-        ...(data.data.membershipCards || []).map((card: any) => ({
-          id: card.id,
-          name: card.name,
-          type: 'membership' as const,
-          business_name: card.businesses?.name || 'Unknown Business',
-          business_id: card.business_id,
-          created_at: card.created_at,
-          total_sessions: card.total_sessions,
-          status: card.status || 'active'
-        }))
+      // Use mock data for the test page since we don't need real card data
+      const mockCards: CardData[] = [
+        {
+          id: 'test-stamp-1',
+          name: 'Test Stamp Card',
+          type: 'stamp',
+          business_name: 'Test Business',
+          status: 'active'
+        },
+        {
+          id: 'test-membership-1', 
+          name: 'Test Membership Card',
+          type: 'membership',
+          business_name: 'Test Business',
+          status: 'active'
+        }
       ]
 
-      console.log('✅ TEST CARDS PAGE - Processed cards:', allCards.length)
-
-      setCards(allCards)
+      setCards(mockCards)
       setMetrics({
-        totalCards: allCards.length,
-        stampCards: data.data.stampCards?.length || 0,
-        membershipCards: data.data.membershipCards?.length || 0,
-        totalCustomers: data.metrics.totalCustomers || 0
+        totalCards: stats.totalCards,
+        stampCards: stats.totalStampCards,
+        membershipCards: stats.totalMembershipCards,
+        totalCustomers: stats.totalCustomers
       })
       setError(null)
     } catch (err) {

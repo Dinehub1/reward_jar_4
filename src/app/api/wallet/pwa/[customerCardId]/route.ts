@@ -370,7 +370,7 @@ export async function POST(
     }
 
     const resolvedParams = await params
-    const supabase = await createClient()
+    const supabase = await createServerClient()
     const customerCardId = resolvedParams.customerCardId
     const url = new URL(request.url)
     const requestedType = url.searchParams.get('type') // 'stamp' or 'membership'

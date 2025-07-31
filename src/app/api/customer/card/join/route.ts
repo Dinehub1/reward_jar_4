@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server-only'
+import { createServerClient, getServerUser, getServerSession } from '@/lib/supabase/server'
 import { z } from 'zod'
 
 // Validation schema - supports both stamp cards and membership cards
@@ -17,10 +17,10 @@ const joinCardSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    const supabase = await createServerClient()
     
     // Check authentication
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    const { session, error: sessionError } = await getServerSession()
     
     if (sessionError || !session?.user) {
       return NextResponse.json(

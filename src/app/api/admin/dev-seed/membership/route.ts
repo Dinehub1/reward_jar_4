@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server-only'
+import { createServerClient, getServerUser, getServerSession } from '@/lib/supabase/server'
 import { v4 as uuid } from 'uuid'
 
 // Type definition for membership data from Supabase
@@ -90,7 +90,7 @@ const MEMBERSHIP_SCENARIOS = {
 export async function POST(request: NextRequest) {
   try {
     const { scenario, count = 1, cleanup = false } = await request.json()
-    const supabase = await createClient()
+    const supabase = await createServerClient()
     
     // Cleanup existing test data if requested
     if (cleanup) {
@@ -365,7 +365,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   try {
-    const supabase = await createClient()
+    const supabase = await createServerClient()
     
     // Get existing test membership cards
     const { data: memberships, error } = await supabase

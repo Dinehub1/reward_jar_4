@@ -1,33 +1,70 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin-client'
 
+// Retry function for database operations
+async function retryOperation<T>(
+  operation: () => Promise<T>,
+  maxRetries: number = 3,
+  delay: number = 1000
+): Promise<T> {
+  let lastError: Error
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation()
+    } catch (error) {
+      lastError = error as Error
+      console.warn(`❌ Attempt ${attempt}/${maxRetries} failed:`, error)
+      
+      if (attempt < maxRetries) {
+        console.log(`⏳ Retrying in ${delay}ms...`)
+        await new Promise(resolve => setTimeout(resolve, delay))
+        delay *= 2 // Exponential backoff
+      }
+    }
+  }
+  
+  throw lastError!
+}
+
 export async function GET(request: NextRequest) {
   console.log('🎯 ADMIN ALL DATA - Fetching comprehensive admin data from Supabase...')
   
   try {
     const supabase = createAdminClient()
     
-    // Fetch real businesses data from Supabase (using same query as panel-data)
-    const { data: businesses, error: businessError } = await supabase
-      .from('businesses')
-      .select(`
-        id,
-        name,
-        contact_email,
-        description,
-        status,
-        is_flagged,
-        admin_notes,
-        created_at,
-        owner_id
-      `)
-      .order('created_at', { ascending: false })
-    
-    if (businessError) {
+    // Fetch businesses with retry logic
+    let businesses: any[] = []
+    try {
+      const businessesOperation = async () => {
+        const { data, error } = await supabase
+          .from('businesses')
+          .select(`
+            id,
+            name,
+            contact_email,
+            description,
+            status,
+            is_flagged,
+            admin_notes,
+            created_at,
+            owner_id
+          `)
+          .order('created_at', { ascending: false })
+        
+        if (error) {
+          throw new Error(`Businesses fetch failed: ${error.message}`)
+        }
+        
+        return data || []
+      }
+      
+      businesses = await retryOperation(businessesOperation)
+      console.log('🏢 ADMIN ALL DATA - Businesses fetched:', businesses.length)
+    } catch (businessError) {
       console.error('❌ Error fetching businesses:', businessError)
+      // Continue with empty array - don't fail the entire request
     }
-
-    console.log('🏢 ADMIN ALL DATA - Businesses fetched:', businesses?.length || 0)
 
     // Fetch real customers data from Supabase
     const { data: customers, error: customerError } = await supabase

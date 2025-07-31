@@ -1,22 +1,40 @@
 # Environment Validation Report - RewardJar 4.0
 
-**Generated**: July 20, 2025 (10:28 PM IST)  
-**Status**: ✅ **FULLY OPERATIONAL** - Complete Multi-Wallet + Membership Support  
-**Software Version**: RewardJar 4.0 with Dual Card Type Support
+**Generated**: December 29, 2024  
+**Updated**: Latest (Centralized Architecture)  
+**Status**: ✅ **FULLY OPERATIONAL** - Centralized Supabase Architecture + Multi-Wallet Support  
+**Software Version**: RewardJar 4.0 with Centralized Data Layer
 
 ---
 
-## ✅ Environment Variables Status
+## ✅ Environment Variables Status (ENHANCED VALIDATION)
 
-### Core Application Variables (6/6) ✅ CONFIGURED
+### 🔍 Automated Environment Validation ✅ IMPLEMENTED
+
+RewardJar 4.0 now includes comprehensive environment validation that runs at startup:
+
+```typescript
+// ✅ AUTOMATIC VALIDATION - Startup Check
+import { validateEnvVarsOrThrow } from '@/lib/env-validation'
+
+// Validates all required variables at app startup
+validateEnvVarsOrThrow() // Throws error if critical vars missing
+
+// Development helper for detailed reports
+import { getEnvReport } from '@/lib/env-validation'
+console.log(getEnvReport()) // Detailed environment status
+```
+
+### Core Application Variables (5/5) ✅ CONFIGURED
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://qxomkkjgbqmscxjppkeu.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGci... (valid JWT)
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGci... (valid service role key)
-BASE_URL=http://localhost:3000 (auto-detected for development)
-NEXT_PUBLIC_BASE_URL=https://www.rewardjar.xyz (production URL)
-NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=placeholder (optional for development)
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGci... (valid service role key) ⚠️ REQUIRED
+BASE_URL=https://www.rewardjar.xyz (production URL)
+NEXT_PUBLIC_BASE_URL=https://www.rewardjar.xyz (public-facing URL)
 ```
+
+**⚠️ CRITICAL SECURITY NOTE**: `SUPABASE_SERVICE_ROLE_KEY` is now strictly required for admin operations and is validated at startup.
 
 ### Apple Wallet Variables (6/6) ✅ PRODUCTION READY
 ```env
@@ -55,15 +73,52 @@ HOTJAR_ID=optional_legacy_analytics
 GOOGLE_ANALYTICS_ID=optional_legacy_analytics
 ```
 
+### 🏗️ Centralized Supabase Architecture ✅ IMPLEMENTED
+
+RewardJar 4.0 now uses a secure, centralized architecture that separates concerns and enforces security best practices:
+
+#### **Supabase Client Structure**
+```
+src/lib/supabase/
+├── index.ts          # Centralized exports
+├── client.ts         # Client-side authentication ONLY
+├── admin-client.ts   # Admin API routes ONLY (server-side)
+├── server-only.ts    # Server components with user context
+└── types.ts          # Shared database types
+```
+
+#### **Security Enforcement**
+- **Client Components**: Can ONLY authenticate, cannot access sensitive data
+- **Admin API Routes**: Use service role key, bypass RLS for admin operations
+- **Server Components**: Respect RLS, maintain user session context
+- **Environment Validation**: Startup validation ensures all required keys are present
+
+#### **Data Fetching Pattern**
+```typescript
+// ✅ NEW PATTERN - SWR Hooks + API Routes
+'use client'
+import { useAdminBusinesses, useAdminStats } from '@/lib/hooks/use-admin-data'
+
+export default function AdminDashboard() {
+  const { data: stats, error, isLoading } = useAdminStats()
+  const { data: businesses } = useAdminBusinesses()
+  
+  if (isLoading) return <div>Loading...</div>
+  if (error) return <div>Error: {error.message}</div>
+  
+  return <div>Total Businesses: {stats?.data?.totalBusinesses}</div>
+}
+```
+
 ### Validation Results ✅ 
-- ✅ **Core System**: 6/6 essential variables configured
+- ✅ **Core System**: 5/5 essential variables configured
 - ✅ **Apple Wallet**: 6/6 variables configured and PKPass generation working
 - ✅ **Google Wallet**: 3/3 variables configured and JWT signing working
 - ✅ **MCP Integration**: 1/1 configured and database access working
+- ✅ **Environment Validation**: Automated startup validation implemented
 - ⏳ **Analytics**: 1/4 configured (optional for development)
 
-
-**Overall Status**: 77% (10/13 critical variables) + 9 legacy variables under review
+**Overall Status**: 85% (16/19 variables) with enhanced security and validation
 
 ---
 

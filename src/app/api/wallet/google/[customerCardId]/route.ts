@@ -368,7 +368,7 @@ export async function HEAD(
     const customerCardId = resolvedParams.customerCardId
 
     // Get customer card data to verify it exists
-    const supabase = await createClient()
+    const supabase = await createServerClient()
 
     const { data: customerCard, error } = await supabase
       .from('customer_cards')

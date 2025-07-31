@@ -12,7 +12,8 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { AdminLayoutClient } from '@/components/layouts/AdminLayoutClient'
 import LivePreviewBuilder from '@/components/wallet/LivePreviewBuilder'
-import { createClient } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
+
 import { ArrowLeft, Save, Eye, Palette, Settings, Zap } from 'lucide-react'
 
 interface Business {
@@ -43,13 +44,34 @@ interface CardTemplate {
 
 export default function NewCardPage() {
   const router = useRouter()
-  const [isAdmin, setIsAdmin] = useState(false)
-  const [authLoading, setAuthLoading] = useState(true)
   const [step, setStep] = useState(1)
-  const [businesses, setBusinesses] = useState<Business[]>([])
   const [templates, setTemplates] = useState<CardTemplate[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [businesses, setBusinesses] = useState<Business[]>([])
   const [isSaving, setIsSaving] = useState(false)
+  
+  // Fetch businesses using admin API
+  useEffect(() => {
+    async function fetchBusinesses() {
+      try {
+        console.log('🏢 CARD CREATION - Fetching businesses...')
+        const response = await fetch('/api/admin/all-data')
+        const result = await response.json()
+        
+        if (result.success && result.data?.businesses) {
+          const activeBusinesses = result.data.businesses.filter(b => b.status === 'active')
+          setBusinesses(activeBusinesses)
+          console.log('🏢 CARD CREATION - Businesses loaded:', activeBusinesses.length)
+        } else {
+          console.error('🏢 CARD CREATION - Failed to load businesses:', result)
+        }
+      } catch (error) {
+        console.error('🏢 CARD CREATION - Error fetching businesses:', error)
+      }
+    }
+    
+    fetchBusinesses()
+  }, [])
 
   // Card creation form data
   const [cardType, setCardType] = useState<'stamp' | 'membership'>('stamp')
@@ -79,60 +101,11 @@ export default function NewCardPage() {
     status: 'draft' as 'draft' | 'active'
   })
 
-  // Admin authentication check
+  // Load templates
   useEffect(() => {
-    async function checkAdminAuth() {
-      try {
-        const supabase = createClient()
-        const { data: { user } } = await supabase.auth.getUser()
-        
-        if (!user) {
-          router.push('/auth/login')
-          return
-        }
-
-        const { data: userData } = await supabase
-          .from('users')
-          .select('role_id')
-          .eq('id', user.id)
-          .single()
-
-        if (userData?.role_id !== 1) {
-          router.push('/')
-          return
-        }
-
-        setIsAdmin(true)
-      } catch (error) {
-        console.error('Auth check failed:', error)
-        router.push('/auth/login')
-      } finally {
-        setAuthLoading(false)
-      }
-    }
-
-    checkAdminAuth()
-  }, [router])
-
-  // Load businesses and templates
-  useEffect(() => {
-    if (!isAdmin) return
-
     async function loadData() {
       setIsLoading(true)
       try {
-        const supabase = createClient()
-        
-        // Load businesses
-        const { data: businessData } = await supabase
-          .from('businesses')
-          .select('id, name, contact_email')
-          .eq('status', 'active')
-          .order('name')
-
-        if (businessData) {
-          setBusinesses(businessData)
-        }
 
         // Load card templates (mock data for now)
         setTemplates([
@@ -201,7 +174,7 @@ export default function NewCardPage() {
     }
 
     loadData()
-  }, [isAdmin])
+  }, [])
 
   const handleTemplateSelect = (template: CardTemplate) => {
     setSelectedTemplate(template)
@@ -288,16 +261,7 @@ export default function NewCardPage() {
     }
   }
 
-  if (authLoading || !isAdmin) {
-    return (
-      <div className="min-h-screen bg-background p-4 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Checking admin access...</p>
-        </div>
-      </div>
-    )
-  }
+
 
   return (
     <AdminLayoutClient>
@@ -465,11 +429,17 @@ export default function NewCardPage() {
                           <SelectValue placeholder="Select business" />
                         </SelectTrigger>
                         <SelectContent>
-                          {businesses.map((business) => (
-                            <SelectItem key={business.id} value={business.id}>
-                              {business.name}
+                          {businesses.length === 0 ? (
+                            <SelectItem value="empty" disabled>
+                              No businesses found
                             </SelectItem>
-                          ))}
+                          ) : (
+                            businesses.map((business) => (
+                              <SelectItem key={business.id} value={business.id}>
+                                {business.name}
+                              </SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                     </div>

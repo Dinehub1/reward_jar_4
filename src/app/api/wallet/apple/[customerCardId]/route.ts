@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server-only'
+import { createServerClient, getServerUser, getServerSession } from '@/lib/supabase/server'
 import { getAppleWalletBaseUrl } from '@/lib/env'
 import crypto from 'crypto'
 import archiver from 'archiver'
@@ -23,7 +23,7 @@ export async function GET(
   try {
     const resolvedParams = await params
     // Use server client for wallet generation
-    const supabase = await createClient()
+    const supabase = await createServerClient()
     const customerCardId = resolvedParams.customerCardId
 
     console.log('🍎 Generating Apple Wallet for card ID:', customerCardId)
@@ -451,7 +451,7 @@ export async function POST(
     }
 
     const resolvedParams = await params
-    const supabase = await createClient()
+    const supabase = await createServerClient()
     const customerCardId = resolvedParams.customerCardId
     const url = new URL(request.url)
     const requestedType = url.searchParams.get('type') // 'stamp' or 'membership'

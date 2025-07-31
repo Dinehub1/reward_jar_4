@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server-only'
+import { createServerClient, getServerUser, getServerSession } from '@/lib/supabase/server'
 
 // Analytics data interfaces
 interface StampCardAnalytics {
@@ -102,10 +102,10 @@ export async function GET(request: NextRequest) {
       'Content-Type': 'application/json'
     })
 
-    const supabase = await createClient()
+    const supabase = await createServerClient()
 
     // Authentication check
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    const { session, error: sessionError } = await getServerSession()
     
     if (sessionError || !session?.user) {
       return NextResponse.json({

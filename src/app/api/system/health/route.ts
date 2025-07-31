@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server-only'
+import { createServerClient } from '@/lib/supabase/server'
 import { writeFileSync, unlinkSync } from 'fs'
 import { join } from 'path'
 
@@ -17,7 +17,7 @@ export async function GET() {
     // 1. Test Supabase Connection
     console.log('🔍 Testing Supabase connection...')
     try {
-      const supabase = await createClient()
+      const supabase = await createServerClient()
       
       // Test basic connection
       const { error: connectionError } = await supabase
