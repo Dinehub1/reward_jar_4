@@ -24,7 +24,7 @@ interface AdminAuthActions {
 
 /**
  * Hook for admin authentication management
- * Separates authentication (client-side) from authorization (API route)
+ * Optimized to reduce excessive API calls
  */
 export function useAdminAuth(requireAuth: boolean = true): AdminAuthState & AdminAuthActions {
   const [state, setState] = useState<AdminAuthState>({
@@ -47,22 +47,40 @@ export function useAdminAuth(requireAuth: boolean = true): AdminAuthState & Admi
       setState(prev => ({ ...prev, isLoading: true, error: null }))
 
       // Proper authentication flow - check session then verify admin role
+      console.log('🔍 useAdminAuth: Starting auth check...')
 
       // First check if we have a valid session (client-side auth check)
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-
-      if (sessionError) {
-        console.error('Session error:', sessionError)
-        setState({
-          isAdmin: false,
-          isLoading: false,
-          user: null,
-          error: 'Authentication error'
-        })
-        return
+      // Add retry logic for session hydration
+      let session = null
+      let attempts = 0
+      const maxAttempts = 3
+      
+      while (!session && attempts < maxAttempts) {
+        const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession()
+        
+        if (sessionError) {
+          console.error('Session error:', sessionError)
+          setState({
+            isAdmin: false,
+            isLoading: false,
+            user: null,
+            error: 'Authentication error'
+          })
+          return
+        }
+        
+        session = currentSession
+        attempts++
+        
+        // If no session on first attempt, wait briefly for hydration
+        if (!session && attempts < maxAttempts) {
+          console.log(`🔍 useAdminAuth: No session found, attempt ${attempts}/${maxAttempts}, waiting for hydration...`)
+          await new Promise(resolve => setTimeout(resolve, 100))
+        }
       }
 
       if (!session) {
+        console.log('🔍 useAdminAuth: No session found after all attempts')
         setState({
           isAdmin: false,
           isLoading: false,
@@ -71,6 +89,8 @@ export function useAdminAuth(requireAuth: boolean = true): AdminAuthState & Admi
         })
         return
       }
+
+      console.log('🔍 useAdminAuth: Session found, user:', session.user?.email)
 
       // If we have a session, check admin role via API route
       console.log('🔍 useAdminAuth: Checking admin role via API...')
@@ -103,12 +123,15 @@ export function useAdminAuth(requireAuth: boolean = true): AdminAuthState & Admi
         return
       }
 
-      setState({
+      const newState = {
         isAdmin: result.data?.isAdmin || false,
         isLoading: false,
         user: result.data?.user || null,
         error: null
-      })
+      }
+      
+      console.log('✅ useAdminAuth: Setting final auth state:', newState)
+      setState(newState)
 
     } catch (error) {
       console.error('Auth check error:', error)
@@ -141,11 +164,28 @@ export function useAdminAuth(requireAuth: boolean = true): AdminAuthState & Admi
   }
 
   useEffect(() => {
-    checkAuth()
+    let isMounted = true
+    
+    const performAuthCheck = async () => {
+      // Add minimum loading time to prevent flash
+      const minLoadingTime = new Promise(resolve => setTimeout(resolve, 200))
+      
+      const authCheckPromise = checkAuth()
+      
+      // Wait for both the auth check and minimum loading time
+      await Promise.all([authCheckPromise, minLoadingTime])
+      
+      // Only update state if component is still mounted
+      if (!isMounted) return
+    }
+    
+    performAuthCheck()
 
-    // Listen for auth state changes
+    // Listen for auth state changes (optimized to reduce API calls)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        if (!isMounted) return
+        
         if (event === 'SIGNED_OUT' || !session) {
           setState({
             isAdmin: false,
@@ -155,12 +195,16 @@ export function useAdminAuth(requireAuth: boolean = true): AdminAuthState & Admi
           })
         } else if (event === 'SIGNED_IN') {
           // Re-check auth when user signs in
-          checkAuth()
+          performAuthCheck()
         }
+        // Don't check auth on every token refresh to reduce API calls
       }
     )
 
-    return () => subscription.unsubscribe()
+    return () => {
+      isMounted = false
+      subscription.unsubscribe()
+    }
   }, [requireAuth])
 
   return {

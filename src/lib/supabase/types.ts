@@ -5,6 +5,35 @@
  * These types ensure type safety across the entire application.
  */
 
+// Stamp Card Configuration Types
+export interface StampConfig {
+  manualStampOnly: boolean
+  minSpendAmount: number
+  billProofRequired: boolean
+  maxStampsPerDay: number
+  duplicateVisitBuffer: '12h' | '1d' | 'none'
+}
+
+// Card Form Data Types
+export interface CardFormData {
+  cardName: string
+  businessId: string
+  reward: string
+  stampsRequired: number
+  cardColor: string
+  iconEmoji: string
+  barcodeType: 'PDF417' | 'QR_CODE'
+  cardExpiryDays: number
+  rewardExpiryDays: number
+  stampConfig: StampConfig
+}
+
+// Wallet Type Definitions
+export type WalletType = 'apple' | 'google' | 'pwa'
+
+// Card Creation Status
+export type CardCreationStatus = 'draft' | 'active' | 'inactive'
+
 export interface Database {
   public: {
     Tables: {
@@ -117,7 +146,16 @@ export interface Database {
           total_stamps: number
           reward_description: string
           status: string
+          card_color: string
+          icon_emoji: string
+          barcode_type: 'PDF417' | 'QR_CODE'
+          expiry_days: number
+          reward_expiry_days: number
+          stamp_config: StampConfig
+          stamp_condition?: string
+          min_bill_amount?: number
           created_at: string
+          updated_at?: string
         }
         Insert: {
           id?: string
@@ -126,7 +164,16 @@ export interface Database {
           total_stamps: number
           reward_description: string
           status?: string
+          card_color?: string
+          icon_emoji?: string
+          barcode_type?: 'PDF417' | 'QR_CODE'
+          expiry_days?: number
+          reward_expiry_days?: number
+          stamp_config?: StampConfig
+          stamp_condition?: string
+          min_bill_amount?: number
           created_at?: string
+          updated_at?: string
         }
         Update: {
           id?: string
@@ -135,7 +182,16 @@ export interface Database {
           total_stamps?: number
           reward_description?: string
           status?: string
+          card_color?: string
+          icon_emoji?: string
+          barcode_type?: 'PDF417' | 'QR_CODE'
+          expiry_days?: number
+          reward_expiry_days?: number
+          stamp_config?: StampConfig
+          stamp_condition?: string
+          min_bill_amount?: number
           created_at?: string
+          updated_at?: string
         }
       }
       

@@ -1,163 +1,220 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin-client'
-import type { StampCard, MembershipCard, ApiResponse } from '@/lib/supabase/types'
+import type { ApiResponse, StampConfig, CardFormData } from '@/lib/supabase/types'
 
-export async function GET(request: NextRequest) {
+/**
+ * POST /api/admin/cards
+ * 
+ * Creates a new card (stamp or membership) via admin interface
+ * Uses admin client to bypass RLS for card creation
+ */
+export async function POST(request: NextRequest) {
   try {
-    const supabase = createAdminClient()
-    const url = new URL(request.url)
-    const cardType = url.searchParams.get('type') as 'stamp' | 'membership' | null
+    const body = await request.json()
     
-    console.log('🎫 ADMIN CARDS API - Fetching cards:', { cardType })
+    // Enhanced validation for new card creation schema
+    const { 
+      cardName,
+      businessId, 
+      reward, 
+      stampsRequired,
+      cardColor,
+      iconEmoji,
+      barcodeType,
+      cardExpiryDays,
+      rewardExpiryDays,
+      stampConfig,
+      
+      // Legacy support (to be deprecated)
+      card_type, 
+      business_id, 
+      name, 
+      reward_description, 
+      status,
+      values,
+      stamp_condition,
+      min_bill_amount
+    } = body
 
-    if (cardType === 'stamp') {
-      // Get only stamp cards
-      const { data: stampCards, error } = await supabase
-        .from('stamp_cards')
-        .select(`
-          id,
-          business_id,
-          name,
-          total_stamps,
-          reward_description,
-          status,
-          created_at,
-          businesses (
-            id,
-            name,
-            contact_email
-          )
-        `)
-        .order('created_at', { ascending: false })
+    console.log('🔍 Admin API: Creating card:', { 
+      cardName: cardName || name, 
+      businessId: businessId || business_id, 
+      stampsRequired: stampsRequired || values?.total_stamps 
+    })
 
-      if (error) {
-        console.error('💥 ADMIN CARDS API - Error fetching stamp cards:', error)
-        return NextResponse.json(
-          { success: false, error: 'Failed to fetch stamp cards' } as ApiResponse<never>,
-          { status: 500 }
-        )
-      }
+    // ✅ Server-side only - safe to use admin client
+    const supabase = createAdminClient()
 
-      return NextResponse.json({
-        success: true,
-        data: stampCards || []
-      } as ApiResponse<StampCard[]>)
-
-    } else if (cardType === 'membership') {
-      // Get only membership cards
-      const { data: membershipCards, error } = await supabase
-        .from('membership_cards')
-        .select(`
-          id,
-          business_id,
-          name,
-          membership_type,
-          total_sessions,
-          cost,
-          duration_days,
-          status,
-          created_at,
-          updated_at,
-          businesses (
-            id,
-            name,
-            contact_email
-          )
-        `)
-        .order('created_at', { ascending: false })
-
-      if (error) {
-        console.error('💥 ADMIN CARDS API - Error fetching membership cards:', error)
-        return NextResponse.json(
-          { success: false, error: 'Failed to fetch membership cards' } as ApiResponse<never>,
-          { status: 500 }
-        )
-      }
-
-      return NextResponse.json({
-        success: true,
-        data: membershipCards || []
-      } as ApiResponse<MembershipCard[]>)
-
-    } else {
-      // Get both types of cards
-      const [stampResult, membershipResult] = await Promise.all([
-        supabase
-          .from('stamp_cards')
-          .select(`
-            id,
-            business_id,
-            name,
-            total_stamps,
-            reward_description,
-            status,
-            created_at,
-            businesses (
-              id,
-              name,
-              contact_email
-            )
-          `)
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('membership_cards')
-          .select(`
-            id,
-            business_id,
-            name,
-            membership_type,
-            total_sessions,
-            cost,
-            duration_days,
-            status,
-            created_at,
-            updated_at,
-            businesses (
-              id,
-              name,
-              contact_email
-            )
-          `)
-          .order('created_at', { ascending: false })
-      ])
-
-      if (stampResult.error) {
-        console.error('💥 ADMIN CARDS API - Error fetching stamp cards:', stampResult.error)
-        return NextResponse.json(
-          { success: false, error: 'Failed to fetch stamp cards' } as ApiResponse<never>,
-          { status: 500 }
-        )
-      }
-
-      if (membershipResult.error) {
-        console.error('💥 ADMIN CARDS API - Error fetching membership cards:', membershipResult.error)
-        return NextResponse.json(
-          { success: false, error: 'Failed to fetch membership cards' } as ApiResponse<never>,
-          { status: 500 }
-        )
-      }
-
-      console.log('✅ ADMIN CARDS API - Successfully fetched:', {
-        stampCards: stampResult.data?.length || 0,
-        membershipCards: membershipResult.data?.length || 0
-      })
-
-      return NextResponse.json({
-        success: true,
-        data: {
-          stampCards: stampResult.data || [],
-          membershipCards: membershipResult.data || [],
-          total: (stampResult.data?.length || 0) + (membershipResult.data?.length || 0)
-        }
-      } as ApiResponse<{
-        stampCards: StampCard[]
-        membershipCards: MembershipCard[]
-        total: number
-      }>)
+    // Verify admin access (role_id = 1)
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' } as ApiResponse<never>,
+        { status: 401 }
+      )
     }
 
+    // Get user role
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('role_id')
+      .eq('id', user.id)
+      .single()
+
+    if (userError || userData?.role_id !== 1) {
+      return NextResponse.json(
+        { success: false, error: 'Admin access required' } as ApiResponse<never>,
+        { status: 403 }
+      )
+    }
+
+    // New schema-based card creation
+    if (cardName && businessId && reward !== undefined && stampsRequired) {
+      const newCardPayload = {
+        business_id: businessId,
+        name: cardName,
+        reward_description: reward,
+        total_stamps: stampsRequired,
+        card_color: cardColor || '#8B4513',
+        icon_emoji: iconEmoji || '☕',
+        barcode_type: barcodeType || 'QR_CODE',
+        expiry_days: cardExpiryDays || 60,
+        reward_expiry_days: rewardExpiryDays || 15,
+        stamp_config: stampConfig || {
+          manualStampOnly: true,
+          minSpendAmount: 0,
+          billProofRequired: false,
+          maxStampsPerDay: 1,
+          duplicateVisitBuffer: '12h'
+        },
+        status: 'active'
+      }
+
+      const { data: savedCard, error } = await supabase
+        .from('stamp_cards')
+        .insert([newCardPayload])
+        .select()
+        .single()
+
+      if (error) {
+        console.error('❌ Admin API: Error saving card:', error)
+        return NextResponse.json(
+          { success: false, error: 'Failed to save card: ' + error.message } as ApiResponse<never>,
+          { status: 500 }
+        )
+      }
+
+      console.log('✅ Admin API: Card saved successfully:', savedCard)
+
+      // Add to wallet update queue for provisioning
+      try {
+        await supabase
+          .from('wallet_update_queue')
+          .insert([{
+            customer_card_id: null, // Will be updated when customers join
+            update_type: 'card_creation',
+            metadata: {
+              stamp_card_id: savedCard.id,
+              business_id: businessId,
+              card_name: cardName,
+              created_by: 'admin'
+            },
+            processed: false,
+            failed: false
+          }])
+          
+        console.log('✅ Admin API: Added to wallet update queue')
+      } catch (queueError) {
+        console.warn('⚠️ Admin API: Failed to add to wallet queue (non-critical):', queueError)
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: savedCard,
+        message: 'Stamp card created successfully'
+      } as ApiResponse<typeof savedCard>)
+    }
+
+    // Legacy support - prepare card payload based on type
+    const cardPayload = {
+      business_id: business_id || businessId,
+      name: name || cardName,
+      reward_description: reward_description || reward,
+      status: status || 'active',
+      ...(card_type === 'stamp' ? {
+        total_stamps: values?.total_stamps || stampsRequired,
+        stamp_condition: stamp_condition || 'per_visit',
+        min_bill_amount: stamp_condition === 'min_bill_amount' ? min_bill_amount : null,
+        card_color: cardColor || '#8B4513',
+        icon_emoji: iconEmoji || '☕',
+        expiry_days: cardExpiryDays || 60,
+        reward_expiry_days: rewardExpiryDays || 15,
+        stamp_config: stampConfig || {
+          manualStampOnly: true,
+          minSpendAmount: min_bill_amount || 0,
+          billProofRequired: false,
+          maxStampsPerDay: 1,
+          duplicateVisitBuffer: '12h'
+        }
+      } : {
+        total_sessions: values?.total_sessions,
+        cost: values?.cost,
+        duration_days: values?.duration_days,
+        membership_type: values?.tier?.toLowerCase() || 'bronze'
+      })
+    }
+
+    const tableName = card_type === 'stamp' ? 'stamp_cards' : 'membership_cards'
+    
+    console.log(`💾 Admin API: Saving ${card_type} card to ${tableName}:`, cardPayload)
+    
+    const { data: savedCard, error } = await supabase
+      .from(tableName)
+      .insert([cardPayload])
+      .select()
+      .single()
+
+      if (error) {
+      console.error('❌ Admin API: Error saving card:', error)
+        return NextResponse.json(
+        { success: false, error: 'Failed to save card' } as ApiResponse<never>,
+          { status: 500 }
+        )
+      }
+
+    console.log('✅ Admin API: Card saved successfully:', savedCard)
+
+    // Add to wallet update queue for initial setup
+    try {
+      await supabase
+        .from('wallet_update_queue')
+        .insert([{
+          customer_card_id: savedCard.id, // This will be null initially, updated when customers join
+          update_type: 'card_update',
+          metadata: {
+            card_type,
+            business_id,
+            card_name: name,
+            created_by: 'admin'
+          },
+          processed: false,
+          failed: false
+        }])
+        
+      console.log('✅ Admin API: Added to wallet update queue')
+    } catch (queueError) {
+      console.warn('⚠️ Admin API: Failed to add to wallet queue (non-critical):', queueError)
+      // Don't fail the card creation for queue issues
+    }
+
+      return NextResponse.json({
+        success: true,
+      data: savedCard,
+      message: `${card_type} card created successfully`
+    } as ApiResponse<typeof savedCard>)
+
   } catch (error) {
-    console.error('💥 ADMIN CARDS API - Unexpected error:', error)
+    console.error('❌ Admin API: Error in card creation:', error)
     return NextResponse.json(
       { success: false, error: 'Internal server error' } as ApiResponse<never>,
       { status: 500 }

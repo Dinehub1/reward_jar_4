@@ -16,14 +16,11 @@ export default function HomePage() {
             </div>
             <div className="flex items-center space-x-3">
               <ThemeToggle />
-              <Link href="/setup">
-                <Button variant="ghost" className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">Setup</Button>
-              </Link>
               <Link href="/auth/login">
-                <Button variant="outline" className="border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800">Sign In</Button>
+                <Button variant="ghost" className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">Business Login</Button>
               </Link>
-              <Link href="/auth/signup">
-                <Button className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 px-6">Start Free Trial</Button>
+              <Link href="/onboarding/business">
+                <Button className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 px-6">Get Started</Button>
               </Link>
             </div>
           </div>
@@ -34,25 +31,28 @@ export default function HomePage() {
       <section className="py-16 lg:py-24 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto text-center">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-            Digital Loyalty Cards
-            <span className="block text-blue-600 mt-2">Made Simple</span>
+            Launch a Digital Loyalty Program
+            <span className="block text-blue-600 mt-2">in Minutes</span>
           </h1>
           <p className="text-lg md:text-xl text-gray-600 mb-10 max-w-3xl mx-auto leading-relaxed">
-            Create stamp cards that customers can add to their Apple Wallet or Google Wallet. 
-            They collect stamps by scanning QR codes and get rewarded automatically.
+            Submit your business details and logo. Our team designs professional digital cards 
+            for Apple Wallet, Google Wallet, and web. You focus on customers, we handle the tech.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Link href="/auth/signup">
+            <Link href="/onboarding/business">
               <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-lg px-8 py-4 h-14 min-w-[200px] shadow-lg hover:shadow-xl transition-all duration-200">
-                Start Free Trial
+                Get Started →
               </Button>
             </Link>
             <Link href="/auth/login">
               <Button size="lg" variant="outline" className="text-lg px-8 py-4 h-14 min-w-[160px] border-gray-300 text-gray-700 hover:bg-gray-50">
-                Sign In
+                Business Login
               </Button>
             </Link>
           </div>
+          <p className="text-sm text-gray-500 mt-4">
+            No setup required • Professional design included • Live in 24-48 hours
+          </p>
         </div>
       </section>
 
@@ -61,50 +61,20 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              Everything you need for customer loyalty
+              Professional loyalty programs, designed for you
             </h2>
             <p className="text-lg text-gray-600">
-              Simple, modern, and effective loyalty programs that work on every device
+              We handle the technical complexity while you focus on growing your business
             </p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             <Card>
               <CardHeader>
-                <QrCode className="h-10 w-10 text-blue-600 mb-4" />
-                <CardTitle>QR Code Collection</CardTitle>
-                <CardDescription>
-                  Customers scan QR codes to collect stamps automatically. No app required.
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <Smartphone className="h-10 w-10 text-blue-600 mb-4" />
-                <CardTitle>Apple & Google Wallet</CardTitle>
-                <CardDescription>
-                  Loyalty cards sync directly to customers&apos; digital wallets for easy access.
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card>
-              <CardHeader>
                 <Zap className="h-10 w-10 text-blue-600 mb-4" />
-                <CardTitle>Instant Setup</CardTitle>
+                <CardTitle>Simple Onboarding</CardTitle>
                 <CardDescription>
-                  Create your first loyalty program in minutes. No technical knowledge needed.
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <TrendingUp className="h-10 w-10 text-blue-600 mb-4" />
-                <CardTitle>Analytics Dashboard</CardTitle>
-                <CardDescription>
-                  Track customer engagement, stamp collection, and reward redemption rates.
+                  Just submit your business details and logo. We handle all the technical setup for you.
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -112,9 +82,39 @@ export default function HomePage() {
             <Card>
               <CardHeader>
                 <Users className="h-10 w-10 text-blue-600 mb-4" />
-                <CardTitle>Customer Growth</CardTitle>
+                <CardTitle>Expert Design</CardTitle>
                 <CardDescription>
-                  Increase repeat visits and customer lifetime value with digital rewards.
+                  Our team creates professional stamp cards and membership cards tailored to your brand and business type.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <Smartphone className="h-10 w-10 text-blue-600 mb-4" />
+                <CardTitle>Multi-Platform Cards</CardTitle>
+                <CardDescription>
+                  Your cards work on Apple Wallet, Google Wallet, and web browsers automatically.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <QrCode className="h-10 w-10 text-blue-600 mb-4" />
+                <CardTitle>QR Code Integration</CardTitle>
+                <CardDescription>
+                  Customers collect stamps by scanning QR codes. No app downloads required.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <TrendingUp className="h-10 w-10 text-blue-600 mb-4" />
+                <CardTitle>Business Dashboard</CardTitle>
+                <CardDescription>
+                  Track customer engagement, stamp collection, and reward redemption from your dashboard.
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -122,9 +122,9 @@ export default function HomePage() {
             <Card>
               <CardHeader>
                 <CreditCard className="h-10 w-10 text-blue-600 mb-4" />
-                <CardTitle>Multiple Card Types</CardTitle>
+                <CardTitle>Flexible Card Types</CardTitle>
                 <CardDescription>
-                  Create different loyalty programs for various products or services.
+                  Stamp cards, membership cards, or custom programs - we create what fits your business.
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -140,7 +140,7 @@ export default function HomePage() {
               How it works
             </h2>
             <p className="text-lg text-gray-600">
-              Get started with digital loyalty cards in three simple steps
+              From onboarding to launch in three simple steps
             </p>
           </div>
 
@@ -149,9 +149,9 @@ export default function HomePage() {
               <div className="bg-blue-600 text-white rounded-full w-12 h-12 flex items-center justify-center text-xl font-bold mx-auto mb-4">
                 1
               </div>
-              <h3 className="text-xl font-semibold mb-2">Create Your Card</h3>
+              <h3 className="text-xl font-semibold mb-2">Get Started</h3>
               <p className="text-gray-600">
-                Design your loyalty program with custom rewards and stamp requirements.
+                Complete our simple onboarding form with your business details and upload your logo.
               </p>
             </div>
 
@@ -159,9 +159,9 @@ export default function HomePage() {
               <div className="bg-blue-600 text-white rounded-full w-12 h-12 flex items-center justify-center text-xl font-bold mx-auto mb-4">
                 2
               </div>
-              <h3 className="text-xl font-semibold mb-2">Share QR Codes</h3>
+              <h3 className="text-xl font-semibold mb-2">We Design Your Cards</h3>
               <p className="text-gray-600">
-                Display QR codes at your location for customers to scan and join.
+                Our team creates professional stamp cards and membership cards tailored to your business and brand.
               </p>
             </div>
 
@@ -169,11 +169,58 @@ export default function HomePage() {
               <div className="bg-blue-600 text-white rounded-full w-12 h-12 flex items-center justify-center text-xl font-bold mx-auto mb-4">
                 3
               </div>
-              <h3 className="text-xl font-semibold mb-2">Watch Growth</h3>
+              <h3 className="text-xl font-semibold mb-2">Go Live & Grow</h3>
               <p className="text-gray-600">
-                Track customer engagement and see your loyalty program drive repeat business.
+                Launch your loyalty program and watch customer engagement drive repeat business.
               </p>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Centralized Control Section */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-3xl font-bold text-gray-900 mb-6">
+            Professional quality, every time
+          </h2>
+          <p className="text-lg text-gray-600 mb-8 leading-relaxed">
+            Our expert team reviews every business onboarding and creates custom stamp cards and membership cards 
+            that match your brand perfectly. This ensures consistent quality, optimal customer 
+            experience, and maximum engagement across all platforms.
+          </p>
+          <div className="grid md:grid-cols-2 gap-8 text-left">
+            <div className="bg-gray-50 p-6 rounded-lg">
+              <h3 className="font-semibold text-gray-900 mb-2">✨ Expert Design</h3>
+              <p className="text-gray-600 text-sm">
+                Professional designers create cards optimized for your industry and customer base.
+              </p>
+            </div>
+            <div className="bg-gray-50 p-6 rounded-lg">
+              <h3 className="font-semibold text-gray-900 mb-2">🔒 Quality Control</h3>
+              <p className="text-gray-600 text-sm">
+                Every card is tested across all platforms before going live to ensure perfect functionality.
+              </p>
+            </div>
+            <div className="bg-gray-50 p-6 rounded-lg">
+              <h3 className="font-semibold text-gray-900 mb-2">⚡ Fast Turnaround</h3>
+              <p className="text-gray-600 text-sm">
+                Most businesses go live within 24-48 hours of completing onboarding.
+              </p>
+            </div>
+            <div className="bg-gray-50 p-6 rounded-lg">
+              <h3 className="font-semibold text-gray-900 mb-2">📱 Multi-Platform</h3>
+              <p className="text-gray-600 text-sm">
+                Your cards work seamlessly on Apple Wallet, Google Wallet, and web browsers.
+              </p>
+            </div>
+          </div>
+          <div className="mt-8">
+            <Link href="/onboarding/business">
+              <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-lg px-8 py-4">
+                Request Your Cards →
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
@@ -182,14 +229,14 @@ export default function HomePage() {
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-blue-600">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl font-bold text-white mb-4">
-            Ready to boost customer loyalty?
+            Ready to launch your loyalty program?
           </h2>
           <p className="text-xl text-blue-100 mb-8">
-            Join thousands of businesses using RewardJar to increase customer retention
+            Join businesses using RewardJar to increase customer retention and drive growth
           </p>
-          <Link href="/auth/signup">
+          <Link href="/onboarding/business">
             <Button size="lg" className="bg-white text-blue-600 hover:bg-gray-100 text-lg px-8 py-6">
-              Start Your Free Trial
+              Get Started Today
             </Button>
           </Link>
         </div>
@@ -197,17 +244,55 @@ export default function HomePage() {
 
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto text-center">
-          <h3 className="text-2xl font-bold mb-4">RewardJar</h3>
-          <p className="text-gray-400 mb-4">
-            Digital loyalty platform for modern businesses
-          </p>
-          <div className="flex justify-center space-x-6 text-sm text-gray-400">
-            <span>© 2025 RewardJar</span>
-            <span>•</span>
-            <span>Privacy Policy</span>
-            <span>•</span>
-            <span>Terms of Service</span>
+        <div className="max-w-7xl mx-auto">
+          <div className="grid md:grid-cols-4 gap-8 mb-8">
+            <div className="md:col-span-2">
+              <h3 className="text-2xl font-bold mb-4">RewardJar</h3>
+              <p className="text-gray-400 mb-4 max-w-md">
+                Professional digital loyalty programs designed and managed by experts. 
+                Focus on your customers, we handle the technology.
+              </p>
+              <div className="flex space-x-4 text-sm text-gray-500">
+                <span>Powered by Next.js</span>
+                <span>•</span>
+                <span>Supabase</span>
+                <span>•</span>
+                <span>Vercel</span>
+              </div>
+            </div>
+            
+            <div>
+              <h4 className="font-semibold mb-4">Business</h4>
+              <div className="space-y-2 text-sm text-gray-400">
+                <div><Link href="/onboarding/business" className="hover:text-white">Get Started</Link></div>
+                <div><Link href="/auth/login" className="hover:text-white">Business Login</Link></div>
+                <div><span className="text-gray-500">Demo (Coming Soon)</span></div>
+              </div>
+            </div>
+            
+            <div>
+              <h4 className="font-semibold mb-4">Support</h4>
+              <div className="space-y-2 text-sm text-gray-400">
+                <div><span>Contact: hello@rewardjar.xyz</span></div>
+                <div><span>Support: support@rewardjar.xyz</span></div>
+                <div><span className="text-gray-500">Help Center (Coming Soon)</span></div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="border-t border-gray-800 pt-8 text-center">
+            <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+              <div className="flex space-x-6 text-sm text-gray-400">
+                <span>© 2025 RewardJar</span>
+                <span>•</span>
+                <span className="hover:text-white cursor-pointer">Privacy Policy</span>
+                <span>•</span>
+                <span className="hover:text-white cursor-pointer">Terms of Service</span>
+              </div>
+              <div className="text-sm text-gray-500">
+                Made with ❤️ for businesses everywhere
+              </div>
+            </div>
           </div>
         </div>
       </footer>

@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
-import { createClient } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 
 export default function TestDarkModePage() {
   const { theme, isDark } = useTheme()
@@ -200,6 +200,7 @@ export default function TestDarkModePage() {
             </div>
           </CardContent>
         </Card>
+      </div>
       </div>
     </AdminLayout>
   )

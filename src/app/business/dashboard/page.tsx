@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import BusinessLayout from '@/components/layouts/BusinessLayout'
@@ -24,7 +24,9 @@ import {
   Settings,
   Bell,
   DollarSign,
-  UserCheck
+  UserCheck,
+  CheckCircle,
+  X
 } from 'lucide-react'
 import ManagerModeToggle from '@/components/business/ManagerModeToggle'
 
@@ -93,8 +95,20 @@ export default function BusinessDashboard() {
 
   const [session, setSession] = useState<any>(null)
   const [business, setBusiness] = useState<any>(null)
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
+
+  // Check for success message from onboarding
+  useEffect(() => {
+    const success = searchParams.get('success')
+    if (success === 'business_created') {
+      setShowSuccessMessage(true)
+      // Auto-hide after 5 seconds
+      setTimeout(() => setShowSuccessMessage(false), 5000)
+    }
+  }, [searchParams])
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -350,6 +364,39 @@ export default function BusinessDashboard() {
   return (
     <BusinessLayout>
       <div className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6 overflow-hidden">
+        {/* Success Message from Onboarding */}
+        {showSuccessMessage && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-green-800">
+                  Welcome to RewardJar!
+                </h3>
+                <div className="mt-1 text-sm text-green-700">
+                  <p>
+                    Your business profile has been created successfully. Our team is now creating your custom stamp cards and membership cards and will notify you when they're ready to use.
+                  </p>
+                </div>
+              </div>
+              <div className="ml-auto pl-3">
+                <div className="-mx-1.5 -my-1.5">
+                  <button
+                    type="button"
+                    className="inline-flex rounded-md bg-green-50 p-1.5 text-green-500 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2 focus:ring-offset-green-50"
+                    onClick={() => setShowSuccessMessage(false)}
+                  >
+                    <span className="sr-only">Dismiss</span>
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header Section */}
         <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
           <div className="min-w-0 flex-1">
@@ -608,7 +655,7 @@ export default function BusinessDashboard() {
                   <div className="text-center py-8 text-gray-500">
                     <CreditCard className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                     <p>No cards created yet</p>
-                    <p className="text-sm">Create your first loyalty card to get started</p>
+                    <p className="text-sm">Request your first stamp card or membership card to get started</p>
                   </div>
                 )}
               </div>
@@ -671,7 +718,7 @@ export default function BusinessDashboard() {
             </CardHeader>
             <CardContent>
               <p className="text-blue-800 mb-4">
-                Welcome to RewardJar! Our admin team will help you set up your first loyalty card to start building customer loyalty and driving revenue.
+                Welcome to RewardJar! Our admin team will help you set up your first stamp cards and membership cards to start building customer loyalty and driving revenue.
               </p>
               <p className="text-blue-700 text-sm">
                 Contact support to request your first card setup. Cards are created and managed centrally by RewardJar Admins for consistency.

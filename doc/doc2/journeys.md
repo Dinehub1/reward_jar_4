@@ -1,21 +1,92 @@
-# RewardJar 4.0 - Customer, Business & Admin Journeys
+# 🔧 FINAL SPEC: RewardJar 4.0 - Customer, Business & Admin Journeys
 
-**Status**: ✅ Production Ready | **Tech Stack**: Next.js 15 + Supabase + Multi-Wallet Integration  
-**Generated**: July 21, 2025 | **Version**: 4.0 Complete Journey Documentation
+**Status**: ✅ Production Ready with Marketing Site Integration | **Tech Stack**: Next.js 15 + Supabase + Multi-Wallet Integration  
+**Generated**: December 29, 2024 | **Version**: 4.0.3 Complete Journey Documentation with Marketing Funnel
 
----
+⸻
 
 ## 📋 Overview
 
-RewardJar 4.0 provides comprehensive user journeys for three distinct user roles, each with tailored experiences and capabilities:
+RewardJar 4.0 provides comprehensive user journeys for four distinct user experiences, each with tailored interactions and capabilities:
 
-- **Customers (role_id: 3)**: QR-based entry, wallet integration, loyalty tracking
+- **Marketing Visitors**: Homepage experience leading to business onboarding
+- **Customers (role_id: 3)**: QR-based entry, wallet integration, loyalty tracking  
 - **Businesses (role_id: 2)**: Dashboard management, analytics, revenue tracking
 - **Admins (role_id: 1)**: System oversight, support operations, global analytics
 
-The platform ensures seamless cross-journey synchronization with real-time updates across all user types through the `wallet_update_queue` system.
+The platform ensures seamless cross-journey synchronization with real-time updates across all user types through the `wallet_update_queue` system and expert-managed card creation process.
 
----
+⸻
+
+## 🌐 Marketing Visitor Journey (NEW)
+
+### Homepage Experience & Business Conversion
+
+#### Marketing Site Flow (`www.rewardjar.xyz`)
+| Stage | Action | Route | Purpose | Conversion Goal |
+|-------|--------|-------|---------|-----------------|
+| **Landing** | Homepage visit | `/` | Build trust in expert approach | Understand value proposition |
+| **Education** | Read features & process | `/` (sections) | Learn about managed service | Reduce friction/concerns |
+| **Conversion** | Click "Get Started" | `/onboarding/business` | Convert to business lead | Complete onboarding form |
+| **Alternative** | Click "Business Login" | `/auth/login` | Existing business access | Return user login |
+
+**Marketing Message Flow**:
+```typescript
+const marketingJourney = {
+  hero: "Launch a Digital Loyalty Program in Minutes",
+  value: "Professional cards designed by experts - no technical setup",
+  process: "Submit details → We design cards → Go live in 24-48 hours",
+  trust: "Expert design + Quality control + Multi-platform support",
+  cta: "Get Started → /onboarding/business"
+};
+```
+
+**Content Strategy**:
+- **Problem**: Businesses want loyalty programs but lack technical expertise
+- **Solution**: Expert-managed service that handles all technical complexity
+- **Proof**: Professional quality, fast turnaround, multi-platform support
+- **Action**: Simple onboarding form to get started immediately
+
+### Visitor Segmentation & Messaging
+
+#### **Primary Audience: Small-Medium Business Owners**
+- **Pain Points**: Limited technical knowledge, time constraints, quality concerns
+- **Messaging**: "Focus on customers, we handle the technology"
+- **CTA Strategy**: Direct to onboarding (primary) or business login (secondary)
+
+#### **Secondary Audience: Existing Business Users**
+- **Pain Points**: Need to access existing dashboard or manage cards
+- **Messaging**: "Business Login" for quick access
+- **CTA Strategy**: Direct to authentication flow
+
+#### **Conversion Optimization**
+- **Trust Signals**: "Professional design included", "Live in 24-48 hours"
+- **Social Proof**: "Join businesses using RewardJar" (testimonials coming)
+- **Risk Reduction**: Clear explanation of expert-managed process
+- **Urgency**: Fast turnaround time emphasizes quick results
+
+### Marketing → Onboarding → Admin → Business Flow
+
+```
+1. Marketing Site (/) 
+   ↓ "Get Started" CTA
+2. Business Onboarding (/onboarding/business)
+   ↓ Form submission with card_requested: true
+3. Admin Dashboard Alert (/admin/businesses)
+   ↓ Expert card creation and configuration
+4. Business Notification & Dashboard Access (/dashboard)
+   ↓ Launch loyalty program with professional cards
+5. Customer Acquisition & Engagement
+   ↓ QR codes, wallet integration, stamp collection
+```
+
+**Success Metrics**:
+- **Homepage → Onboarding**: Target 15-25% conversion rate
+- **Onboarding Completion**: Target 80%+ form completion rate
+- **Admin Processing**: Target <48 hours card creation time
+- **Business Activation**: Target 90%+ go-live rate after card creation
+
+⸻
 
 ## 👤 Customer Journey
 
@@ -74,13 +145,26 @@ graph TD
 
 ### Card Display & Visual Design
 
-#### Card Type Detection (UNIFIED SCHEMA)
+#### Card Type Detection (UNIFIED SCHEMA) - Next.js 15+ Compatible
 ```typescript
+import { use } from 'react'; // Required for Next.js 15+ client components
+
 const cardTypeDetection = {
   determineCardType: (customerCard) => {
     if (customerCard.stamp_card_id) return 'stamp_card';
     if (customerCard.membership_card_id) return 'membership_card';
     return 'invalid';
+  },
+  
+  // ✅ Next.js 15+ - Route params handling
+  extractCardId: async (params: Promise<{ id: string }>) => {
+    const { id } = await params; // Server component
+    return id;
+  },
+  
+  extractCardIdClient: (params: Promise<{ id: string }>) => {
+    const { id } = use(params); // Client component with React.use()
+    return id;
   },
   progressCalculation: {
     stamp_card: "(current_stamps / stamp_cards.total_stamps) * 100",
@@ -216,7 +300,7 @@ const customerProfile = {
 };
 ```
 
----
+⸻
 
 ## 🏢 Business Journey (Updated - Admin-Managed Cards)
 
@@ -346,7 +430,7 @@ const analyticsTabsStructure = {
 };
 ```
 
----
+⸻
 
 ## ⚙️ Admin Journey
 
@@ -472,7 +556,7 @@ const adminControls = {
 };
 ```
 
----
+⸻
 
 ## 🔄 Cross-Journey Synchronization
 
@@ -549,7 +633,7 @@ const notificationConfig = {
 };
 ```
 
----
+⸻
 
 ## 📊 Journey Integration Summary
 
@@ -587,7 +671,7 @@ graph LR
 | **System Uptime** | 99.5% | 99.9% | ✅ Exceeded |
 | **Revenue Growth** | 20% quarterly | 45% | ✅ Exceeded |
 
----
+⸻
 
 **Status**: ✅ **All Journeys Production Ready & Performance Optimized**  
 **Recent Updates**: MCP integration fixed, RLS policies enhanced, wallet APIs optimized  

@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { AdminLayoutClient } from '@/components/layouts/AdminLayoutClient'
 import LivePreviewBuilder from '@/components/wallet/LivePreviewBuilder'
-import { createClient } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { 
   Plus, 
   Search, 

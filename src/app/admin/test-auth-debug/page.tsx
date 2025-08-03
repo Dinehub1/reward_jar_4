@@ -72,7 +72,7 @@ export default function TestAuthDebugPage() {
           If you need to create an admin user, use the promote-user endpoint:
         </p>
         <code className="text-xs bg-gray-100 p-2 rounded block">
-          curl -X POST http://localhost:3001/api/admin/promote-user -H "Content-Type: application/json" -d '{"{"email":"your-email@example.com"}"}'
+          {`curl -X POST http://localhost:3001/api/admin/promote-user -H "Content-Type: application/json" -d '{"email":"your-email@example.com"}'`}
         </code>
       </div>
     </div>

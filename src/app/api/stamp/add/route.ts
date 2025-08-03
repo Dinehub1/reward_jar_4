@@ -6,6 +6,7 @@ interface AddStampRequest {
   businessId?: string
   markedBy?: string
   notes?: string
+  billAmount?: number
 }
 
 export async function POST(request: NextRequest) {
@@ -13,7 +14,7 @@ export async function POST(request: NextRequest) {
   
   try {
     const body = await request.json() as AddStampRequest
-    const { customerCardId, businessId, markedBy, notes } = body
+    const { customerCardId, businessId, markedBy, notes, billAmount } = body
 
     if (!customerCardId) {
       return NextResponse.json(
@@ -44,6 +45,8 @@ export async function POST(request: NextRequest) {
           total_stamps,
           reward_description,
           business_id,
+          stamp_condition,
+          min_bill_amount,
           businesses!inner(id, name)
         ),
         membership_cards(
@@ -96,6 +99,27 @@ export async function POST(request: NextRequest) {
         )
       }
 
+      // Check stamp condition - validate bill amount if required
+      if (stampCard.stamp_condition === 'min_bill_amount') {
+        if (!billAmount) {
+          return NextResponse.json(
+            { error: 'Bill amount is required for this card' },
+            { status: 400 }
+          )
+        }
+        
+        if (billAmount < (stampCard.min_bill_amount || 0)) {
+          return NextResponse.json(
+            { 
+              error: `Minimum bill amount required: $${stampCard.min_bill_amount}`,
+              required_amount: stampCard.min_bill_amount,
+              provided_amount: billAmount
+            },
+            { status: 400 }
+          )
+        }
+      }
+
       const newStampCount = currentStamps + 1
       const isComplete = newStampCount >= totalStamps
 
@@ -116,7 +140,7 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // Log session usage
+      // Log session usage with bill amount
       await supabase
         .from('session_usage')
         .insert([{
@@ -124,7 +148,8 @@ export async function POST(request: NextRequest) {
           business_id: businessId || stampCard.business_id,
           marked_by: markedBy,
           usage_type: 'stamp',
-          notes: notes
+          notes: notes,
+          bill_amount: billAmount
         }])
 
       updateType = isComplete ? 'reward_complete' : 'stamp_update'

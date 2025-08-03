@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -8,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { AdminLayoutClient } from '@/components/layouts/AdminLayoutClient'
 import { useBusinesses, useAdminStatsCompat as useAdminStats } from '@/lib/hooks/use-admin-data'
 import { CardSkeleton, TableSkeleton } from '@/components/ui/skeleton'
+import { RefreshCw, AlertTriangle, CheckCircle, Clock, Search, Filter } from 'lucide-react'
 
 // Use types from the centralized service
 interface Business {
@@ -18,6 +20,7 @@ interface Business {
   owner_id?: string
   status: string
   is_flagged?: boolean | null
+  card_requested?: boolean | null
   admin_notes?: string | null
   created_at: string
   // Optional fields for compatibility
@@ -29,12 +32,21 @@ interface BusinessMetrics {
   totalBusinesses: number
   activeBusinesses: number
   flaggedBusinesses: number
+  cardRequests: number
   newThisWeek: number
 }
 
 export default function BusinessesPage() {
   const { data: statsData, loading: statsLoading, error: statsError } = useAdminStats()
   const { data: businessesData, loading: businessesLoading, error: businessesError, refetch } = useBusinesses()
+  
+  // Enhanced state management
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive' | 'flagged'>('all')
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true)
+  const [refreshError, setRefreshError] = useState<string | null>(null)
 
   const loading = statsLoading || businessesLoading
   const error = statsError || businessesError
@@ -47,6 +59,7 @@ export default function BusinessesPage() {
     totalBusinesses: safeBusinessesData.length || 0,
     activeBusinesses: safeBusinessesData.filter(b => b?.status === 'active').length || 0,
     flaggedBusinesses: safeBusinessesData.filter(b => b?.is_flagged === true).length || 0,
+    cardRequests: safeBusinessesData.filter(b => b?.card_requested === true).length || 0,
     newThisWeek: safeBusinessesData.filter(b => {
       try {
         if (!b?.created_at) return false
@@ -59,6 +72,54 @@ export default function BusinessesPage() {
       }
     }).length || 0
   }
+
+  // Enhanced refresh function
+  const handleRefresh = async () => {
+    if (isRefreshing) return
+    
+    setIsRefreshing(true)
+    setRefreshError(null)
+    console.log('🔄 Refreshing businesses data...')
+    
+    try {
+      await refetch()
+      setLastRefresh(new Date())
+      console.log('✅ Businesses data refreshed successfully')
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to refresh data'
+      setRefreshError(errorMessage)
+      console.error('❌ Failed to refresh businesses data:', error)
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
+
+  // Auto-refresh effect
+  useEffect(() => {
+    if (!autoRefreshEnabled) return
+
+    const interval = setInterval(() => {
+      if (!loading && !isRefreshing) {
+        console.log('🔄 Auto-refreshing businesses data...')
+        handleRefresh()
+      }
+    }, 300000) // Auto-refresh every 5 minutes
+
+    return () => clearInterval(interval)
+  }, [autoRefreshEnabled, loading, isRefreshing])
+
+  // Filter and search businesses
+  const filteredBusinesses = safeBusinessesData.filter(business => {
+    const matchesSearch = business.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         business.contact_email?.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    const matchesFilter = filterStatus === 'all' || 
+                         (filterStatus === 'active' && business.status === 'active') ||
+                         (filterStatus === 'inactive' && business.status === 'inactive') ||
+                         (filterStatus === 'flagged' && business.is_flagged === true)
+    
+    return matchesSearch && matchesFilter
+  })
 
   if (loading) {
     return (
@@ -124,20 +185,124 @@ export default function BusinessesPage() {
             <p className="text-muted-foreground">
               Monitor and manage all business accounts on the platform
             </p>
+            {lastRefresh && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Last updated: {lastRefresh.toLocaleTimeString()}
+              </p>
+            )}
           </div>
-          <Button onClick={() => refetch()} disabled={loading}>
-            {loading ? 'Refreshing...' : 'Refresh Data'}
-          </Button>
+          <div className="flex items-center gap-2">
+            {refreshError && (
+              <div className="flex items-center gap-1 text-red-600 text-sm">
+                <AlertTriangle className="h-4 w-4" />
+                <span>Refresh failed</span>
+              </div>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setAutoRefreshEnabled(!autoRefreshEnabled)}
+              className={autoRefreshEnabled ? 'bg-green-50 text-green-700' : ''}
+            >
+              <Clock className="h-4 w-4 mr-1" />
+              Auto: {autoRefreshEnabled ? 'ON' : 'OFF'}
+            </Button>
+            <Button 
+              onClick={handleRefresh} 
+              disabled={loading || isRefreshing}
+              variant={refreshError ? "destructive" : "default"}
+            >
+              <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              {isRefreshing ? 'Refreshing...' : refreshError ? 'Retry' : 'Refresh Data'}
+            </Button>
+          </div>
         </div>
 
+        {/* Enhanced Error Banner */}
+        {refreshError && (
+          <Card className="border-red-200 bg-red-50 dark:bg-red-900/20">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 text-red-600">
+                <AlertTriangle className="h-4 w-4" />
+                <span className="text-sm">
+                  Data refresh failed: {refreshError}
+                </span>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => setRefreshError(null)}
+                  className="ml-auto"
+                >
+                  Dismiss
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Search and Filter Controls */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    placeholder="Search businesses by name or email..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant={filterStatus === 'all' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setFilterStatus('all')}
+                >
+                  All ({safeBusinessesData.length})
+                </Button>
+                <Button
+                  variant={filterStatus === 'active' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setFilterStatus('active')}
+                >
+                  <CheckCircle className="h-3 w-3 mr-1" />
+                  Active ({businessMetrics.activeBusinesses})
+                </Button>
+                <Button
+                  variant={filterStatus === 'flagged' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setFilterStatus('flagged')}
+                >
+                  <AlertTriangle className="h-3 w-3 mr-1" />
+                  Flagged ({businessMetrics.flaggedBusinesses})
+                </Button>
+              </div>
+            </div>
+            {filteredBusinesses.length !== safeBusinessesData.length && (
+              <p className="text-sm text-muted-foreground mt-2">
+                Showing {filteredBusinesses.length} of {safeBusinessesData.length} businesses
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
         <BusinessStats stats={businessMetrics} />
-        <BusinessesTable businesses={safeBusinessesData} />
+        <BusinessesTable businesses={filteredBusinesses} />
       </div>
     </AdminLayoutClient>
   )
 }
 
 function BusinessStats({ stats }: { stats: BusinessMetrics }) {
+  const activePercentage = stats.totalBusinesses > 0 ? 
+    Math.round((stats.activeBusinesses / stats.totalBusinesses) * 100) : 0
+  
+  const flaggedPercentage = stats.totalBusinesses > 0 ? 
+    Math.round((stats.flaggedBusinesses / stats.totalBusinesses) * 100) : 0
+
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       <Card>
@@ -146,41 +311,110 @@ function BusinessStats({ stats }: { stats: BusinessMetrics }) {
           <span className="text-2xl">🏢</span>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats.totalBusinesses}</div>
+          <div className="text-2xl font-bold text-blue-600">{stats.totalBusinesses}</div>
           <p className="text-xs text-muted-foreground">Registered businesses</p>
+          <div className="flex items-center mt-2">
+            <div className="w-full bg-gray-200 rounded-full h-1.5">
+              <div 
+                className="bg-blue-600 h-1.5 rounded-full transition-all duration-300" 
+                style={{ width: '100%' }}
+              ></div>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Active Businesses</CardTitle>
-          <span className="text-2xl">✅</span>
+          <CheckCircle className="h-4 w-4 text-green-600" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-green-600">{stats.activeBusinesses}</div>
-          <p className="text-xs text-muted-foreground">Currently active</p>
+          <p className="text-xs text-muted-foreground">
+            {activePercentage}% of total
+          </p>
+          <div className="flex items-center mt-2">
+            <div className="w-full bg-gray-200 rounded-full h-1.5">
+              <div 
+                className="bg-green-600 h-1.5 rounded-full transition-all duration-300" 
+                style={{ width: `${activePercentage}%` }}
+              ></div>
+            </div>
+            <span className="text-xs text-muted-foreground ml-2">{activePercentage}%</span>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Card Requests</CardTitle>
+          <div className="flex items-center">
+            <span className="text-2xl">🎯</span>
+            {stats.cardRequests > 0 && (
+              <div className="w-2 h-2 bg-yellow-500 rounded-full ml-1 animate-pulse"></div>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className={`text-2xl font-bold ${stats.cardRequests > 0 ? 'text-yellow-600' : 'text-gray-400'}`}>
+            {stats.cardRequests}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {stats.cardRequests > 0 ? 'Businesses need cards' : 'All businesses have cards'}
+          </p>
+          {stats.cardRequests > 0 && (
+            <Badge variant="outline" className="mt-2 bg-yellow-50 text-yellow-700 border-yellow-300">
+              Needs attention
+            </Badge>
+          )}
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Flagged Businesses</CardTitle>
-          <span className="text-2xl">🚨</span>
+          <AlertTriangle className={`h-4 w-4 ${stats.flaggedBusinesses > 0 ? 'text-red-600' : 'text-gray-400'}`} />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-red-600">{stats.flaggedBusinesses}</div>
-          <p className="text-xs text-muted-foreground">Require attention</p>
+          <div className={`text-2xl font-bold ${stats.flaggedBusinesses > 0 ? 'text-red-600' : 'text-gray-400'}`}>
+            {stats.flaggedBusinesses}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {stats.flaggedBusinesses > 0 ? `${flaggedPercentage}% need attention` : 'All clear'}
+          </p>
+          {stats.flaggedBusinesses > 0 && (
+            <div className="flex items-center mt-2">
+              <div className="w-full bg-gray-200 rounded-full h-1.5">
+                <div 
+                  className="bg-red-600 h-1.5 rounded-full transition-all duration-300" 
+                  style={{ width: `${flaggedPercentage}%` }}
+                ></div>
+              </div>
+              <span className="text-xs text-red-600 ml-2">{flaggedPercentage}%</span>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">New This Week</CardTitle>
-          <span className="text-2xl">📈</span>
+          <div className="flex items-center">
+            <span className="text-2xl">📈</span>
+            {stats.newThisWeek > 0 && (
+              <div className="w-2 h-2 bg-green-500 rounded-full ml-1 animate-pulse"></div>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-blue-600">{stats.newThisWeek}</div>
-          <p className="text-xs text-muted-foreground">Recent signups</p>
+          <div className="text-2xl font-bold text-purple-600">{stats.newThisWeek}</div>
+          <p className="text-xs text-muted-foreground">Recent signups (7 days)</p>
+          {stats.newThisWeek > 0 && (
+            <Badge variant="outline" className="mt-2 text-green-600 border-green-600">
+              +{stats.newThisWeek} this week
+            </Badge>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -189,6 +423,7 @@ function BusinessStats({ stats }: { stats: BusinessMetrics }) {
 
 function BusinessesTable({ businesses }: { businesses: Business[] }) {
   const [searchTerm, setSearchTerm] = useState('')
+  const router = useRouter()
 
   // Defensive programming: Ensure businesses is always an array
   const safeBusinesses = Array.isArray(businesses) ? businesses : []
@@ -274,13 +509,22 @@ function BusinessesTable({ businesses }: { businesses: Business[] }) {
                         <Badge variant={business.status === 'active' ? 'default' : 'secondary'}>
                           {business.status || 'unknown'}
                         </Badge>
+                        {business.card_requested && (
+                          <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300">
+                            Card Requested
+                          </Badge>
+                        )}
                         {business.is_flagged && (
                           <Badge variant="destructive">Flagged</Badge>
                         )}
                       </div>
                     </td>
                     <td className="p-2">
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => router.push(`/admin/businesses/${business.id}`)}
+                      >
                         View Details
                       </Button>
                     </td>

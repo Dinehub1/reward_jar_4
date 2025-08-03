@@ -1,6 +1,6 @@
 /**
  * RewardJar 4.0 - Google Wallet API Route
- * Generates Google Wallet passes for loyalty cards (stamp & membership subtypes)
+ * Generates Google Wallet passes for stamp cards and membership cards
  * 
  * @version 4.0
  * @path /api/wallet/google/[customerCardId]

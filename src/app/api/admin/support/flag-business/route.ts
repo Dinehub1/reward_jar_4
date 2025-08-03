@@ -3,7 +3,7 @@ import { createServerClient, getServerUser, getServerSession } from '@/lib/supab
 
 export async function POST(request: NextRequest) {
   try {
-    createServerClient(
+    const supabase = createServerClient()
     
     // Check authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser()

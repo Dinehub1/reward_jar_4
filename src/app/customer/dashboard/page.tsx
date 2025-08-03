@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import CustomerLayout from '@/components/layouts/CustomerLayout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -138,7 +138,7 @@ export default function CustomerDashboard() {
       <div className="space-y-8">
         {/* Welcome Section */}
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">My Loyalty Cards</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">My Cards</h1>
           <p className="text-gray-600">
             Collect stamps and earn rewards from your favorite businesses
           </p>
@@ -285,7 +285,7 @@ export default function CustomerDashboard() {
           <Card className="text-center py-12">
             <CardContent>
               <CreditCard className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">No Loyalty Cards Yet</h3>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">No Cards Yet</h3>
               <p className="text-gray-600 mb-6">
                 Start collecting stamps by scanning QR codes at participating businesses
               </p>

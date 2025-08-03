@@ -11,9 +11,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "RewardJar - Business Loyalty Platform",
-  description: "Create digital stamp cards and loyalty programs for your business. Grow customer retention with QR-based stamp collection and digital wallet integration.",
-  keywords: "business loyalty platform, digital stamp cards, customer retention, QR codes, business growth",
+  title: "RewardJar - Launch a Digital Loyalty Program in Minutes",
+  description: "Professional digital stamp cards and membership cards designed by experts. Submit your business details, we create custom cards for Apple Wallet, Google Wallet, and web. No technical setup required.",
+  keywords: "digital stamp cards, membership cards, business loyalty program, Apple Wallet, Google Wallet, customer retention, professional design, business onboarding",
 };
 
 // Validate environment variables at startup (server-side)

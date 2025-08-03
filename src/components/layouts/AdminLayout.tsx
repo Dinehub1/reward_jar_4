@@ -44,7 +44,7 @@ function AdminSidebar() {
       name: 'Cards',
       href: '/admin/cards',
       icon: '🎴',
-      description: 'Manage all loyalty cards'
+      description: 'Manage all stamp cards and membership cards'
     },
     {
       name: 'Alerts',

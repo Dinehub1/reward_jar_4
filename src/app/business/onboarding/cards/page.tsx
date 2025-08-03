@@ -57,10 +57,9 @@ export default function BusinessCardsIntroPage() {
 
   const handleCreateCard = () => {
     if (selectedCardType === 'stamp') {
-
-      router.push('/admin/cards/stamp/new')
+      router.push('/admin/cards/new?type=stamp')
     } else if (selectedCardType === 'membership') {
-      router.push('/admin/cards/membership/new')
+      router.push('/admin/cards/new?type=membership')
     }
   }
 

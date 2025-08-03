@@ -36,9 +36,15 @@ const fetcher = async (url: string) => {
  */
 export function useAdminStats() {
   return useSWR<ApiResponse<AdminStats>>('/api/admin/dashboard-stats', fetcher, {
-    refreshInterval: 30000, // Refresh every 30 seconds
-    revalidateOnFocus: true,
-    errorRetryCount: 3
+    refreshInterval: 300000, // Refresh every 5 minutes (was 30 seconds!)
+    revalidateOnFocus: false, // Disable focus revalidation to prevent excessive calls
+    revalidateOnReconnect: true,
+    dedupingInterval: 60000, // Dedupe requests for 1 minute
+    errorRetryCount: 3,
+    errorRetryInterval: 5000,
+    onError: (error) => {
+      console.warn('Failed to fetch admin stats:', error)
+    }
   })
 }
 
@@ -48,8 +54,15 @@ export function useAdminStats() {
  */
 export function useAdminBusinesses() {
   return useSWR<ApiResponse<Business[]>>('/api/admin/businesses-simple', fetcher, {
-    refreshInterval: 60000, // Refresh every minute
-    revalidateOnFocus: true
+    refreshInterval: 300000, // Refresh every 5 minutes
+    revalidateOnFocus: false, // Disable focus revalidation to prevent excessive calls
+    revalidateOnReconnect: true,
+    dedupingInterval: 60000, // Dedupe requests for 1 minute
+    errorRetryCount: 3,
+    errorRetryInterval: 5000,
+    onError: (error) => {
+      console.warn('Failed to fetch businesses:', error)
+    }
   })
 }
 
@@ -59,8 +72,12 @@ export function useAdminBusinesses() {
  */
 export function useAdminBusinessesDetailed() {
   return useSWR<ApiResponse<BusinessWithDetails[]>>('/api/admin/businesses?detailed=true', fetcher, {
-    refreshInterval: 60000,
-    revalidateOnFocus: true
+    refreshInterval: 300000, // Refresh every 5 minutes
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+    dedupingInterval: 30000,
+    errorRetryCount: 3,
+    errorRetryInterval: 5000
   })
 }
 

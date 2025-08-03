@@ -203,7 +203,7 @@ export async function GET(
         headerFields: [
           {
             key: "card_name",
-            label: isMembershipCard ? "Membership" : "Loyalty Card",
+            label: isMembershipCard ? "Membership" : "Stamp Card",
             value: stampCardData.name,
             textAlignment: "PKTextAlignmentCenter"
           }
@@ -259,7 +259,7 @@ export async function GET(
         customerCardId: customerCardId,
         stampCardId: stampCardData.id,
         businessName: businessData.name,
-        cardType: isMembershipCard ? 'membership' : 'loyalty'
+        cardType: isMembershipCard ? 'membership' : 'stamp'
       },
       
       locations: [],

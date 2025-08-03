@@ -35,7 +35,7 @@ const permissionDisplayConfig: PermissionDisplay[] = [
     label: 'Add Stamps',
     description: 'Add stamps with bill amount tracking',
     icon: <QrCode className="w-4 h-4" />,
-    restrictedFeatures: ['Cannot create new loyalty cards', 'Cannot modify card templates']
+          restrictedFeatures: ['Cannot create new cards', 'Cannot modify card templates']
   },
   {
     key: 'redeem_rewards',
@@ -296,7 +296,7 @@ export default function ManagerModeToggle({
                 <div className="space-y-1">
                   <div className="text-xs text-red-700 bg-red-100 p-2 rounded-lg">
                     <ul className="space-y-1">
-                      <li>• Cannot create new loyalty cards</li>
+                      <li>• Cannot create new cards</li>
                       <li>• Cannot modify business profile</li>
                       <li>• Cannot access financial analytics (revenue data)</li>
                       <li>• Cannot delete customer data</li>

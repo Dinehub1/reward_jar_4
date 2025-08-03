@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getAllBusinesses } from '@/mcp/businesses'
-import { requireAdmin } from '@/mcp/auth'
+import { createAdminClient } from '@/lib/supabase/admin-client'
 import type { ApiResponse } from '@/lib/supabase/types'
 
 /**
  * GET /api/admin/businesses
  * 
- * Fetches businesses data for admin panel via MCP layer
+ * Fetches businesses data for admin panel using direct Supabase queries
  * 
  * Query Parameters:
  * - page: number - Page number for pagination (1-based)
@@ -17,14 +16,7 @@ import type { ApiResponse } from '@/lib/supabase/types'
  */
 export async function GET(request: NextRequest) {
   try {
-    // Require admin authentication via MCP
-    const authResult = await requireAdmin()
-    if (!authResult.success) {
-      return NextResponse.json(
-        { success: false, error: authResult.error } as ApiResponse<never>,
-        { status: 401 }
-      )
-    }
+    console.log('🔍 Admin API: Fetching businesses list')
     
     const url = new URL(request.url)
     
@@ -35,35 +27,56 @@ export async function GET(request: NextRequest) {
     const status = url.searchParams.get('status')
     const flaggedOnly = url.searchParams.get('flagged') === 'true'
     
-    // Build filters
-    const filters: Record<string, any> = {}
-    if (status) filters.status = status
-    if (flaggedOnly) filters.is_flagged = true
-    if (search) filters._search = search // Special search filter
+    // ✅ Server-side only - safe to use admin client
+    const supabase = createAdminClient()
     
-    // Call MCP layer
-    const result = await getAllBusinesses({
-      page,
-      limit,
-      filters,
-      orderBy: 'created_at',
-      orderDirection: 'desc'
-    })
+    // Build query
+    let query = supabase
+      .from('businesses')
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false })
     
-    if (!result.success) {
+    // Apply filters
+    if (status) {
+      query = query.eq('status', status)
+    }
+    if (flaggedOnly) {
+      query = query.eq('is_flagged', true)
+    }
+    if (search) {
+      query = query.or(`name.ilike.%${search}%,contact_email.ilike.%${search}%`)
+    }
+    
+    // Apply pagination
+    const from = (page - 1) * limit
+    const to = from + limit - 1
+    query = query.range(from, to)
+    
+    const { data: businesses, error, count } = await query
+    
+    if (error) {
+      console.error('❌ Admin API: Error fetching businesses:', error)
       return NextResponse.json(
-        { success: false, error: result.error } as ApiResponse<never>,
+        { success: false, error: 'Failed to fetch businesses' } as ApiResponse<never>,
         { status: 500 }
       )
     }
 
+    console.log(`✅ Admin API: Fetched ${businesses?.length || 0} businesses`)
+
     return NextResponse.json({
       success: true,
-      data: result.data,
-      pagination: result.pagination
+      data: businesses || [],
+      pagination: {
+        page,
+        limit,
+        total: count || 0,
+        totalPages: Math.ceil((count || 0) / limit)
+      }
     })
 
   } catch (error) {
+    console.error('❌ Admin API: Error in businesses list fetch:', error)
     return NextResponse.json(
       { success: false, error: 'Internal server error' } as ApiResponse<never>,
       { status: 500 }

@@ -9,7 +9,8 @@
 export { createClient, createAuthClient } from './client'
 
 // Server-side exports (for API routes and server components)
-export { createServerClient } from './server-only'
+// Import directly from './server-only' in server components to avoid client-side bundle issues
+// export { createServerClient } from './server-only' // Commented out to prevent client-side imports
 
 // Admin-only exports (for admin API routes only)
 export { createAdminClient, createSecureAdminClient, createDevAdminClient } from './admin-client'

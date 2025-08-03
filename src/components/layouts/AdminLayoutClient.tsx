@@ -113,14 +113,25 @@ export function AdminLayoutClient({ children, requireAuth = true }: AdminLayoutC
     requireAuth
   })
 
+  // Enhanced loading guards - prevent any rendering until auth is fully resolved
   if (isLoading) {
+    console.log('🔄 AdminLayoutClient: Auth still loading, showing loading state')
     return <LoadingState />
   }
 
+  // Additional safety check - if we don't have user data but should be admin, keep loading
+  if (requireAuth && isAdmin && !user) {
+    console.log('🔄 AdminLayoutClient: Admin verified but user data not loaded, continuing to load')
+    return <LoadingState />
+  }
+
+  // If auth is required but user is not admin, redirect to login
   if (requireAuth && !isAdmin) {
     console.log('❌ AdminLayoutClient: Access denied - redirecting to login')
-    // Instead of showing access denied, redirect to login
-    router.push('/auth/login?error=admin_required')
+    // Use setTimeout to avoid redirect during render
+    setTimeout(() => {
+      router.push('/auth/login?error=admin_required')
+    }, 0)
     return <LoadingState />
   }
 

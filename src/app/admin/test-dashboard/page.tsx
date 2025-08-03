@@ -1,7 +1,18 @@
 import { Suspense } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { createAdminClient } from '@/lib/supabase/admin-client'
+import { 
+  RefreshCw, 
+  AlertTriangle, 
+  CheckCircle, 
+  XCircle, 
+  Clock,
+  Zap,
+  Activity,
+  Database
+} from 'lucide-react'
 
 // Icons (using emoji for simplicity)
 const icons = {
@@ -293,7 +304,318 @@ async function TestDashboardContent() {
   )
 }
 
-export default async function TestAdminDashboard() {
+// Quick Actions Test Component
+function QuickActionsTest() {
+  const [activeTab, setActiveTab] = useState<'overview' | 'quick-actions'>('overview')
+  const [actionResults, setActionResults] = useState<string[]>([])
+  const [isPerformingAction, setIsPerformingAction] = useState(false)
+
+  const addResult = (result: string) => {
+    setActionResults(prev => [`${new Date().toLocaleTimeString()}: ${result}`, ...prev.slice(0, 9)])
+  }
+
+  const performQuickAction = async (action: string) => {
+    setIsPerformingAction(true)
+    addResult(`Starting ${action}...`)
+    
+    try {
+      // Simulate different quick actions
+      switch (action) {
+        case 'refresh-all':
+          await new Promise(resolve => setTimeout(resolve, 1000))
+          addResult('✅ All data refreshed successfully')
+          break
+        case 'clear-cache':
+          await new Promise(resolve => setTimeout(resolve, 500))
+          addResult('✅ Cache cleared successfully')
+          break
+        case 'sync-wallets':
+          await new Promise(resolve => setTimeout(resolve, 1500))
+          addResult('✅ Wallet sync completed')
+          break
+        case 'generate-reports':
+          await new Promise(resolve => setTimeout(resolve, 2000))
+          addResult('✅ Reports generated successfully')
+          break
+        default:
+          addResult(`❌ Unknown action: ${action}`)
+      }
+    } catch (error) {
+      addResult(`❌ Error performing ${action}: ${error}`)
+    } finally {
+      setIsPerformingAction(false)
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Zap className="h-5 w-5" />
+          Quick Actions Test
+        </CardTitle>
+        <CardDescription>Testing the Quick Actions tab functionality</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Tab Navigation */}
+        <div className="flex space-x-2 border-b">
+          <button 
+            onClick={() => setActiveTab('overview')}
+            className={`px-4 py-2 text-sm font-medium ${
+              activeTab === 'overview' 
+                ? 'border-b-2 border-blue-500 text-blue-600' 
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Overview
+          </button>
+          <button 
+            onClick={() => setActiveTab('quick-actions')}
+            className={`px-4 py-2 text-sm font-medium ${
+              activeTab === 'quick-actions' 
+                ? 'border-b-2 border-blue-500 text-blue-600' 
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Quick Actions
+          </button>
+        </div>
+
+        {/* Tab Content */}
+        {activeTab === 'overview' && (
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">Overview tab is active</p>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div>Status: <Badge variant="outline">Active</Badge></div>
+              <div>Tab Switch: <Badge variant="outline" className="text-green-600">Working</Badge></div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'quick-actions' && (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">Quick Actions tab is active</p>
+            
+            {/* Quick Action Buttons */}
+            <div className="grid grid-cols-2 gap-2">
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => performQuickAction('refresh-all')}
+                disabled={isPerformingAction}
+              >
+                <RefreshCw className="h-3 w-3 mr-1" />
+                Refresh All
+              </Button>
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => performQuickAction('clear-cache')}
+                disabled={isPerformingAction}
+              >
+                <Database className="h-3 w-3 mr-1" />
+                Clear Cache
+              </Button>
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => performQuickAction('sync-wallets')}
+                disabled={isPerformingAction}
+              >
+                <Activity className="h-3 w-3 mr-1" />
+                Sync Wallets
+              </Button>
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => performQuickAction('generate-reports')}
+                disabled={isPerformingAction}
+              >
+                <Clock className="h-3 w-3 mr-1" />
+                Generate Reports
+              </Button>
+            </div>
+
+            {/* Action Results */}
+            <div>
+              <h4 className="text-sm font-medium mb-2">Action Results:</h4>
+              <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-lg max-h-32 overflow-y-auto">
+                {actionResults.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No actions performed yet</p>
+                ) : (
+                  <div className="space-y-1">
+                    {actionResults.map((result, index) => (
+                      <div key={index} className="text-xs font-mono">{result}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+// Refresh Button Test Component
+function RefreshButtonTest() {
+  const { data: statsResponse, error: statsError, isLoading: statsLoading, mutate: refetchStats } = useAdminStats()
+  const { data: businessesResponse, error: businessesError, isLoading: businessesLoading, mutate: refetchBusinesses } = useAdminBusinesses()
+  
+  const [refreshResults, setRefreshResults] = useState<string[]>([])
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
+
+  const loading = statsLoading || businessesLoading
+  const error = statsError || businessesError
+
+  const addRefreshResult = (result: string) => {
+    setRefreshResults(prev => [`${new Date().toLocaleTimeString()}: ${result}`, ...prev.slice(0, 9)])
+  }
+
+  const testRefreshAll = async () => {
+    addRefreshResult('🔄 Starting refresh all...')
+    setLastRefresh(new Date())
+    
+    try {
+      await Promise.all([
+        refetchStats(),
+        refetchBusinesses()
+      ])
+      addRefreshResult('✅ Refresh all completed successfully')
+    } catch (error) {
+      addRefreshResult(`❌ Refresh all failed: ${error}`)
+    }
+  }
+
+  const testRefreshStats = async () => {
+    addRefreshResult('📊 Refreshing stats...')
+    try {
+      await refetchStats()
+      addRefreshResult('✅ Stats refreshed successfully')
+    } catch (error) {
+      addRefreshResult(`❌ Stats refresh failed: ${error}`)
+    }
+  }
+
+  const testRefreshBusinesses = async () => {
+    addRefreshResult('🏢 Refreshing businesses...')
+    try {
+      await refetchBusinesses()
+      addRefreshResult('✅ Businesses refreshed successfully')
+    } catch (error) {
+      addRefreshResult(`❌ Businesses refresh failed: ${error}`)
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <RefreshCw className="h-5 w-5" />
+          Refresh Button Test
+        </CardTitle>
+        <CardDescription>Testing all refresh functionality</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Status Indicators */}
+        <div className="grid grid-cols-3 gap-4">
+          <div className="text-center">
+            <div className={`w-3 h-3 rounded-full mx-auto mb-1 ${loading ? 'bg-yellow-500' : error ? 'bg-red-500' : 'bg-green-500'}`} />
+            <div className="text-xs">
+              {loading ? 'Loading' : error ? 'Error' : 'Ready'}
+            </div>
+          </div>
+          <div className="text-center">
+            <div className={`w-3 h-3 rounded-full mx-auto mb-1 ${statsLoading ? 'bg-yellow-500' : statsError ? 'bg-red-500' : 'bg-green-500'}`} />
+            <div className="text-xs">Stats</div>
+          </div>
+          <div className="text-center">
+            <div className={`w-3 h-3 rounded-full mx-auto mb-1 ${businessesLoading ? 'bg-yellow-500' : businessesError ? 'bg-red-500' : 'bg-green-500'}`} />
+            <div className="text-xs">Businesses</div>
+          </div>
+        </div>
+
+        {/* Refresh Buttons */}
+        <div className="grid grid-cols-3 gap-2">
+          <Button 
+            size="sm" 
+            onClick={testRefreshAll}
+            disabled={loading}
+            className="text-xs"
+          >
+            <RefreshCw className={`h-3 w-3 mr-1 ${loading ? 'animate-spin' : ''}`} />
+            {loading ? 'Refreshing...' : 'Refresh All'}
+          </Button>
+          <Button 
+            size="sm" 
+            variant="outline"
+            onClick={testRefreshStats}
+            disabled={statsLoading}
+            className="text-xs"
+          >
+            📊 Stats
+          </Button>
+          <Button 
+            size="sm" 
+            variant="outline"
+            onClick={testRefreshBusinesses}
+            disabled={businessesLoading}
+            className="text-xs"
+          >
+            🏢 Businesses
+          </Button>
+        </div>
+
+        {/* Last Refresh Info */}
+        {lastRefresh && (
+          <div className="text-xs text-muted-foreground">
+            Last refresh: {lastRefresh.toLocaleTimeString()}
+          </div>
+        )}
+
+        {/* Error Display */}
+        {error && (
+          <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-lg">
+            <div className="flex items-center gap-2 text-red-600 text-sm">
+              <XCircle className="h-4 w-4" />
+              Error: {typeof error === 'string' ? error : 'Unknown error'}
+            </div>
+          </div>
+        )}
+
+        {/* Data Summary */}
+        <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-lg">
+          <div className="text-xs space-y-1">
+            <div>Stats Response: {statsResponse ? '✅ Loaded' : '❌ No data'}</div>
+            <div>Businesses Response: {businessesResponse ? '✅ Loaded' : '❌ No data'}</div>
+            <div>Stats Data: {statsResponse?.data?.stats ? '✅ Available' : '❌ Missing'}</div>
+            <div>Businesses Data: {businessesResponse?.data ? '✅ Available' : '❌ Missing'}</div>
+          </div>
+        </div>
+
+        {/* Refresh Results */}
+        <div>
+          <h4 className="text-sm font-medium mb-2">Refresh Results:</h4>
+          <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-lg max-h-32 overflow-y-auto">
+            {refreshResults.length === 0 ? (
+              <p className="text-xs text-muted-foreground">No refresh actions performed yet</p>
+            ) : (
+              <div className="space-y-1">
+                {refreshResults.map((result, index) => (
+                  <div key={index} className="text-xs font-mono">{result}</div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+// Enhanced Test Dashboard
+export default function TestAdminDashboard() {
   console.log('🚀 TEST ADMIN DASHBOARD - Main component rendering...')
 
   return (
@@ -301,13 +623,19 @@ export default async function TestAdminDashboard() {
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">🧪 Test Admin Dashboard</h1>
+          <h1 className="text-3xl font-bold tracking-tight">🧪 Enhanced Admin Dashboard Test</h1>
           <p className="text-muted-foreground">
-            Testing the admin dashboard data flow without authentication
+            Comprehensive testing of Quick Actions and Refresh button functionality
           </p>
         </div>
 
-        {/* Dashboard Content */}
+        {/* Test Components */}
+        <div className="grid gap-6 md:grid-cols-2">
+          <QuickActionsTest />
+          <RefreshButtonTest />
+        </div>
+
+        {/* Original Dashboard Content */}
         <Suspense fallback={
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {[1, 2, 3, 4].map(i => (

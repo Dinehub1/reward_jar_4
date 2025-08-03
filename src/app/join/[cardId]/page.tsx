@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { createClient } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { Apple, Chrome, Globe, Smartphone, Star, Gift, Clock, Users } from 'lucide-react'
 
 interface CardInfo {
@@ -50,7 +50,8 @@ export default function JoinCardPage() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    phone: ''
+    phone: '',
+    dateOfBirth: ''
   })
 
   // Detect device and load card info
@@ -144,7 +145,7 @@ export default function JoinCardPage() {
   }, [cardId])
 
   const handleRegistration = async () => {
-    if (!cardInfo || !formData.name || !formData.email) {
+    if (!cardInfo || !formData.name || !formData.email || !formData.dateOfBirth) {
       setError('Please fill in all required fields')
       return
     }
@@ -171,7 +172,8 @@ export default function JoinCardPage() {
           .insert([{
             name: formData.name,
             email: formData.email,
-            phone: formData.phone || null
+            phone: formData.phone || null,
+            date_of_birth: formData.dateOfBirth
           }])
           .select('id')
           .single()
@@ -315,7 +317,7 @@ export default function JoinCardPage() {
             <CardContent className="p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <Badge variant={cardInfo.card_type === 'stamp' ? 'default' : 'secondary'}>
-                  {cardInfo.card_type === 'stamp' ? 'Loyalty Card' : 'Membership Card'}
+                  {cardInfo.card_type === 'stamp' ? 'Stamp Card' : 'Membership Card'}
                 </Badge>
                 <div className="flex items-center gap-4 text-sm text-gray-600">
                   {cardInfo.card_type === 'stamp' ? (
@@ -405,6 +407,17 @@ export default function JoinCardPage() {
                 />
               </div>
 
+              <div>
+                <Label htmlFor="dateOfBirth">Date of Birth *</Label>
+                <Input
+                  id="dateOfBirth"
+                  type="date"
+                  value={formData.dateOfBirth}
+                  onChange={(e) => setFormData(prev => ({ ...prev, dateOfBirth: e.target.value }))}
+                  required
+                />
+              </div>
+
               {error && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-3">
                   <p className="text-red-600 text-sm">{error}</p>
@@ -421,7 +434,7 @@ export default function JoinCardPage() {
                 </Button>
                 <Button 
                   onClick={handleRegistration}
-                  disabled={isRegistering || !formData.name || !formData.email}
+                  disabled={isRegistering || !formData.name || !formData.email || !formData.dateOfBirth}
                   className="flex-1 bg-blue-600 hover:bg-blue-700"
                 >
                   {isRegistering ? 'Registering...' : 'Register'}
