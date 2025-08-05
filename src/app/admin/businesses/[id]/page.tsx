@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { AdminLayoutClient } from '@/components/layouts/AdminLayoutClient'
+import { Plus, ExternalLink } from 'lucide-react'
 // ❌ REMOVED: createAdminClient - use API routes instead
 
 interface BusinessDetails {
@@ -281,125 +282,194 @@ function BusinessOverview({ business }: { business: BusinessDetails }) {
   )
 }
 
+
+
 function BusinessCards({ businessId }: { businessId: string }) {
-  const [cards, setCards] = useState<{ stampCards: any[], membershipCards: any[] }>({ stampCards: [], membershipCards: [] })
+  const [cards, setCards] = useState<{
+    stampCards: any[]
+    membershipCards: any[]
+  }>({ stampCards: [], membershipCards: [] })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function fetchCards() {
-      setLoading(true)
-      const cardsData = await getBusinessCards(businessId)
-      setCards(cardsData)
-      setLoading(false)
+      try {
+        setLoading(true)
+        
+        // Fetch both stamp cards and membership cards for this business
+        const [stampResponse, membershipResponse] = await Promise.all([
+          fetch(`/api/admin/cards-simple?business_id=${businessId}&type=stamp`),
+          fetch(`/api/admin/cards-simple?business_id=${businessId}&type=membership`)
+        ])
+        
+        const stampResult = await stampResponse.json()
+        const membershipResult = await membershipResponse.json()
+        
+        setCards({
+          stampCards: stampResult.success ? (stampResult.data.stampCards || []) : [],
+          membershipCards: membershipResult.success ? (membershipResult.data.membershipCards || []) : []
+        })
+      } catch (error) {
+        console.error('Error fetching business cards:', error)
+        setCards({ stampCards: [], membershipCards: [] })
+      } finally {
+        setLoading(false)
+      }
     }
+    
     fetchCards()
   }, [businessId])
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <Card>
-          <CardContent className="p-8">
-            <div className="text-center text-muted-foreground">Loading cards...</div>
-          </CardContent>
-        </Card>
-      </div>
+      <Card>
+        <CardContent className="p-8">
+          <div className="text-center text-muted-foreground">Loading cards...</div>
+        </CardContent>
+      </Card>
     )
   }
 
-  const { stampCards, membershipCards } = cards
+  const totalCards = (cards?.stampCards?.length || 0) + (cards?.membershipCards?.length || 0)
 
   return (
     <div className="space-y-6">
+      {/* Cards Summary */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Total Cards</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalCards}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Stamp Cards</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{cards?.stampCards?.length || 0}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Membership Cards</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{cards?.membershipCards?.length || 0}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Create New Card Button */}
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-semibold">Business Cards</h3>
+        <Button onClick={() => window.open(`/admin/cards/new?business_id=${businessId}`, '_blank')}>
+          <Plus className="h-4 w-4 mr-2" />
+          Create New Card
+        </Button>
+      </div>
+
       {/* Stamp Cards */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            Stamp Cards ({stampCards.length})
-            <Link href={`/admin/cards/new?business_id=${businessId}&type=stamp`}>
-              <Button>Create Stamp Card</Button>
-            </Link>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {stampCards.length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-2">
-              {stampCards.map((card: any) => (
-                <Card key={card.id} className="border">
-                  <CardHeader>
-                    <CardTitle className="text-lg">{card.name}</CardTitle>
-                    <CardDescription>{card.reward_description}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <div className="text-sm text-gray-500">Total Stamps</div>
-                        <div className="font-medium">{card.total_stamps}</div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-gray-500">Customers</div>
-                        <div className="font-medium">{card.customer_cards?.length || 0}</div>
-                      </div>
-                      <Link href={`/admin/cards/stamp/${card.id}`}>
-                        <Button variant="outline" size="sm">View</Button>
-                      </Link>
+      {cards.stampCards.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              🎫 Stamp Cards ({cards.stampCards.length})
+            </CardTitle>
+            <CardDescription>Loyalty cards with stamp-based rewards</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {cards.stampCards.map((card: any) => (
+                <div key={card.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div>
+                    <div className="font-medium">{card.name}</div>
+                    <div className="text-sm text-gray-500">
+                      {card.total_stamps || card.stamps_required || 0} stamps required • {card.reward || card.reward_description}
                     </div>
-                  </CardContent>
-                </Card>
+                    <div className="text-xs text-gray-400">
+                      Created {new Date(card.created_at).toLocaleDateString()}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={card.status === 'active' ? 'default' : 'secondary'}>
+                      {card.status}
+                    </Badge>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => window.open(`/admin/cards/stamp/${card.id}`, '_blank')}
+                    >
+                      <ExternalLink className="h-4 w-4 mr-1" />
+                      View
+                    </Button>
+                  </div>
+                </div>
               ))}
             </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              No stamp cards created for this business
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Membership Cards */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            Membership Cards ({membershipCards.length})
-            <Link href={`/admin/cards/new?business_id=${businessId}&type=membership`}>
-              <Button>Create Membership Card</Button>
-            </Link>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {membershipCards.length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-2">
-              {membershipCards.map((card: any) => (
-                <Card key={card.id} className="border">
-                  <CardHeader>
-                    <CardTitle className="text-lg">{card.name}</CardTitle>
-                    <CardDescription>{card.membership_type} membership</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <div className="text-sm text-gray-500">Sessions</div>
-                        <div className="font-medium">{card.total_sessions}</div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-gray-500">Cost</div>
-                        <div className="font-medium">₩{card.cost?.toLocaleString()}</div>
-                      </div>
-                      <Link href={`/admin/cards/membership/${card.id}`}>
-                        <Button variant="outline" size="sm">View</Button>
-                      </Link>
+      {cards.membershipCards.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              💪 Membership Cards ({cards.membershipCards.length})
+            </CardTitle>
+            <CardDescription>Time-based membership cards</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {cards.membershipCards.map((card: any) => (
+                <div key={card.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div>
+                    <div className="font-medium">{card.name}</div>
+                    <div className="text-sm text-gray-500">
+                      ${card.cost} • {card.duration_days} days • {card.total_sessions} sessions
                     </div>
-                  </CardContent>
-                </Card>
+                    <div className="text-xs text-gray-400">
+                      Created {new Date(card.created_at).toLocaleDateString()}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={card.status === 'active' ? 'default' : 'secondary'}>
+                      {card.status}
+                    </Badge>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => window.open(`/admin/cards/membership/${card.id}`, '_blank')}
+                    >
+                      <ExternalLink className="h-4 w-4 mr-1" />
+                      View
+                    </Button>
+                  </div>
+                </div>
               ))}
             </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              No membership cards created for this business
+          </CardContent>
+        </Card>
+      )}
+
+      {/* No Cards State */}
+      {totalCards === 0 && (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <div className="text-gray-500 mb-4">
+              <div className="text-lg font-medium">No Cards Created</div>
+              <div className="text-sm">This business hasn't created any cards yet.</div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+            <Button onClick={() => window.open(`/admin/cards/new?business_id=${businessId}`, '_blank')}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create First Card
+            </Button>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
@@ -586,7 +656,9 @@ export default function BusinessDetailsPage({
               {business.is_flagged ? 'Unflag Business' : 'Flag Business'}
             </Button>
             <Button variant="outline">Impersonate</Button>
-            <Button>Edit Business</Button>
+            <Button onClick={() => router.push('/admin/businesses')}>
+              ← Back to Businesses
+            </Button>
           </div>
         </div>
 

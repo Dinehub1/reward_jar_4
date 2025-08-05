@@ -33,9 +33,16 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = createAdminClient()
     
+    // Parse query parameters
+    const { searchParams } = new URL(request.url)
+    const businessId = searchParams.get('business_id')
+    const cardType = searchParams.get('type') // 'stamp' or 'membership'
+    
+    console.log('Query params:', { businessId, cardType })
+    
     // Fetch stamp cards with retry logic
     const stampCardsOperation = async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('stamp_cards')
         .select(`
           *,
@@ -45,7 +52,13 @@ export async function GET(request: NextRequest) {
           ),
           customer_cards (id)
         `)
-        .order('created_at', { ascending: false })
+      
+      // Apply business filter if provided
+      if (businessId) {
+        query = query.eq('business_id', businessId)
+      }
+      
+      const { data, error } = await query.order('created_at', { ascending: false })
       
       if (error) {
         throw new Error(`Stamp cards fetch failed: ${error.message}`)
@@ -56,7 +69,7 @@ export async function GET(request: NextRequest) {
 
     // Fetch membership cards with retry logic
     const membershipCardsOperation = async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('membership_cards')
         .select(`
           *,
@@ -66,7 +79,13 @@ export async function GET(request: NextRequest) {
           ),
           customer_cards (id)
         `)
-        .order('created_at', { ascending: false })
+      
+      // Apply business filter if provided
+      if (businessId) {
+        query = query.eq('business_id', businessId)
+      }
+      
+      const { data, error } = await query.order('created_at', { ascending: false })
       
       if (error) {
         throw new Error(`Membership cards fetch failed: ${error.message}`)
@@ -75,24 +94,30 @@ export async function GET(request: NextRequest) {
       return data || []
     }
 
-    // Execute both operations with retry logic
+    // Execute operations based on card type filter
     let stampCards: any[] = []
     let membershipCards: any[] = []
 
-    try {
-      stampCards = await retryOperation(stampCardsOperation)
-      console.log(`✅ Stamp cards fetched successfully: ${stampCards.length}`)
-    } catch (stampError) {
-      console.error('❌ Failed to fetch stamp cards after retries:', stampError)
-      // Continue with empty array - don't fail the entire request
+    // Fetch stamp cards if no type filter or type is 'stamp'
+    if (!cardType || cardType === 'stamp') {
+      try {
+        stampCards = await retryOperation(stampCardsOperation)
+        console.log(`✅ Stamp cards fetched successfully: ${stampCards.length}`)
+      } catch (stampError) {
+        console.error('❌ Failed to fetch stamp cards after retries:', stampError)
+        // Continue with empty array - don't fail the entire request
+      }
     }
 
-    try {
-      membershipCards = await retryOperation(membershipCardsOperation)
-      console.log(`✅ Membership cards fetched successfully: ${membershipCards.length}`)
-    } catch (membershipError) {
-      console.error('❌ Failed to fetch membership cards after retries:', membershipError)
-      // Continue with empty array - don't fail the entire request
+    // Fetch membership cards if no type filter or type is 'membership'
+    if (!cardType || cardType === 'membership') {
+      try {
+        membershipCards = await retryOperation(membershipCardsOperation)
+        console.log(`✅ Membership cards fetched successfully: ${membershipCards.length}`)
+      } catch (membershipError) {
+        console.error('❌ Failed to fetch membership cards after retries:', membershipError)
+        // Continue with empty array - don't fail the entire request
+      }
     }
 
     // Process the data to match expected format

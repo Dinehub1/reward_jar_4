@@ -88,7 +88,13 @@ export async function POST(request: NextRequest) {
     
     if (isStampCard) {
       // Handle stamp card logic
-      const stampCard = customerCard.stamp_cards!
+      const stampCard = customerCard.stamp_cards![0]
+      if (!stampCard) {
+        return NextResponse.json(
+          { error: 'Stamp card data not found' },
+          { status: 500 }
+        )
+      }
       const currentStamps = customerCard.current_stamps
       const totalStamps = stampCard.total_stamps
       
@@ -169,7 +175,13 @@ export async function POST(request: NextRequest) {
 
     } else {
       // Handle membership card logic
-      const membershipCard = customerCard.membership_cards!
+      const membershipCard = customerCard.membership_cards![0]
+      if (!membershipCard) {
+        return NextResponse.json(
+          { error: 'Membership card data not found' },
+          { status: 500 }
+        )
+      }
       const sessionsUsed = customerCard.sessions_used
       const totalSessions = membershipCard.total_sessions
       
@@ -235,13 +247,13 @@ export async function POST(request: NextRequest) {
 
     // Add to wallet update queue for real-time wallet updates
     const queueMetadata = {
-      customer_name: customerCard.customers.name,
+      customer_name: customerCard.customers[0]?.name || 'Unknown Customer',
       business_name: isStampCard 
-        ? customerCard.stamp_cards!.businesses.name 
-        : customerCard.membership_cards!.businesses.name,
+        ? customerCard.stamp_cards![0]?.businesses[0]?.name || 'Unknown Business'
+        : customerCard.membership_cards![0]?.businesses[0]?.name || 'Unknown Business',
       card_name: isStampCard 
-        ? customerCard.stamp_cards!.name 
-        : customerCard.membership_cards!.name,
+        ? customerCard.stamp_cards![0]?.name || 'Unknown Card'
+        : customerCard.membership_cards![0]?.name || 'Unknown Card',
       previous_progress: isStampCard 
         ? customerCard.current_stamps 
         : customerCard.sessions_used,
@@ -340,29 +352,29 @@ export async function GET(request: NextRequest) {
     
     let cardStatus
     if (isStampCard) {
-      const stampCard = customerCard.stamp_cards!
+      const stampCard = customerCard.stamp_cards![0]
       cardStatus = {
         card_type: 'stamp',
         current_stamps: customerCard.current_stamps,
-        total_stamps: stampCard.total_stamps,
-        progress_percentage: Math.round((customerCard.current_stamps / stampCard.total_stamps) * 100),
-        is_complete: customerCard.current_stamps >= stampCard.total_stamps,
-        card_name: stampCard.name,
-        reward_description: stampCard.reward_description
+        total_stamps: stampCard?.total_stamps || 0,
+        progress_percentage: Math.round((customerCard.current_stamps / (stampCard?.total_stamps || 1)) * 100),
+        is_complete: customerCard.current_stamps >= (stampCard?.total_stamps || 0),
+        card_name: stampCard?.name || 'Unknown Card',
+        reward_description: stampCard?.reward_description || ''
       }
     } else {
-      const membershipCard = customerCard.membership_cards!
+      const membershipCard = customerCard.membership_cards![0]
       const isExpired = customerCard.expiry_date && new Date(customerCard.expiry_date) < new Date()
       cardStatus = {
         card_type: 'membership',
         sessions_used: customerCard.sessions_used,
-        total_sessions: membershipCard.total_sessions,
-        sessions_remaining: membershipCard.total_sessions - customerCard.sessions_used,
-        progress_percentage: Math.round((customerCard.sessions_used / membershipCard.total_sessions) * 100),
+        total_sessions: membershipCard?.total_sessions || 0,
+        sessions_remaining: (membershipCard?.total_sessions || 0) - customerCard.sessions_used,
+        progress_percentage: Math.round((customerCard.sessions_used / (membershipCard?.total_sessions || 1)) * 100),
         is_expired: isExpired,
         expiry_date: customerCard.expiry_date,
-        card_name: membershipCard.name,
-        cost: membershipCard.cost
+        card_name: membershipCard?.name || 'Unknown Card',
+        cost: membershipCard?.cost || 0
       }
     }
 

@@ -120,32 +120,32 @@ export async function POST(request: NextRequest) {
     }
 
     // Final verification
-    const { data: finalCount } = await supabase
+    const { count: finalCount } = await supabase
       .from('customer_cards')
       .select('id', { count: 'exact', head: true })
 
-    const { data: finalStampCount } = await supabase
+    const { count: finalStampCount } = await supabase
       .from('customer_cards')
       .select('id', { count: 'exact', head: true })
       .not('stamp_card_id', 'is', null)
 
-    const { data: finalMembershipCount } = await supabase
+    const { count: finalMembershipCount } = await supabase
       .from('customer_cards')
       .select('id', { count: 'exact', head: true })
       .not('membership_card_id', 'is', null)
 
     // Calculate wallet distribution
-    const { data: appleCards } = await supabase
+    const { count: appleCards } = await supabase
       .from('customer_cards')
       .select('id', { count: 'exact', head: true })
       .eq('wallet_type', 'apple')
 
-    const { data: googleCards } = await supabase
+    const { count: googleCards } = await supabase
       .from('customer_cards')
       .select('id', { count: 'exact', head: true })
       .eq('wallet_type', 'google')
 
-    const { data: pwaCards } = await supabase
+    const { count: pwaCards } = await supabase
       .from('customer_cards')
       .select('id', { count: 'exact', head: true })
       .eq('wallet_type', 'pwa')
@@ -159,13 +159,13 @@ export async function POST(request: NextRequest) {
         cardsAttempted: customerCardsToCreate.length,
         cardsInserted: insertedCards,
         cardsFailed: failedInserts,
-        finalTotalCards: finalCount?.count || 0,
-        finalStampCards: finalStampCount?.count || 0,
-        finalMembershipCards: finalMembershipCount?.count || 0,
+        finalTotalCards: finalCount || 0,
+        finalStampCards: finalStampCount || 0,
+        finalMembershipCards: finalMembershipCount || 0,
         walletDistribution: {
-          apple: appleCards?.count || 0,
-          google: googleCards?.count || 0,
-          pwa: pwaCards?.count || 0
+          apple: appleCards || 0,
+          google: googleCards || 0,
+          pwa: pwaCards || 0
         }
       },
       businesses: businesses?.map(b => ({

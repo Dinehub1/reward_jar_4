@@ -6,8 +6,10 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { AdminLayoutClient } from '@/components/layouts/AdminLayoutClient'
 import { useAdminStats, useAdminBusinesses } from '@/lib/hooks/use-admin-data'
+import { useAdminRealtime, useAdminNotifications } from '@/lib/hooks/use-admin-realtime'
 import { CardSkeleton, TableSkeleton } from '@/components/ui/skeleton'
-import { RefreshCw, Database, Activity, FileText, Zap, AlertTriangle } from 'lucide-react'
+import { BusinessCreationDialog } from '@/components/admin/BusinessCreationDialog'
+import { RefreshCw, Database, Activity, FileText, Zap, AlertTriangle, Plus, CreditCard, Building2, Eye } from 'lucide-react'
 import type { AdminStats, Business } from '@/lib/supabase/types'
 
 // Icons for the dashboard
@@ -63,7 +65,7 @@ function DashboardCards({ stats }: { stats: AdminStats }) {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-purple-600">
-            {stats?.totalCards || 0}
+            {(stats?.totalStampCards || 0) + (stats?.totalMembershipCards || 0)}
           </div>
           <p className="text-xs text-muted-foreground">
             Card templates available
@@ -73,15 +75,15 @@ function DashboardCards({ stats }: { stats: AdminStats }) {
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Recent Activity</CardTitle>
+          <CardTitle className="text-sm font-medium">Active Customer Cards</CardTitle>
           <span className="text-2xl">{icons.activity}</span>
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-orange-600">
-            {stats?.recentActivity || 0}
+            {stats?.totalCards || 0}
           </div>
           <p className="text-xs text-muted-foreground">
-            Platform activity level
+            Cards in customer wallets
           </p>
         </CardContent>
       </Card>
@@ -90,7 +92,7 @@ function DashboardCards({ stats }: { stats: AdminStats }) {
 }
 
 // BusinessesTable Component
-function BusinessesTable({ businesses }: { businesses: Business[] }) {
+function BusinessesTable({ businesses, onRefresh }: { businesses: Business[], onRefresh?: () => void }) {
   const [searchTerm, setSearchTerm] = useState('')
 
   // Defensive programming: Ensure businesses is always an array
@@ -113,13 +115,30 @@ function BusinessesTable({ businesses }: { businesses: Business[] }) {
     }
   })
 
+  const handleViewBusiness = (businessId: string) => {
+    window.open(`/admin/businesses/${businessId}`, '_blank')
+  }
+
+  const handleCreateStampCard = (businessId: string) => {
+    window.open(`/admin/cards/new?businessId=${businessId}&type=stamp`, '_blank')
+  }
+
+  const handleCreateMembershipCard = (businessId: string) => {
+    window.open(`/admin/cards/new?businessId=${businessId}&type=membership`, '_blank')
+  }
+
   return (
     <Card>
       <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
         <CardTitle>Recent Businesses</CardTitle>
         <CardDescription>
           Latest business registrations ({safeBusinesses.length} total)
         </CardDescription>
+          </div>
+          <BusinessCreationDialog onBusinessCreated={onRefresh} />
+        </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -130,17 +149,55 @@ function BusinessesTable({ businesses }: { businesses: Business[] }) {
             }
             
             return (
-              <div key={business.id} className="flex items-center justify-between p-3 border rounded-lg">
-                <div>
+              <div key={business.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                <div className="flex-1">
                   <div className="font-medium">{business.name || 'Unnamed Business'}</div>
                   <div className="text-sm text-muted-foreground">{business.contact_email || 'No email'}</div>
-                </div>
-                <div className="flex gap-2">
+                  <div className="flex gap-2 mt-2">
                   <Badge variant={business.status === 'active' ? 'default' : 'secondary'}>
                     {business.status || 'unknown'}
                   </Badge>
                   {business.is_flagged && (
                     <Badge variant="destructive">Flagged</Badge>
+                    )}
+                    {business.card_requested && (
+                      <Badge variant="outline" className="border-yellow-500 text-yellow-700">
+                        Card Requested
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                <div className="flex gap-2 ml-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleViewBusiness(business.id)}
+                    className="flex items-center gap-1"
+                  >
+                    <Eye className="w-4 h-4" />
+                    View
+                  </Button>
+                  {business.card_requested && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleCreateStampCard(business.id)}
+                        className="flex items-center gap-1 border-yellow-500 text-yellow-700 hover:bg-yellow-50"
+                      >
+                        <CreditCard className="w-4 h-4" />
+                        Stamp Card
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleCreateMembershipCard(business.id)}
+                        className="flex items-center gap-1 border-blue-500 text-blue-700 hover:bg-blue-50"
+                      >
+                        <Building2 className="w-4 h-4" />
+                        Membership Card
+                      </Button>
+                    </>
                   )}
                 </div>
               </div>
@@ -311,36 +368,40 @@ export default function AdminDashboard() {
   const [refreshError, setRefreshError] = useState<string | null>(null)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
   
-  const { data: statsResponse, error: statsError, isLoading: statsLoading, mutate: refetchStats } = useAdminStats()
-  const { data: businessesResponse, error: businessesError, isLoading: businessesLoading, mutate: refetchBusinesses } = useAdminBusinesses()
+  // Use unified API for consistent data
+  const { data: unifiedResponse, error: unifiedError, isLoading: unifiedLoading, mutate: refetchUnified } = useAdminStats()
 
-  // Extract data from API responses
-  const statsData = statsResponse?.data?.stats
-  const businessesData = businessesResponse?.data
+  // Real-time subscriptions for automatic updates
+  const { isConnected: realtimeConnected } = useAdminRealtime()
+  const { sendNotification } = useAdminNotifications()
 
-  const loading = statsLoading || businessesLoading
-  const error = statsError || businessesError
+  // Extract data from unified API response
+  const statsData = unifiedResponse?.data?.stats
+  
+  // Get businesses data from separate hook
+  const { data: businessesResponse } = useAdminBusinesses()
+  const businessesData = businessesResponse?.data || []
+
+  const loading = unifiedLoading
+  const error = unifiedError
   const safeBusinessesData = Array.isArray(businessesData) ? businessesData : []
 
-  // Enhanced refresh function with proper error handling
+  // Enhanced refresh function with unified API
   const refetchAll = async () => {
     if (refreshing) return
     
     setRefreshing(true)
     setRefreshError(null)
-    console.log('🔄 Starting data refresh...')
+    console.log('🔄 Starting unified data refresh...')
     
     try {
-      await Promise.all([
-        refetchStats(),
-        refetchBusinesses()
-      ])
+      await refetchUnified()
       setLastRefresh(new Date())
-      console.log('✅ Data refresh completed successfully')
+      console.log('✅ Unified data refresh completed successfully')
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
       setRefreshError(errorMessage)
-      console.error('❌ Data refresh failed:', error)
+      console.error('❌ Unified data refresh failed:', error)
     } finally {
       setRefreshing(false)
     }
@@ -397,7 +458,7 @@ export default function AdminDashboard() {
           <div className="text-center max-w-md">
             <div className="text-red-600 mb-4">
               <div className="text-lg font-semibold">Error Loading Dashboard</div>
-              <div className="text-sm mt-2">{error}</div>
+              <div className="text-sm mt-2">{(error as any) instanceof Error ? (error as any).message : String(error)}</div>
             </div>
             <div className="space-x-2">
               <Button onClick={() => refetchAll()} variant="outline">
@@ -512,8 +573,65 @@ export default function AdminDashboard() {
 
             {/* Recent Activity */}
             <div className="grid gap-4 md:grid-cols-2">
-              <BusinessesTable businesses={safeBusinessesData} />
+              <BusinessesTable 
+                businesses={safeBusinessesData} 
+                onRefresh={() => {
+                        refetchUnified()
+                }} 
+              />
 
+              <div className="space-y-4">
+                {/* Quick Actions Card */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center space-x-2">
+                      <Zap className="w-5 h-5" />
+                      <span>Quick Actions</span>
+                    </CardTitle>
+                    <CardDescription>Common admin tasks</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 gap-3">
+                      <Button
+                        variant="outline"
+                        onClick={() => window.open('/admin/cards/new', '_blank')}
+                        className="flex items-center justify-start gap-2 h-auto py-3"
+                      >
+                        <CreditCard className="w-4 h-4" />
+                        <div className="text-left">
+                          <div className="font-medium">Create New Card</div>
+                          <div className="text-sm text-muted-foreground">Start the card creation wizard</div>
+                        </div>
+                      </Button>
+                      
+                      <Button
+                        variant="outline"
+                        onClick={() => window.open('/admin/businesses', '_blank')}
+                        className="flex items-center justify-start gap-2 h-auto py-3"
+                      >
+                        <Building2 className="w-4 h-4" />
+                        <div className="text-left">
+                          <div className="font-medium">Manage Businesses</div>
+                          <div className="text-sm text-muted-foreground">View all business accounts</div>
+                        </div>
+                      </Button>
+                      
+                      <Button
+                        variant="outline"
+                        onClick={() => window.open('/admin/customers', '_blank')}
+                        className="flex items-center justify-start gap-2 h-auto py-3"
+                      >
+                        <span className="text-lg">👥</span>
+                        <div className="text-left">
+                          <div className="font-medium">Customer Management</div>
+                          <div className="text-sm text-muted-foreground">View customer accounts</div>
+                        </div>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* System Overview Card */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
@@ -543,6 +661,7 @@ export default function AdminDashboard() {
                   </div>
                 </CardContent>
               </Card>
+              </div>
             </div>
           </>
         )}

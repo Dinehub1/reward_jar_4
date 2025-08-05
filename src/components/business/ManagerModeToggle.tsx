@@ -96,13 +96,17 @@ export default function ManagerModeToggle({
     setError(null)
 
     try {
-      // TODO: Replace with actual MCP integration
-      // const mcpResponse = await fetch('/mcp/query', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     table: 'manager_permissions',
-      //     query: 'SELECT permissions FROM manager_permissions WHERE user_id = $1 AND business_id = $2',
+      // MCP Integration: Use API route for manager permissions
+      const response = await fetch('/api/business/manager-permissions', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch manager permissions')
+      }
+
+      const permissionsData = await response.json()
       //     params: [userId, businessId]
       //   })
       // })

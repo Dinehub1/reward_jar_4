@@ -9,6 +9,69 @@
 
 ## 🚨 Critical Errors & Fixes
 
+### **Error 4: React "Objects are not valid as a React child" Error**
+
+#### **Problem**
+```typescript
+// ❌ BROKEN - Error objects rendered directly in JSX
+if (error) {
+  return <div>{error}</div> // Causes React error if error is an object
+}
+```
+
+#### **Root Cause**
+SWR hooks and other data fetching libraries return Error objects, not strings. When these Error objects are rendered directly in JSX using `{error}`, React throws "Objects are not valid as a React child" because it cannot render objects directly.
+
+#### **Solution**
+```typescript
+// ✅ FIXED - Convert error objects to strings
+if (error) {
+  return <div>{error instanceof Error ? error.message : String(error)}</div>
+}
+
+// ✅ ALTERNATIVE - Use optional chaining with fallback
+if (error) {
+  return <div>{error?.message || 'An error occurred'}</div>
+}
+```
+
+#### **Files Fixed**
+- `src/app/admin/page.tsx` ✅
+- `src/app/admin/alerts/page.tsx` ✅
+- `src/app/admin/test-cards/page.tsx` ✅
+- `src/app/admin/customers/page.tsx` ✅
+- `src/app/admin/test-auth-debug/page.tsx` ✅
+
+⸻
+
+### **Error 5: Import Error - createServiceClient not exported**
+
+#### **Problem**
+```typescript
+// ❌ BROKEN - Importing non-existent function
+import { createServiceClient } from '@/lib/supabase/server-only'
+const supabase = createServiceClient() // Function doesn't exist
+```
+
+#### **Root Cause**
+Some files were importing `createServiceClient` which doesn't exist. The correct function is `createServerClient` and it's async.
+
+#### **Solution**
+```typescript
+// ✅ FIXED - Use correct import and await the function
+import { createServerClient } from '@/lib/supabase/server-only'
+const supabase = await createServerClient() // Async function call
+```
+
+#### **Files Fixed**
+- `src/app/api/wallet/update-queue/[customerCardId]/route.ts` ✅
+- `src/app/api/admin/test/database-check/route.ts` ✅
+- `src/app/api/auth/complete-signup/route.ts` ✅
+
+⸻
+
+## 🚨 Critical Errors & Fixes
+
 ### Error 1: Next.js 15+ Params Promise Issue
 
 #### Problem
@@ -257,20 +320,27 @@ SELECT u.email, u.role_id FROM users u WHERE u.email = 'your-admin-email';
 # Expected: role_id = 1 for admin users
 ```
 
-### **Debug Business Data Issues**
+### **Debug Card Creation Issues**
 ```bash
-# 1. Check if business exists
-curl -s "http://localhost:3000/api/admin/businesses-simple" | jq '.data | length'
-# Expected: Number > 0
+# 1. Test admin card creation route
+curl -s "http://localhost:3000/api/admin/cards" | jq '.success'
+# Expected: true (if admin authenticated)
 
-# 2. Test specific business ID
-curl -s "http://localhost:3000/api/admin/businesses-simple" | jq '.data[] | select(.id == "business-id-here")'
-# Expected: Business object or null
+# 2. Verify stamp_cards schema
+curl -s "http://localhost:3000/api/admin/cards-data" | jq '.data[0] | keys'
+# Expected: ["id", "card_name", "reward", "stamps_required", "card_color", "icon_emoji", "barcode_type", "stamp_config"]
 
-# 3. Check RLS policies
+# 3. Test QR provisioning endpoints
+curl -I "http://localhost:3000/api/wallet/apple/test-card-id"
+# Expected: HTTP 200 with application/vnd.apple.pkpass
+
+curl -I "http://localhost:3000/api/wallet/google/test-card-id"
+# Expected: HTTP 200 with text/html (JWT page)
+
+# 4. Check RLS policies for admin card creation
 # In Supabase SQL Editor:
-SELECT policyname, cmd FROM pg_policies WHERE tablename = 'businesses';
-# Expected: Admin policies for SELECT operations
+SELECT policyname, cmd FROM pg_policies WHERE tablename = 'stamp_cards';
+# Expected: Admin-only creation policies (role_id = 1)
 ```
 
 ### **Debug Route Params Issues**

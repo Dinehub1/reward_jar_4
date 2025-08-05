@@ -6,7 +6,6 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
 import { checkAuth } from '@/lib/auth-protection'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -152,7 +151,7 @@ export default function BusinessProfilePage() {
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const [logoError, setLogoError] = useState<string | null>(null)
   const router = useRouter()
-  const supabase = createClient()
+
 
   const form = useForm<BusinessProfileForm>({
     resolver: zodResolver(businessProfileSchema),
@@ -260,17 +259,30 @@ export default function BusinessProfilePage() {
           return
         }
 
-        const { data: businessData, error } = await supabase
-          .from('businesses')
-          .select('*')
-          .eq('owner_id', authResult.user!.id)
-          .single()
+        // Use MCP-powered API route to get business profile
+        const response = await fetch('/api/business/profile', {
+          method: 'GET',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
 
-        if (error) {
-          console.error('Error loading business:', error)
+        if (!response.ok) {
+          console.error('Error loading business:', response.status)
           setError('Failed to load business profile')
           return
         }
+
+        const result = await response.json()
+
+        if (!result.success) {
+          console.error('Error loading business:', result.error)
+          setError(result.error || 'Failed to load business profile')
+          return
+        }
+
+        const businessData = result.data
 
         setBusiness(businessData)
         
@@ -296,46 +308,42 @@ export default function BusinessProfilePage() {
     }
 
     loadBusinessData()
-  }, [router, supabase, form])
+  }, [router, form])
 
-  // MCP Integration for database updates
+  // MCP Integration for database updates via API route
   const updateBusinessWithMCP = async (data: BusinessProfileForm, profileProgress: number, logoUrl: string | null) => {
     try {
-      // Since we don't have direct MCP API routes, we'll use Supabase directly
-      // but structure it as if using MCP for future migration
       const updateData = {
         name: data.businessName?.trim() || business?.name,
         contact_email: data.contactEmail?.trim() || business?.contact_email,
         location: data.location?.trim() || null,
         description: data.description?.trim() || null,
         website_url: data.websiteUrl?.trim() || null,
-        logo_url: logoUrl || null, // Update logo_url
-        profile_progress: profileProgress,
-        updated_at: new Date().toISOString()
+        logo_url: logoUrl || null,
+        profile_progress: profileProgress
       }
 
-      // TODO: Replace with actual MCP call when /mcp/update endpoint is available
-      // const mcpResponse = await fetch('/api/mcp/update', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     table: 'businesses',
-      //     id: business?.id,
-      //     data: updateData
-      //   })
-      // })
+      // Use MCP-powered API route for business profile updates
+      const response = await fetch('/api/business/profile', {
+        method: 'PUT',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updateData)
+      })
 
-      // For now, use direct Supabase call
-      const { error: updateError } = await supabase
-        .from('businesses')
-        .update(updateData)
-        .eq('id', business?.id)
-
-      if (updateError) {
-        throw new Error(`Failed to update business profile: ${updateError.message}`)
+      if (!response.ok) {
+        throw new Error(`Failed to update business profile: ${response.status}`)
       }
 
-      return { success: true }
+      const result = await response.json()
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to update business profile')
+      }
+
+      return { success: true, data: result.data }
     } catch (error) {
       console.error('MCP update error:', error)
       throw error
@@ -358,7 +366,9 @@ export default function BusinessProfilePage() {
           const fileExt = logoFile.name.split('.').pop()
           const fileName = `${business.id}-${Date.now()}.${fileExt}`
           
-          // Upload to Supabase Storage
+          // Upload to Supabase Storage (create client only when needed)
+          const { createClient } = await import('@/lib/supabase/client')
+          const supabase = createClient()
           const { data: uploadData, error: uploadError } = await supabase.storage
             .from('buinesslogo')
             .upload(fileName, logoFile, {

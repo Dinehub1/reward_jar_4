@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient, getServerUser, getServerSession } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin-client'
 import { getAppleWalletBaseUrl } from '@/lib/env'
 import crypto from 'crypto'
 import archiver from 'archiver'
@@ -16,14 +16,26 @@ function getValidWebServiceURL(): string {
   return `${baseUrl}/api/wallet/apple/updates`
 }
 
+// Helper function to convert hex to RGB format for Apple Wallet
+function hexToRgb(hex: string): string {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+  if (result) {
+    const r = parseInt(result[1], 16)
+    const g = parseInt(result[2], 16)
+    const b = parseInt(result[3], 16)
+    return `rgb(${r}, ${g}, ${b})`
+  }
+  return 'rgb(16, 185, 129)' // fallback green
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ customerCardId: string }> }
 ) {
   try {
     const resolvedParams = await params
-    // Use server client for wallet generation
-    const supabase = await createServerClient()
+    // Use admin client for wallet generation
+    const supabase = createAdminClient()
     const customerCardId = resolvedParams.customerCardId
 
     console.log('🍎 Generating Apple Wallet for card ID:', customerCardId)
@@ -45,6 +57,8 @@ export async function GET(
           name,
           total_stamps,
           reward_description,
+          card_color,
+          icon_emoji,
           businesses (
             name,
             description
@@ -55,6 +69,8 @@ export async function GET(
           name,
           total_sessions,
           cost,
+          card_color,
+          icon_emoji,
           businesses (
             name,
             description
@@ -148,7 +164,7 @@ export async function GET(
       organizationName: "RewardJar",
       description: `${cardData.name} - ${businessData.name}`,
       logoText: "RewardJar",
-      backgroundColor: isMembershipCard ? "rgb(99, 102, 241)" : "rgb(16, 185, 129)", // indigo for gym, green for loyalty
+      backgroundColor: cardData.card_color ? hexToRgb(cardData.card_color) : (isMembershipCard ? "rgb(99, 102, 241)" : "rgb(16, 185, 129)"), // Use card-specific color
       foregroundColor: "rgb(255, 255, 255)",
       labelColor: "rgb(255, 255, 255)",
       
@@ -188,14 +204,14 @@ export async function GET(
             {
               key: "cost",
               label: "Value",
-              value: `₩${(customerCard.cost || 15000).toLocaleString()}`,
+              value: `₩${(customerCard.membership_cards?.[0]?.cost || 15000).toLocaleString()}`,
               textAlignment: "PKTextAlignmentRight"
             }
           ] : [
             {
               key: "reward",
               label: "Reward",
-              value: stampCardData.reward_description,
+              value: cardData.reward_description,
               textAlignment: "PKTextAlignmentRight"
             }
           ])
@@ -204,7 +220,7 @@ export async function GET(
           {
             key: "card_name",
             label: isMembershipCard ? "Membership" : "Stamp Card",
-            value: stampCardData.name,
+                          value: cardData.name,
             textAlignment: "PKTextAlignmentCenter"
           }
         ],
@@ -213,8 +229,8 @@ export async function GET(
             key: "description",
             label: "About",
             value: isMembershipCard ? 
-              `Gym membership with ${customerCard.total_sessions || 20} sessions. Value: ₩${(customerCard.cost || 15000).toLocaleString()}.` :
-              `Collect ${stampCardData.total_stamps} stamps to earn: ${stampCardData.reward_description}`
+              `Gym membership with ${customerCard.membership_cards?.[0]?.total_sessions || 20} sessions. Value: ₩${(customerCard.membership_cards?.[0]?.cost || 15000).toLocaleString()}.` :
+              `Collect ${cardData.total_stamps} stamps to earn: ${cardData.reward_description}`
           },
           {
             key: "business_info",
@@ -257,7 +273,7 @@ export async function GET(
       
       userInfo: {
         customerCardId: customerCardId,
-        stampCardId: stampCardData.id,
+        stampCardId: cardData.id,
         businessName: businessData.name,
         cardType: isMembershipCard ? 'membership' : 'stamp'
       },
@@ -331,7 +347,7 @@ export async function GET(
           status: 200,
           headers: {
             'Content-Type': 'application/vnd.apple.pkpass',
-            'Content-Disposition': `attachment; filename="${stampCardData.name.replace(/[^a-zA-Z0-9]/g, '_')}.pkpass"`,
+            'Content-Disposition': `attachment; filename="${cardData.name.replace(/[^a-zA-Z0-9]/g, '_')}.pkpass"`,
             'Content-Transfer-Encoding': 'binary',
             'Cache-Control': 'no-store, no-cache, must-revalidate',
             'Pragma': 'no-cache',
@@ -427,8 +443,16 @@ export async function GET(
 
   } catch (error) {
     console.error('❌ Error generating Apple Wallet pass:', error)
+    console.error('❌ Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined
+    })
     return NextResponse.json(
-      { error: 'Failed to generate Apple Wallet pass' },
+      { 
+        error: 'Failed to generate Apple Wallet pass',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     )
   }
@@ -451,7 +475,7 @@ export async function POST(
     }
 
     const resolvedParams = await params
-    const supabase = await createServerClient()
+    const supabase = createAdminClient()
     const customerCardId = resolvedParams.customerCardId
     const url = new URL(request.url)
     const requestedType = url.searchParams.get('type') // 'stamp' or 'membership'
@@ -729,21 +753,38 @@ async function generatePassIcons(_stampCard: Record<string, unknown>, _business:
 // Create proper PKCS#7 signature using openssl command (more reliable than node-forge)
 async function createPKCS7Signature(manifestBuffer: Buffer): Promise<Buffer> {
   try {
+    // Validate required environment variables
     if (!process.env.APPLE_CERT_BASE64 || !process.env.APPLE_KEY_BASE64 || !process.env.APPLE_WWDR_BASE64) {
-      throw new Error('Missing Apple certificates')
+      throw new Error('Missing Apple certificates in environment variables')
     }
     
     // Use imported modules
     const execAsync = promisify(exec)
     
-    // Decode certificates
-    const certPem = Buffer.from(process.env.APPLE_CERT_BASE64, 'base64').toString('utf8')
-    const keyPem = Buffer.from(process.env.APPLE_KEY_BASE64, 'base64').toString('utf8')
-    const wwdrPem = Buffer.from(process.env.APPLE_WWDR_BASE64, 'base64').toString('utf8')
+    console.log('📜 Loading Apple Wallet certificates from environment variables')
     
-    // Validate certificates with forge first
-    const cert = forge.pki.certificateFromPem(certPem)
-    const wwdrCert = forge.pki.certificateFromPem(wwdrPem)
+    // Decode certificates from base64 - handle mixed DER/PEM formats
+    const certData = Buffer.from(process.env.APPLE_CERT_BASE64, 'base64')
+    const keyData = Buffer.from(process.env.APPLE_KEY_BASE64, 'base64')
+    const wwdrData = Buffer.from(process.env.APPLE_WWDR_BASE64, 'base64')
+    
+    // Certificate is in DER format, convert to PEM
+    const cert = forge.pki.certificateFromAsn1(forge.asn1.fromDer(certData.toString('binary')))
+    const certPem = forge.pki.certificateToPem(cert)
+    
+    // Private key is already in PEM format
+    const keyPem = keyData.toString('utf8')
+    
+    // WWDR certificate is in DER format, convert to PEM  
+    const wwdrCert = forge.pki.certificateFromAsn1(forge.asn1.fromDer(wwdrData.toString('binary')))
+    const wwdrPem = forge.pki.certificateToPem(wwdrCert)
+    
+    console.log('✅ Successfully loaded certificates from environment variables')
+    
+    console.log('📋 Certificate info:')
+    console.log('  - Subject:', cert.subject.getField('CN').value)
+    console.log('  - Valid from:', cert.validity.notBefore)
+    console.log('  - Valid until:', cert.validity.notAfter)
     
     const now = new Date()
     if (cert.validity.notAfter < now) {

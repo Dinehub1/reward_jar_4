@@ -37,11 +37,12 @@ export async function GET(request: NextRequest) {
       detailed
     })
 
-    // Build base query
-    let query = supabase.from('customer_cards')
+    // Build base query with proper typing
+    const baseQuery = supabase.from('customer_cards')
     
+    let query
     if (detailed) {
-      query = query.select(`
+      query = baseQuery.select(`
         id,
         customer_id,
         stamp_card_id,
@@ -87,7 +88,7 @@ export async function GET(request: NextRequest) {
         )
       `)
     } else {
-      query = query.select(`
+      query = baseQuery.select(`
         id,
         customer_id,
         stamp_card_id,

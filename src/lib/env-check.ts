@@ -64,11 +64,7 @@ export function useEnvValidation(): EnvValidationResult {
   return envStatus
 }
 
-// Legacy function for backward compatibility (deprecated)
-export function validateEnvVars(): EnvValidationResult {
-  console.warn('validateEnvVars is deprecated. Use useEnvValidation hook instead.')
-  return validateServerEnvVars()
-}
+// Deprecated function removed - use useEnvValidation hook instead
 
 export function getSupabaseConfig() {
   // Always return valid config for server-side rendering

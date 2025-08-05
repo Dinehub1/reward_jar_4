@@ -155,15 +155,18 @@ export default function StampCardsPage() {
             </p>
           </div>
           
-          {/* Admin-Managed Cards Banner */}
-          <Card className="border-blue-200 bg-blue-50">
-            <CardContent className="pt-6">
-              <div className="text-blue-700">
-                <p className="font-medium">Cards are created and managed by RewardJar Admins.</p>
-                <p className="text-sm mt-1">Contact support if you'd like to update or request a new stamp card.</p>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Create Card Action */}
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-600">Create and manage your loyalty cards to engage customers.</p>
+            </div>
+            <Link href="/business/stamp-cards/new">
+              <Button className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Create New Card
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Stats Overview */}

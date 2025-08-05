@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
-import { createClient } from '@/lib/supabase/server-only'
+import { createServerClient } from '@/lib/supabase/server-only'
 
 interface TestCard {
   id: string
@@ -20,7 +20,7 @@ interface TestCard {
 }
 
 async function getTestCards() {
-  const supabase = await createClient()
+  const supabase = await createServerClient()
   
   try {
     // Get stamp cards for testing

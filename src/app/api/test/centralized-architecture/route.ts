@@ -170,6 +170,6 @@ export async function GET(request: NextRequest) {
         timestamp: new Date().toISOString(),
         totalTime: `${Date.now() - startTime}ms`
       }
-    } as ApiResponse<never>, { status: 500 })
+    } as ApiResponse<any>, { status: 500 })
   }
 }

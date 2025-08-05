@@ -91,10 +91,13 @@ All tables must be properly aligned and complete:
 
 ### Terminology Consistency
 - **Admin Dashboard** (not "admin panel" or "admin interface")
-- **Business Journey** (not "business workflow" or "business process")
-- **Customer Cards** (unified term, not "loyalty cards" vs "membership cards")
-- **Stamp Cards** vs **Membership Cards** (when distinguishing types)
-- **API Endpoints** (not "API routes" unless specifically referring to Next.js files)
+- **Card Creation Flow** (5-step canonical: Card type → Settings → Design → Information → Save)
+- **stamp_cards** table and **stamp_config** JSONB (canonical database terms)
+- **QR Provisioning** (not "QR generation" unless specifically about image creation)
+- **Wallet Preview** (not "card preview" when referring to platform-specific views)
+- **Barcode Type** (PDF417 or QR_CODE, not "QR type" or "barcode format")
+- **Reward Configuration** (Stamps/Visit/Spend logic, not "points" or "badges")
+- **Live Preview Behavior** (real-time updates during card configuration)
 - **Service Role Key** (Supabase terminology, always emphasize security)
 
 ### Security Language Requirements
@@ -147,6 +150,10 @@ Update the [specific_file.md] to align with the RewardJar 4.0 documentation stan
 4. Verify security documentation for service role usage
 5. Standardize terminology according to the style guide
 6. Add missing status indicators and quality metrics
+7. Use canonical card creation reference (@card_creation_and_wallet_setup.md)
+8. Apply 5-step workflow: Card type → Settings → Design → Information → Save
+9. Update QR flows to use /join/[cardId] and /stamp/[customerCardId]
+10. Ensure stamp_cards schema and stamp_config JSONB consistency
 ```
 
 ### Prompt Structure for Documentation Updates

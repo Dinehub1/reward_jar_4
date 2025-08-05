@@ -15,47 +15,74 @@ export async function GET(
 
     const { data: customerCard, error } = await supabase
       .from('customer_cards')
-      .select(`
-        id,
-        current_stamps,
-        sessions_used,
-        stamp_card_id,
-        membership_card_id,
-        expiry_date,
-        customers!inner (
-          id,
-          name,
-          email
-        ),
-        stamp_cards (
+      .select('*')
+      .eq('id', customerCardId)
+      .single()
+    
+    console.log('🔍 PWA Customer card basic query result:', { customerCard, error })
+    
+    if (error || !customerCard) {
+      console.error('❌ Customer card not found:', error)
+      return NextResponse.json({ error: 'Customer card not found' }, { status: 404 })
+    }
+    
+    // Now fetch the related data separately
+    let cardData: any = null
+    let businessData: any = null
+    
+    if (customerCard.stamp_card_id) {
+      const { data: stampCard, error: stampError } = await supabase
+        .from('stamp_cards')
+        .select(`
           id,
           name,
           total_stamps,
           reward_description,
-          businesses (
+          card_color,
+          icon_emoji,
+          businesses!business_id (
             id,
             name,
             description
           )
-        ),
-        membership_cards (
+        `)
+        .eq('id', customerCard.stamp_card_id)
+        .single()
+      
+      console.log('🔍 PWA Stamp card query result:', { stampCard, stampError })
+      if (!stampError && stampCard) {
+        cardData = stampCard
+        businessData = stampCard.businesses
+        console.log('✅ PWA Set cardData and businessData:', { cardData: cardData?.name, businessData: businessData?.name })
+      }
+    } else if (customerCard.membership_card_id) {
+      const { data: membershipCard, error: membershipError } = await supabase
+        .from('membership_cards')
+        .select(`
           id,
           name,
           total_sessions,
           cost,
-          businesses (
+          card_color,
+          icon_emoji,
+          businesses!business_id (
             id,
             name,
             description
           )
-        )
-      `)
-      .eq('id', customerCardId)
-      .single()
+        `)
+        .eq('id', customerCard.membership_card_id)
+        .single()
+      
+      if (!membershipError && membershipCard) {
+        cardData = membershipCard
+        businessData = membershipCard.businesses
+      }
+    }
 
-    if (error || !customerCard) {
-      console.error('❌ Customer card not found:', error)
-      return NextResponse.json({ error: 'Customer card not found' }, { status: 404 })
+    if (!cardData || !businessData) {
+      console.error('❌ PWA Card template or business data not found')
+      return NextResponse.json({ error: 'Card template or business data not found' }, { status: 404 })
     }
 
     // Determine card type from unified schema
@@ -69,24 +96,7 @@ export async function GET(
       )
     }
 
-    // Get card data based on type
-    let cardData: any
-    let businessData: any
-
-    if (isStampCard) {
-      cardData = customerCard.stamp_cards
-      businessData = cardData?.businesses
-    } else {
-      cardData = customerCard.membership_cards
-      businessData = cardData?.businesses
-    }
-
-    if (!cardData || !businessData) {
-      return NextResponse.json(
-        { error: 'Card template or business data not found' },
-        { status: 404 }
-      )
-    }
+    // cardData and businessData are already set above from separate queries
 
     console.log('✅ Fetched customer card for PWA:', {
       id: customerCard.id,
@@ -96,10 +106,24 @@ export async function GET(
       sessions_used: customerCard.sessions_used
     })
 
-    // Determine card type and styling
-    const cardTitle = isMembershipCard ? 'Membership Card' : 'Stamp Card'
-    const primaryColor = isMembershipCard ? '#6366f1' : '#10b981'
-    const secondaryColor = isMembershipCard ? '#4f46e5' : '#059669'
+    // Helper function to adjust color brightness
+    const adjustColorBrightness = (hex: string, percent: number) => {
+      const num = parseInt(hex.replace('#', ''), 16)
+      const amt = Math.round(2.55 * percent)
+      const R = (num >> 16) + amt
+      const G = (num >> 8 & 0x00FF) + amt
+      const B = (num & 0x0000FF) + amt
+      return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
+        (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
+        (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1)
+    }
+
+    // Determine card type and styling - use card-specific colors
+    const cardTitle = isMembershipCard ? 'Membership Card' : 'Stamp Cards'
+    const cardColor = cardData.card_color || '#8B4513' // Use card-specific color or default brown
+    const primaryColor = cardColor
+    const secondaryColor = adjustColorBrightness(cardColor, -20) // Darker variant
+    const isGymMembership = isMembershipCard // Define the missing variable
 
     // Generate PWA HTML
     const html = `
@@ -264,29 +288,29 @@ export async function GET(
     <body>
         <div class="card-container">
             <div class="card-icon">${isGymMembership ? '🏋️‍♂️' : '☕'}</div>
-            <h1 class="card-title">${(customerCard.stamp_cards as any).name}</h1>
-            <div class="business-name">${(customerCard.stamp_cards as any).businesses.name}</div>
+            <h1 class="card-title">${isMembershipCard ? cardData.name : 'Stamp Cards'}</h1>
+            <div class="business-name">${businessData.name}</div>
             
             <div class="progress-container">
                 <div class="progress-label">${isGymMembership ? 'Sessions Used' : 'Stamps Collected'}</div>
                 <div class="progress-value">
                     ${isGymMembership 
-                      ? `${customerCard.sessions_used || 0}/${customerCard.total_sessions || 0}`
-                      : `${customerCard.current_stamps || 0}/${(customerCard.stamp_cards as any).total_stamps}`
+                      ? `${customerCard.sessions_used || 0}/${cardData.total_sessions || 0}`
+                      : `${customerCard.current_stamps || 0}/${cardData.total_stamps}`
                     }
                 </div>
                 <div class="progress-bar">
                     <div class="progress-fill" style="width: ${
                       isGymMembership 
-                        ? Math.min(((customerCard.sessions_used || 0) / (customerCard.total_sessions || 1)) * 100, 100)
-                        : Math.min(((customerCard.current_stamps || 0) / (customerCard.stamp_cards as any).total_stamps) * 100, 100)
+                        ? Math.min(((customerCard.sessions_used || 0) / (cardData.total_sessions || 1)) * 100, 100)
+                        : Math.min(((customerCard.current_stamps || 0) / cardData.total_stamps) * 100, 100)
                     }%"></div>
                 </div>
             </div>
             
             <div class="reward-info">
                 <div class="reward-label">${isGymMembership ? 'Benefits' : 'Reward'}</div>
-                <div class="reward-text">${(customerCard.stamp_cards as any).reward_description}</div>
+                <div class="reward-text">${cardData.reward_description || 'Enjoy your rewards!'}</div>
             </div>
             
             <div class="install-prompt">
@@ -370,7 +394,7 @@ export async function POST(
     }
 
     const resolvedParams = await params
-    const supabase = await createServerClient()
+    const supabase = createAdminClient()
     const customerCardId = resolvedParams.customerCardId
     const url = new URL(request.url)
     const requestedType = url.searchParams.get('type') // 'stamp' or 'membership'

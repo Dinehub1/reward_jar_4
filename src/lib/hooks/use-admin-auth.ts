@@ -47,7 +47,7 @@ export function useAdminAuth(requireAuth: boolean = true): AdminAuthState & Admi
       setState(prev => ({ ...prev, isLoading: true, error: null }))
 
       // Proper authentication flow - check session then verify admin role
-      console.log('🔍 useAdminAuth: Starting auth check...')
+      // Starting auth check
 
       // First check if we have a valid session (client-side auth check)
       // Add retry logic for session hydration
@@ -74,13 +74,13 @@ export function useAdminAuth(requireAuth: boolean = true): AdminAuthState & Admi
         
         // If no session on first attempt, wait briefly for hydration
         if (!session && attempts < maxAttempts) {
-          console.log(`🔍 useAdminAuth: No session found, attempt ${attempts}/${maxAttempts}, waiting for hydration...`)
+          // No session found, waiting for hydration
           await new Promise(resolve => setTimeout(resolve, 100))
         }
       }
 
       if (!session) {
-        console.log('🔍 useAdminAuth: No session found after all attempts')
+        // No session found after all attempts
         setState({
           isAdmin: false,
           isLoading: false,
@@ -90,10 +90,10 @@ export function useAdminAuth(requireAuth: boolean = true): AdminAuthState & Admi
         return
       }
 
-      console.log('🔍 useAdminAuth: Session found, user:', session.user?.email)
+      // Session found, checking admin role
 
       // If we have a session, check admin role via API route
-      console.log('🔍 useAdminAuth: Checking admin role via API...')
+      // Checking admin role via API
       const response = await fetch('/api/admin/auth-check', {
         method: 'GET',
         credentials: 'include',
@@ -102,16 +102,16 @@ export function useAdminAuth(requireAuth: boolean = true): AdminAuthState & Admi
         }
       })
 
-      console.log('🔍 useAdminAuth: API response status:', response.status)
+      // API response received
 
       if (!response.ok) {
         const errorText = await response.text()
-        console.error('🔍 useAdminAuth: API error response:', errorText)
+        // API error response received
         throw new Error(`Auth check failed: ${response.status} - ${errorText}`)
       }
 
       const result: ApiResponse<{ isAdmin: boolean; user?: any }> = await response.json()
-      console.log('🔍 useAdminAuth: API result:', result)
+      // API result processed
 
       if (!result.success) {
         setState({
@@ -130,7 +130,7 @@ export function useAdminAuth(requireAuth: boolean = true): AdminAuthState & Admi
         error: null
       }
       
-      console.log('✅ useAdminAuth: Setting final auth state:', newState)
+      // Setting final auth state
       setState(newState)
 
     } catch (error) {

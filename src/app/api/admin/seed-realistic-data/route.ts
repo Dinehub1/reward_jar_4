@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
           
           if (isStampCard) {
             // Create stamp card for customer
-            const currentStamps = Math.floor(Math.random() * (card.total_stamps || 10))
+            const currentStamps = Math.floor(Math.random() * ((card as any).total_stamps || 10))
             const membershipType = 'loyalty'
             
             const { data: customerCard, error: cardError } = await supabase
@@ -150,11 +150,11 @@ export async function POST(request: NextRequest) {
                 sessionUsageCreated++
               }
               
-              console.log(`  🎯 Assigned stamp card: ${card.name} (${currentStamps}/${card.total_stamps} stamps)`)
+              console.log(`  🎯 Assigned stamp card: ${card.name} (${currentStamps}/${(card as any).total_stamps} stamps)`)
             }
           } else if (isMembershipCard) {
             // Create membership card for customer
-            const totalSessions = card.total_sessions || 20
+            const totalSessions = (card as any).total_sessions || 20
             const sessionsUsed = Math.floor(Math.random() * totalSessions)
             const membershipType = 'gym'
             const cost = 15000 // ₩15,000

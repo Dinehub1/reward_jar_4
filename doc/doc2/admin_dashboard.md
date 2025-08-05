@@ -152,23 +152,39 @@ AdminLayoutClient
 - **Type**: Client Component (✅ Security Fixed)
 - **Admin Role Required**: role_id = 1 (exclusive card creation authority)
 
-#### Card Metadata Configuration
-**Live Preview Interface** (2:3 wallet-sized frame with real-time updates):
+#### Canonical 5-Step Card Creation Workflow
+**Step 1: Card Details**
 - **Card Name**: Internal + public display name (e.g. "Pizza Lovers Card")
 - **Business Selection**: Dropdown of active businesses (admin can assign to any business)
 - **Reward Description**: e.g. "Free Garlic Bread or Soft Drink"
 - **Stamps Required**: Slider (1-20) for total stamps needed
+- **Card & Reward Expiry**: Days until card expires (default: 60), reward validity (default: 15)
+
+**Step 2: Design**
 - **Card Color**: Hex color picker for background (#FF5733)
 - **Icon Emoji**: Emoji picker (🍕, 🧋, ☕, 🛍️)
-- **Card Expiry**: Days until card expires (default: 60)
-- **Reward Expiry**: Days reward remains valid after unlock (default: 15)
+- **Barcode Type**: Selection between PDF417 or QR_CODE
 
-#### Stamp Logic Rules Configuration
+**Step 3: Stamp Rules**
 - **Manual Stamp Only**: Always true (staff-controlled stamping)
 - **Minimum Spend Amount**: Required bill amount for stamp eligibility (₹500, etc.)
 - **Bill Proof Required**: Toggle - require bill number at stamp time
 - **Max Stamps Per Day**: Anti-abuse throttle (default: 1)
 - **Duplicate Visit Buffer**: Dropdown (12h, 1d, none) - minimum time between stamps
+
+**Step 4: Information**
+- **Card Description**: Brief description shown on card
+- **How to Earn Stamp**: Instructions for earning stamps
+- **Company Name**: Auto-filled from business
+- **Reward Details**: Detailed description of reward
+- **Stamp Earned Message**: Message when stamp earned (use [#] for remaining count)
+- **Reward Earned Message**: Message when reward unlocked
+
+**Step 5: Live Preview & Save**
+- **Platform-Specific Preview**: Apple Wallet, Google Wallet, PWA Card views
+- **Real-time QR Generation**: Scannable QR codes with actual card data
+- **Wallet Card Layout**: Front/back card preview with branding
+- **Save and Deploy**: Create card with multi-wallet provisioning
 
 #### Multi-Wallet Provisioning Support
 - **Apple Wallet**: PKPass generation with proper Pass Type ID
@@ -201,17 +217,23 @@ AdminLayoutClient
 stamp_cards (
   id UUID PRIMARY KEY,
   business_id UUID REFERENCES businesses(id),
-  name TEXT NOT NULL,           -- From cardName input
-  reward_description TEXT,      -- From reward input
-  total_stamps INTEGER,         -- From stampsRequired slider
-  card_color TEXT,             -- From color picker
-  icon_emoji TEXT,             -- From emoji picker
-  expiry_days INTEGER,         -- From cardExpiryDays
-  reward_expiry_days INTEGER,  -- From rewardExpiryDays
-  stamp_config JSONB           -- Combined stamp logic rules
+  card_name TEXT NOT NULL,         -- From Step 1: Card Name
+  reward TEXT,                     -- From Step 1: Reward Description
+  stamps_required INTEGER,         -- From Step 1: Stamps Required slider
+  card_color TEXT,                 -- From Step 2: Color picker
+  icon_emoji TEXT,                 -- From Step 2: Emoji picker
+  barcode_type TEXT,               -- From Step 2: PDF417 or QR_CODE
+  card_expiry_days INTEGER,        -- From Step 1: Card expiry
+  reward_expiry_days INTEGER,      -- From Step 1: Reward expiry
+  stamp_config JSONB,              -- From Step 3: Stamp rules
+  card_description TEXT,           -- From Step 4: Card description
+  how_to_earn_stamp TEXT,          -- From Step 4: How to earn
+  reward_details TEXT,             -- From Step 4: Reward details
+  earned_stamp_message TEXT,       -- From Step 4: Stamp earned message
+  earned_reward_message TEXT       -- From Step 4: Reward earned message
 )
 
--- stamp_config JSON structure
+-- stamp_config JSON structure (Step 3 data)
 {
   "manualStampOnly": true,
   "minSpendAmount": 500,

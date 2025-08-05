@@ -54,7 +54,7 @@ function CustomerStats() {
 
   // Calculate customer metrics with safety checks
   const customerMetrics: CustomerMetrics = {
-    totalCustomers: statsData?.totalCustomers || safeCustomersData.length || 0,
+    totalCustomers: statsData?.stats?.totalCustomers || safeCustomersData.length || 0,
     activeCustomers: safeCustomersData.filter(c => {
       try {
         if (!c?.created_at) return false
@@ -75,7 +75,7 @@ function CustomerStats() {
         return false
       }
     }).length || 0,
-    anomalies: safeCustomersData.filter(c => c?._flags?.hasAbnormalActivity).length || 0
+    anomalies: safeCustomersData.filter(c => (c as any)?._flags?.hasAbnormalActivity).length || 0
   }
 
   if (loading) {
@@ -252,7 +252,7 @@ function CustomersTable() {
           <div className="text-center py-8">
             <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-2" />
             <p className="text-lg font-medium">Error loading customers</p>
-            <p className="text-muted-foreground mb-4">{error}</p>
+            <p className="text-muted-foreground mb-4">{(error as any) instanceof Error ? (error as any).message : String(error)}</p>
             <Button onClick={() => refetch()}>Retry</Button>
           </div>
         </CardContent>
@@ -301,7 +301,7 @@ function CustomersTable() {
                   </div>
                   <div className="flex items-center space-x-2">
                     <Badge variant="outline">
-                      {customer.customer_cards?.length || 0} cards
+                      {(customer as any).customer_cards?.length || 0} cards
                     </Badge>
                     <Button variant="outline" size="sm">
                       <Eye className="h-4 w-4 mr-1" />

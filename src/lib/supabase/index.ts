@@ -44,5 +44,4 @@ export type {
   SupabaseError
 } from './types'
 
-// Re-export for backwards compatibility (deprecated)
-export { createClient as default } from './client'
+// Deprecated re-export removed - import createClient directly from './client'

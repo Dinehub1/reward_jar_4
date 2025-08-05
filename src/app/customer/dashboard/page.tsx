@@ -23,7 +23,7 @@ interface CustomerCard {
   }
 }
 
-export default function CustomerDashboard() {
+function CustomerDashboard() {
   const [customerCards, setCustomerCards] = useState<CustomerCard[]>([])
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState({
@@ -39,7 +39,7 @@ export default function CustomerDashboard() {
         const { data: { session } } = await supabase.auth.getSession()
         if (!session?.user) return
 
-        // Get customer ID
+        // Get customer ID first
         const { data: customer } = await supabase
           .from('customers')
           .select('id')
@@ -68,25 +68,25 @@ export default function CustomerDashboard() {
           .eq('customer_id', customer.id)
           .order('created_at', { ascending: false })
 
-        if (cards) {
+        if (cards && Array.isArray(cards)) {
           const formattedCards = cards.map(card => {
-            // Handle the nested structure correctly - stamp_cards and businesses are objects, not arrays
-            const stampCard = (card.stamp_cards as unknown) as { id: string; name: string; total_stamps: number; reward_description: string; businesses: unknown }
-            const business = (stampCard.businesses as unknown) as { name: string; description: string }
+            // ✅ FIXED: Safe data processing with null checks
+            const stampCard = card.stamp_cards?.[0] || {}
+            const business = stampCard.businesses?.[0] || {}
             
             return {
-            ...card,
-            stamp_card: {
-                id: stampCard.id,
-                name: stampCard.name,
-                total_stamps: stampCard.total_stamps,
-                reward_description: stampCard.reward_description,
+              ...card,
+              stamp_card: {
+                id: stampCard.id || '',
+                name: stampCard.name || 'Unknown Card',
+                total_stamps: stampCard.total_stamps || 0,
+                reward_description: stampCard.reward_description || '',
                 business: {
-                  name: business.name
+                  name: business.name || 'Unknown Business'
                 }
               }
             }
-          })
+          }).filter(card => card.stamp_card.id) // Filter out invalid cards
 
           setCustomerCards(formattedCards)
 
@@ -107,6 +107,13 @@ export default function CustomerDashboard() {
         }
       } catch (error) {
         console.error('Error fetching customer cards:', error)
+        // ✅ FIXED: Set empty state instead of letting error propagate to render
+        setCustomerCards([])
+        setStats({
+          totalCards: 0,
+          completedCards: 0,
+          totalStamps: 0
+        })
       } finally {
         setLoading(false)
       }
@@ -306,4 +313,6 @@ export default function CustomerDashboard() {
       </div>
     </CustomerLayout>
   )
-} 
+}
+
+export default CustomerDashboard 

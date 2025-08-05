@@ -238,16 +238,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Final verification
-    const { data: finalCount } = await supabase
+    const { count: finalCount } = await supabase
       .from('customer_cards')
       .select('id', { count: 'exact', head: true })
 
-    const { data: finalStampCount } = await supabase
+    const { count: finalStampCount } = await supabase
       .from('customer_cards')
       .select('id', { count: 'exact', head: true })
       .not('stamp_card_id', 'is', null)
 
-    const { data: finalMembershipCount } = await supabase
+    const { count: finalMembershipCount } = await supabase
       .from('customer_cards')
       .select('id', { count: 'exact', head: true })
       .not('membership_card_id', 'is', null)
@@ -260,9 +260,9 @@ export async function POST(request: NextRequest) {
         authUsersCreated: createdAuthUsers.length,
         customersCreated: createdCustomers?.length || 0,
         customerCardsCreated: insertedCards,
-        finalTotalCards: finalCount?.count || 0,
-        finalStampCards: finalStampCount?.count || 0,
-        finalMembershipCards: finalMembershipCount?.count || 0,
+        finalTotalCards: finalCount || 0,
+        finalStampCards: finalStampCount || 0,
+        finalMembershipCards: finalMembershipCount || 0,
         cardDistribution: cardStats
       },
       businesses: businesses?.map(b => ({

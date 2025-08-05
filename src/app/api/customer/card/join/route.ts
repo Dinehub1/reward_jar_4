@@ -1,279 +1,160 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient, getServerUser, getServerSession } from '@/lib/supabase/server'
-import { z } from 'zod'
-
-// Validation schema - supports both stamp cards and membership cards
-const joinCardSchema = z.object({
-  stampCardId: z.string().uuid('Invalid stamp card ID').optional(),
-  membershipCardId: z.string().uuid('Invalid membership card ID').optional(),
-  walletType: z.enum(['apple', 'google', 'pwa']).optional()
-}).refine(
-  (data) => data.stampCardId || data.membershipCardId,
-  {
-    message: "Either stampCardId or membershipCardId must be provided",
-    path: ["cardId"]
-  }
-)
+import { createAdminClient } from '@/lib/supabase/admin-client'
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createServerClient()
-    
-    // Check authentication
-    const { session, error: sessionError } = await getServerSession()
-    
-    if (sessionError || !session?.user) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      )
-    }
-
-    // Parse and validate request body
     const body = await request.json()
-    const validatedData = joinCardSchema.parse(body)
-    
-    const { stampCardId, membershipCardId, walletType } = validatedData
-    const isLoyaltyCard = !!stampCardId
-    const isMembershipCard = !!membershipCardId
-    const cardId = stampCardId || membershipCardId
+    const { name, email, dateOfBirth, cardId, cardType } = body
 
-    // Check if user is a customer
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('role_id')
-      .eq('id', session.user.id)
-      .single()
-
-    if (userError || !userData || userData.role_id !== 3) {
-      return NextResponse.json(
-        { error: 'Only customers can join cards' },
-        { status: 403 }
-      )
+    // Validate input
+    if (!name?.trim() || !email?.trim() || !cardId || !cardType) {
+      return NextResponse.json({
+        success: false,
+        error: 'Name, email, card ID, and card type are required'
+      }, { status: 400 })
     }
 
-    // Get customer record
-    const { data: customer, error: customerError } = await supabase
-      .from('customers')
-      .select('id, name')
-      .eq('user_id', session.user.id)
-      .single()
-
-    if (customerError || !customer) {
-      return NextResponse.json(
-        { error: 'Customer profile not found' },
-        { status: 404 }
-      )
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email.trim())) {
+      return NextResponse.json({
+        success: false,
+        error: 'Please enter a valid email address'
+      }, { status: 400 })
     }
 
-    let cardData: any = null
-    let businessData: any = null
+    // Use admin client to bypass RLS for guest registration
+    const supabase = createAdminClient()
 
-    if (isLoyaltyCard) {
-      // Handle loyalty stamp card
-    const { data: stampCard, error: cardError } = await supabase
-      .from('stamp_cards')
-        .select(`
-          id, 
-          business_id, 
-          name, 
-          total_stamps, 
-          reward_description,
-          businesses!inner (
-            id,
-            name,
-            description
-          )
-        `)
-        .eq('id', cardId)
+    // Verify the card exists and is active
+    const cardTable = cardType === 'stamp' ? 'stamp_cards' : 'membership_cards'
+    const { data: cardInfo, error: cardError } = await supabase
+      .from(cardTable)
+      .select('id, name, business_id, ' + (cardType === 'stamp' ? 'card_expiry_days' : 'duration_days'))
+      .eq('id', cardId)
       .eq('status', 'active')
       .single()
 
-    if (cardError || !stampCard) {
-      return NextResponse.json(
-        { error: 'Stamp card not found or inactive' },
-        { status: 404 }
-      )
+    if (cardError || !cardInfo) {
+      return NextResponse.json({
+        success: false,
+        error: 'Card not found or is no longer active'
+      }, { status: 404 })
     }
 
-      cardData = stampCard
-      businessData = Array.isArray(stampCard.businesses) ? stampCard.businesses[0] : stampCard.businesses
+    // Type guard to ensure cardInfo has the expected properties
+    if (!('name' in cardInfo) || !('id' in cardInfo)) {
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid card data'
+      }, { status: 500 })
+    }
 
-      // Check if customer has already joined this stamp card
+    // Ensure duration_days exists for membership cards
+    if (cardType === 'membership' && !('duration_days' in cardInfo)) {
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid membership card data'
+      }, { status: 500 })
+    }
+
+    // Check if customer already exists by email
+    let { data: existingCustomer } = await supabase
+      .from('customers')
+      .select('id')
+      .eq('email', email.trim())
+      .single()
+
+    let customerId = existingCustomer?.id
+
+    if (!customerId) {
+      // Create new guest customer using the special guest user ID
+      const { data: newCustomer, error: customerError } = await supabase
+        .from('customers')
+        .insert([{
+          user_id: '00000000-0000-0000-0000-000000000000', // Special guest user ID
+          name: name.trim(),
+          email: email.trim()
+        }])
+        .select('id')
+        .single()
+      
+      if (customerError) {
+        console.error('Customer creation failed:', customerError)
+        return NextResponse.json({
+          success: false,
+          error: 'Failed to create customer account. Please try again.'
+        }, { status: 500 })
+      }
+      
+      customerId = newCustomer.id
+    }
+
+    // Check if customer already has this card
     const { data: existingCard } = await supabase
       .from('customer_cards')
       .select('id')
-      .eq('customer_id', customer.id)
-        .eq('stamp_card_id', cardId)
+      .eq('customer_id', customerId)
+      .eq(cardType === 'stamp' ? 'stamp_card_id' : 'membership_card_id', cardId)
       .single()
 
     if (existingCard) {
-      return NextResponse.json(
-        { 
-          error: 'Already joined this stamp card',
-          customerCardId: existingCard.id 
-        },
-        { status: 409 }
-      )
+      return NextResponse.json({
+        success: true,
+        message: 'Welcome back! You already have this card.',
+        data: {
+          customerCardId: existingCard.id,
+          customerId: customerId,
+          cardName: cardInfo.name,
+          isExisting: true
+        }
+      }, { status: 200 })
     }
 
-    } else if (isMembershipCard) {
-      // Handle membership card
-      const { data: membershipCard, error: cardError } = await supabase
-        .from('membership_cards')
-        .select(`
-          id,
-          business_id,
-          name,
-          total_sessions,
-          cost,
-          duration_days,
-          businesses!inner (
-            id,
-            name,
-            description
-          )
-        `)
-        .eq('id', cardId)
-        .eq('status', 'active')
-        .single()
-
-      if (cardError || !membershipCard) {
-        return NextResponse.json(
-          { error: 'Membership card not found or inactive' },
-          { status: 404 }
-        )
-      }
-
-      cardData = membershipCard
-      businessData = Array.isArray(membershipCard.businesses) ? membershipCard.businesses[0] : membershipCard.businesses
-
-      // Check if customer has already joined this membership
-      const { data: existingCard } = await supabase
-        .from('customer_cards')
-        .select('id')
-        .eq('customer_id', customer.id)
-        .eq('membership_card_id', cardId)
-        .single()
-
-      if (existingCard) {
-        return NextResponse.json(
-          { 
-            error: 'Already joined this membership',
-            customerCardId: existingCard.id 
-          },
-          { status: 409 }
-        )
-      }
-    }
-
-    if (!cardData || !businessData) {
-      return NextResponse.json(
-        { error: 'Card or business data not found' },
-        { status: 404 }
-      )
-    }
-
-    // Calculate expiry date for memberships
-    let expiryDate = null
-    if (isMembershipCard) {
-      const durationDays = cardData.duration_days || 365
-      expiryDate = new Date()
-      expiryDate.setDate(expiryDate.getDate() + durationDays)
-    }
-
-    // Create customer card relationship with unified schema
+    // Create customer card
     const customerCardData = {
-      customer_id: customer.id,
-      stamp_card_id: isLoyaltyCard ? cardId : null,
-      membership_card_id: isMembershipCard ? cardId : null,
-      current_stamps: isLoyaltyCard ? 0 : 0,
-      sessions_used: isMembershipCard ? 0 : 0,
-      expiry_date: expiryDate ? expiryDate.toISOString() : null,
-      wallet_type: walletType || 'pwa',
-      wallet_pass_id: null // Will be generated when needed
+      customer_id: customerId,
+      ...(cardType === 'stamp' ? {
+        stamp_card_id: cardId,
+        membership_card_id: null,
+        current_stamps: 0
+      } : {
+        stamp_card_id: null,
+        membership_card_id: cardId,
+        sessions_used: 0,
+        expiry_date: new Date(Date.now() + ((cardInfo as any).duration_days || 365) * 24 * 60 * 60 * 1000).toISOString()
+      })
     }
 
-    // Filter out undefined values
-    const filteredData = Object.fromEntries(
-      Object.entries(customerCardData).filter(([_, value]) => value !== undefined)
-    )
-
-    const { data: customerCard, error: insertError } = await supabase
+    const { data: newCustomerCard, error: cardCreateError } = await supabase
       .from('customer_cards')
-      .insert(filteredData)
-      .select()
+      .insert([customerCardData])
+      .select('id')
       .single()
 
-    if (insertError || !customerCard) {
-      console.error('Error creating customer card:', insertError)
-      return NextResponse.json(
-        { error: 'Failed to join card' },
-        { status: 500 }
-      )
+    if (cardCreateError) {
+      console.error('Customer card creation failed:', cardCreateError)
+      return NextResponse.json({
+        success: false,
+        error: 'Failed to register for card. Please try again.'
+      }, { status: 500 })
     }
 
-    // Generate wallet pass URLs for all types
-    const baseUrl = process.env.BASE_URL || `${request.nextUrl.protocol}//${request.nextUrl.host}`
-    const cardTypePrefix = isLoyaltyCard ? '' : 'membership/'
-    
-    const walletPassUrls = {
-      apple: `${baseUrl}/api/wallet/apple/${cardTypePrefix}${customerCard.id}`,
-      google: `${baseUrl}/api/wallet/google/${cardTypePrefix}${customerCard.id}`,
-      pwa: `${baseUrl}/api/wallet/pwa/${cardTypePrefix}${customerCard.id}`
-    }
-
-    // Build response based on card type
-    const response = {
+    return NextResponse.json({
       success: true,
-      customerCardId: customerCard.id,
-      cardType: isLoyaltyCard ? 'loyalty' : 'membership',
-      card: {
-        id: cardData.id,
-        name: cardData.name,
-        business: {
-          id: businessData.id,
-          name: businessData.name,
-          description: businessData.description
-        }
-      },
-      walletPassUrls,
-      message: `Successfully joined ${isLoyaltyCard ? 'stamp card' : 'membership'}!`
-    }
-
-    if (isLoyaltyCard) {
-      response.card = {
-        ...response.card,
-        totalStamps: cardData.total_stamps,
-        rewardDescription: cardData.reward_description,
-        currentStamps: 0
-      } as any
-    } else {
-      response.card = {
-        ...response.card,
-        totalSessions: cardData.total_sessions,
-        cost: cardData.cost,
-        durationDays: cardData.duration_days,
-        sessionsUsed: 0,
-        expiryDate: expiryDate?.toISOString()
-      } as any
-    }
-
-    return NextResponse.json(response)
+      message: 'Successfully registered for card!',
+      data: {
+        customerCardId: newCustomerCard.id,
+        customerId: customerId,
+        cardName: cardInfo.name
+      }
+    })
 
   } catch (error) {
-    console.error('Error in join card API:', error)
-    
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Invalid request data', details: error.issues },
-        { status: 400 }
-      )
-    }
-
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    console.error('Card join error:', error)
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to process registration. Please try again.'
+    }, { status: 500 })
   }
-} 
+}

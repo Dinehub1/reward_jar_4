@@ -14,18 +14,30 @@ export interface StampConfig {
   duplicateVisitBuffer: '12h' | '1d' | 'none'
 }
 
-// Card Form Data Types
+// Card Form Data Types (Canonical Schema)
 export interface CardFormData {
+  // Primary fields
   cardName: string
   businessId: string
+  businessName: string
   reward: string
+  rewardDescription: string // NEW: Required detailed reward description
   stampsRequired: number
   cardColor: string
   iconEmoji: string
   barcodeType: 'PDF417' | 'QR_CODE'
   cardExpiryDays: number
   rewardExpiryDays: number
+  
+  // Stamp logic
   stampConfig: StampConfig
+  
+  // Information fields
+  cardDescription: string
+  howToEarnStamp: string
+  rewardDetails: string
+  earnedStampMessage: string
+  earnedRewardMessage: string
 }
 
 // Wallet Type Definitions
@@ -86,6 +98,7 @@ export interface Database {
           status: string
           is_flagged: boolean | null
           admin_notes: string | null
+          card_requested: boolean | null
           created_at: string
         }
         Insert: {
@@ -97,6 +110,7 @@ export interface Database {
           status?: string
           is_flagged?: boolean | null
           admin_notes?: string | null
+          card_requested?: boolean | null
           created_at?: string
         }
         Update: {
@@ -108,6 +122,7 @@ export interface Database {
           status?: string
           is_flagged?: boolean | null
           admin_notes?: string | null
+          card_requested?: boolean | null
           created_at?: string
         }
       }
@@ -137,59 +152,83 @@ export interface Database {
         }
       }
       
-      // Stamp Card Templates
+      // Stamp Card Templates (Canonical Schema)
       stamp_cards: {
         Row: {
           id: string
           business_id: string
-          name: string
-          total_stamps: number
+          card_name: string
+          reward: string
           reward_description: string
+          stamps_required: number
           status: string
           card_color: string
           icon_emoji: string
           barcode_type: 'PDF417' | 'QR_CODE'
-          expiry_days: number
+          card_expiry_days: number
           reward_expiry_days: number
           stamp_config: StampConfig
-          stamp_condition?: string
-          min_bill_amount?: number
+          card_description: string
+          how_to_earn_stamp: string
+          reward_details: string
+          earned_stamp_message: string
+          earned_reward_message: string
+          // Legacy fields removed - use current schema fields instead
+
+
+
           created_at: string
           updated_at?: string
         }
         Insert: {
           id?: string
           business_id: string
-          name: string
-          total_stamps: number
-          reward_description: string
+          card_name: string
+          reward: string
+          reward_description?: string
+          stamps_required: number
           status?: string
           card_color?: string
           icon_emoji?: string
           barcode_type?: 'PDF417' | 'QR_CODE'
-          expiry_days?: number
+          card_expiry_days?: number
           reward_expiry_days?: number
           stamp_config?: StampConfig
-          stamp_condition?: string
-          min_bill_amount?: number
+          card_description?: string
+          how_to_earn_stamp?: string
+          reward_details?: string
+          earned_stamp_message?: string
+          earned_reward_message?: string
+          // Legacy fields removed - use current schema fields instead
+
+
+
           created_at?: string
           updated_at?: string
         }
         Update: {
           id?: string
           business_id?: string
-          name?: string
-          total_stamps?: number
+          card_name?: string
+          reward?: string
           reward_description?: string
+          stamps_required?: number
           status?: string
           card_color?: string
           icon_emoji?: string
           barcode_type?: 'PDF417' | 'QR_CODE'
-          expiry_days?: number
+          card_expiry_days?: number
           reward_expiry_days?: number
           stamp_config?: StampConfig
-          stamp_condition?: string
-          min_bill_amount?: number
+          card_description?: string
+          how_to_earn_stamp?: string
+          reward_details?: string
+          earned_stamp_message?: string
+          earned_reward_message?: string
+          // Legacy fields removed - use current schema fields instead
+
+
+
           created_at?: string
           updated_at?: string
         }

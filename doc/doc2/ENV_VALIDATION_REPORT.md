@@ -44,13 +44,19 @@ NEXT_PUBLIC_BASE_URL=https://www.rewardjar.xyz (public-facing URL)
 
 ### Apple Wallet Variables (6/6) ✅ PRODUCTION READY
 ```env
-# ✅ ALL REQUIRED VARIABLES PROPERLY SET FOR PRODUCTION
+# ✅ ALL REQUIRED VARIABLES FOR QR PROVISIONING & WALLET GENERATION
 APPLE_CERT_BASE64=LS0tLS1CRUdJTi... (valid Pass Type ID certificate)
 APPLE_KEY_BASE64=LS0tLS1CRUdJTi... (valid private key)
 APPLE_WWDR_BASE64=LS0tLS1CRUdJTi... (valid WWDR G4 certificate)
 APPLE_CERT_PASSWORD="Powerups1" (certificate password)
 APPLE_TEAM_IDENTIFIER=39CDB598RF (valid 10-character Apple Team ID)
 APPLE_PASS_TYPE_IDENTIFIER=pass.com.rewardjar.rewards (valid Pass Type ID)
+
+# 🚨 CRITICAL: These variables enable:
+# - Admin card creation with wallet provisioning
+# - QR generation for /join/[cardId] flows
+# - PKPass generation for /api/wallet/apple/[customerCardId]
+# - Multi-platform wallet preview in admin interface
 ```
 
 ### Google Wallet Variables (3/3) ✅ PRODUCTION READY
@@ -58,6 +64,12 @@ APPLE_PASS_TYPE_IDENTIFIER=pass.com.rewardjar.rewards (valid Pass Type ID)
 GOOGLE_SERVICE_ACCOUNT_EMAIL=rewardjar@rewardjar-461310.iam.gserviceaccount.com
 GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n..." (valid RS256 key)
 GOOGLE_CLASS_ID=issuer.loyalty.rewardjar (validated and functional)
+
+# 🚨 CRITICAL: These variables enable:
+# - JWT signing for Google Wallet integration
+# - Admin card creation with Google Wallet provisioning
+# - QR links to /api/wallet/google/[customerCardId]
+# - Real-time wallet preview in 5-step card creation flow
 ```
 
 ### MCP Integration Variables (1/1) ✅ OPERATIONAL

@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import { useEffect, useState, useCallback, use } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
@@ -53,7 +53,7 @@ interface Customer {
   created_at: string
   customer: {
     email: string
-    full_name: string
+    name: string
   }
 }
 
@@ -66,7 +66,11 @@ interface CardStats {
   recentActivity: number
 }
 
-export default function AdminMembershipCardDetailPage() {
+export default function AdminMembershipCardDetailPage({ 
+  params 
+}: { 
+  params: Promise<{ cardId: string }> 
+}) {
   const [card, setCard] = useState<MembershipCard | null>(null)
   const [customers, setCustomers] = useState<Customer[]>([])
   const [stats, setStats] = useState<CardStats>({
@@ -82,8 +86,9 @@ export default function AdminMembershipCardDetailPage() {
   const [showQRModal, setShowQRModal] = useState(false)
 
   const router = useRouter()
-  const params = useParams()
-  const cardId = params.cardId as string
+  // Unwrap params Promise using React.use()
+  const { cardId } = use(params)
+  // Initialize Supabase client
   const supabase = createClient()
 
   const fetchCardDetails = useCallback(async () => {
@@ -141,7 +146,7 @@ export default function AdminMembershipCardDetailPage() {
           created_at,
           customers!inner(
             email,
-            full_name
+            name
           )
         `)
         .eq('stamp_card_id', cardId)
@@ -482,7 +487,7 @@ export default function AdminMembershipCardDetailPage() {
                       <div className="flex items-center space-x-3">
                         <div>
                           <p className="font-medium text-gray-900">
-                            {customer.customer.full_name || customer.customer.email}
+                            {customer.customer.name || customer.customer.email}
                           </p>
                           <p className="text-sm text-gray-600">{customer.customer.email}</p>
                         </div>

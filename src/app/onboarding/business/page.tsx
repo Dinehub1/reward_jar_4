@@ -146,8 +146,22 @@ export default function BusinessOnboardingPage() {
     if (file) {
       // Simulate file input change
       const fakeEvent = {
-        target: { files: [file] }
-      } as React.ChangeEvent<HTMLInputElement>
+        target: { files: [file] },
+        currentTarget: { files: [file] },
+        nativeEvent: {} as Event,
+        bubbles: false,
+        cancelable: false,
+        defaultPrevented: false,
+        eventPhase: 0,
+        isTrusted: false,
+        preventDefault: () => {},
+        isDefaultPrevented: () => false,
+        stopPropagation: () => {},
+        isPropagationStopped: () => false,
+        persist: () => {},
+        timeStamp: Date.now(),
+        type: 'change'
+      } as unknown as React.ChangeEvent<HTMLInputElement>
       handleLogoUpload(fakeEvent)
     }
   }

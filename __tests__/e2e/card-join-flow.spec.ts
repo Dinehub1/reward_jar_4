@@ -61,7 +61,7 @@ test.describe('Card Join Flow Tests', () => {
     await page.waitForLoadState('networkidle')
     
     // 2. Confirm card preview is visible using data-testid="card-preview"
-    const cardPreview = await waitForElement(page, '[data-testid="card-preview"]')
+    const cardPreview = page.locator('[data-testid="card-preview"]')
     await expect(cardPreview).toBeVisible()
     
     // Verify card content is displayed
@@ -80,7 +80,7 @@ test.describe('Card Join Flow Tests', () => {
     await page.waitForLoadState('networkidle')
     
     // 2. Confirm card preview is visible using data-testid="card-preview"
-    const cardPreview = await waitForElement(page, '[data-testid="card-preview"]')
+    const cardPreview = page.locator('[data-testid="card-preview"]')
     await expect(cardPreview).toBeVisible()
     
     // Verify card content is displayed
@@ -181,19 +181,20 @@ test.describe('Card Join Flow Tests', () => {
     await page.waitForLoadState('networkidle')
     
     // Verify card preview shows correct information
-    const cardPreview = await waitForElement(page, '[data-testid="card-preview"]')
+    const cardPreview = page.locator('[data-testid="card-preview"]')
+    await expect(cardPreview).toBeVisible()
     
     // Check business information
-    await expect(cardPreview.locator('text=Admin Test Coffee Shop')).toBeVisible()
+    await expect(page.locator('text=Admin Test Coffee Shop')).toBeVisible()
     
     // Check card name
-    await expect(cardPreview.locator('text=Admin Coffee Loyalty')).toBeVisible()
+    await expect(page.locator('text=Admin Coffee Loyalty')).toBeVisible()
     
     // Check program type
-    await expect(cardPreview.locator('text=Loyalty Program')).toBeVisible()
+    await expect(page.locator('text=Loyalty Program')).toBeVisible()
     
     // Check stamps information (should show stamps needed)
-    await expect(cardPreview.locator('text=Stamps needed:')).toBeVisible()
+    await expect(page.locator('text=Stamps needed:')).toBeVisible()
   })
 
   test('should handle invalid card ID gracefully', async ({ page }) => {
@@ -219,7 +220,7 @@ test.describe('Card Join Flow Tests', () => {
     await page.waitForLoadState('networkidle')
     
     // Verify card preview is still visible on mobile
-    const cardPreview = await waitForElement(page, '[data-testid="card-preview"]')
+    const cardPreview = page.locator('[data-testid="card-preview"]')
     await expect(cardPreview).toBeVisible()
     
     // Verify wallet buttons are still accessible
@@ -235,7 +236,7 @@ test.describe('Card Join Flow Tests', () => {
     await page.goto(`/join/${TEST_CARDS.stampCard}`)
     
     // Wait for card preview to be visible
-    await waitForElement(page, '[data-testid="card-preview"]')
+    await expect(page.locator('[data-testid="card-preview"]')).toBeVisible()
     
     const loadTime = Date.now() - startTime
     
@@ -274,7 +275,7 @@ test.describe('Card Join Flow - Customer Cards', () => {
     await page.waitForLoadState('networkidle')
     
     // Card preview should be visible
-    const cardPreview = await waitForElement(page, '[data-testid="card-preview"]')
+    const cardPreview = page.locator('[data-testid="card-preview"]')
     await expect(cardPreview).toBeVisible()
     
     // Should show current progress
@@ -287,7 +288,7 @@ test.describe('Card Join Flow - Customer Cards', () => {
     await page.waitForLoadState('networkidle')
     
     // Card preview should be visible
-    const cardPreview = await waitForElement(page, '[data-testid="card-preview"]')
+    const cardPreview = page.locator('[data-testid="card-preview"]')
     await expect(cardPreview).toBeVisible()
     
     // Should show current progress

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase/server-only'
+import { createServerClient } from '@/lib/supabase/server-only'
 
 export async function POST(
   request: NextRequest,
@@ -30,7 +30,7 @@ export async function POST(
       testMode
     })
 
-    const supabase = createServiceClient()
+    const supabase = await createServerClient()
 
     // Verify customer card exists
     const { data: customerCard, error: cardError } = await supabase

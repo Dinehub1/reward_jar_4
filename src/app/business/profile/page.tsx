@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+
 import BusinessLayout from '@/components/layouts/BusinessLayout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -70,7 +70,7 @@ export default function BusinessProfilePage() {
   const [progress, setProgress] = useState(0)
 
   const router = useRouter()
-  const supabase = createClient()
+
 
   // Calculate profile progress
   const calculateProgress = useCallback((data: FormData) => {
@@ -102,32 +102,32 @@ export default function BusinessProfilePage() {
       setLoading(true)
       setError(null)
 
-      // Get current session
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user) {
-        router.push('/auth/login')
-        return
+      // Use MCP-powered API route to get business profile
+      const response = await fetch('/api/business/profile', {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          router.push('/auth/login')
+          return
+        }
+        throw new Error(`Failed to fetch business profile: ${response.status}`)
       }
 
-      // TODO: Replace with actual MCP integration
-      // const mcpResponse = await fetch('/mcp/query', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     table: 'businesses',
-      //     query: 'SELECT * FROM businesses WHERE owner_id = $1',
-      //     params: [session.user.id]
-      //   })
-      // })
+      const result = await response.json()
 
-      // Get business data from Supabase for now
-      const { data: businessData, error: businessError } = await supabase
-        .from('businesses')
-        .select('*')
-        .eq('owner_id', session.user.id)
-        .single()
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to load business profile')
+      }
 
-      if (businessError || !businessData) {
+      const businessData = result.data
+
+      if (!businessData) {
         setError('Business profile not found')
         return
       }
@@ -153,7 +153,7 @@ export default function BusinessProfilePage() {
     } finally {
       setLoading(false)
     }
-  }, [supabase, router, calculateProgress])
+  }, [router, calculateProgress])
 
   useEffect(() => {
     fetchBusinessProfile()
@@ -249,41 +249,31 @@ export default function BusinessProfilePage() {
     setSuccess(null)
 
     try {
-      // TODO: Replace with actual MCP integration
-      // const mcpResponse = await fetch('/mcp/update', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     table: 'businesses',
-      //     id: business.id,
-      //     data: {
-      //       name: formData.name.trim(),
-      //       contact_email: formData.contact_email.trim() || null,
-      //       location: formData.location.trim() || null,
-      //       description: formData.description.trim() || null,
-      //       logo_url: formData.logo_url.trim() || null,
-      //       website_url: formData.website_url.trim() || null,
-      //       updated_at: new Date().toISOString()
-      //     }
-      //   })
-      // })
-
-      // Update business using Supabase for now
-      const { error: updateError } = await supabase
-        .from('businesses')
-        .update({
+      // Use MCP-powered API route to update business profile
+      const response = await fetch('/api/business/profile', {
+        method: 'PUT',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
           name: formData.name.trim(),
           contact_email: formData.contact_email.trim() || null,
           location: formData.location.trim() || null,
           description: formData.description.trim() || null,
           logo_url: formData.logo_url.trim() || null,
-          website_url: formData.website_url.trim() || null,
-          updated_at: new Date().toISOString()
+          website_url: formData.website_url.trim() || null
         })
-        .eq('id', business.id)
+      })
 
-      if (updateError) {
-        throw updateError
+      if (!response.ok) {
+        throw new Error(`Failed to update profile: ${response.status}`)
+      }
+
+      const result = await response.json()
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to update profile')
       }
 
       setOriginalData(formData)

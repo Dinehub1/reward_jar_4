@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient, getServerUser, getServerSession } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin-client'
+import { getServerUser, getServerSession } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createServerClient()
+    const supabase = createAdminClient()
     
     // Check authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser()

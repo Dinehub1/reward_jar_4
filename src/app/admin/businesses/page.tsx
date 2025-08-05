@@ -6,10 +6,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { AdminLayoutClient } from '@/components/layouts/AdminLayoutClient'
 import { useBusinesses, useAdminStatsCompat as useAdminStats } from '@/lib/hooks/use-admin-data'
 import { CardSkeleton, TableSkeleton } from '@/components/ui/skeleton'
-import { RefreshCw, AlertTriangle, CheckCircle, Clock, Search, Filter } from 'lucide-react'
+import { RefreshCw, AlertTriangle, CheckCircle, Clock, Search, Filter, Edit, Trash2, Plus, ExternalLink } from 'lucide-react'
 
 // Use types from the centralized service
 interface Business {
@@ -59,7 +63,7 @@ export default function BusinessesPage() {
     totalBusinesses: safeBusinessesData.length || 0,
     activeBusinesses: safeBusinessesData.filter(b => b?.status === 'active').length || 0,
     flaggedBusinesses: safeBusinessesData.filter(b => b?.is_flagged === true).length || 0,
-    cardRequests: safeBusinessesData.filter(b => b?.card_requested === true).length || 0,
+    cardRequests: safeBusinessesData.filter(b => (b as any)?.card_requested === true).length || 0,
     newThisWeek: safeBusinessesData.filter(b => {
       try {
         if (!b?.created_at) return false
@@ -192,6 +196,7 @@ export default function BusinessesPage() {
             )}
           </div>
           <div className="flex items-center gap-2">
+            <CreateBusinessDialog onBusinessCreated={refetch} />
             {refreshError && (
               <div className="flex items-center gap-1 text-red-600 text-sm">
                 <AlertTriangle className="h-4 w-4" />
@@ -290,7 +295,7 @@ export default function BusinessesPage() {
         </Card>
 
         <BusinessStats stats={businessMetrics} />
-        <BusinessesTable businesses={filteredBusinesses} />
+        <BusinessesTable businesses={filteredBusinesses} onBusinessUpdated={refetch} />
       </div>
     </AdminLayoutClient>
   )
@@ -421,7 +426,7 @@ function BusinessStats({ stats }: { stats: BusinessMetrics }) {
   )
 }
 
-function BusinessesTable({ businesses }: { businesses: Business[] }) {
+function BusinessesTable({ businesses, onBusinessUpdated }: { businesses: Business[], onBusinessUpdated: () => void }) {
   const [searchTerm, setSearchTerm] = useState('')
   const router = useRouter()
 
@@ -520,13 +525,24 @@ function BusinessesTable({ businesses }: { businesses: Business[] }) {
                       </div>
                     </td>
                     <td className="p-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => router.push(`/admin/businesses/${business.id}`)}
-                      >
-                        View Details
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => router.push(`/admin/businesses/${business.id}`)}
+                        >
+                          <ExternalLink className="h-4 w-4 mr-1" />
+                          View
+                        </Button>
+                        <EditBusinessDialog 
+                          business={business} 
+                          onBusinessUpdated={onBusinessUpdated} 
+                        />
+                        <DeleteBusinessDialog 
+                          business={business} 
+                          onBusinessDeleted={onBusinessUpdated} 
+                        />
+                      </div>
                     </td>
                   </tr>
                 )
@@ -547,5 +563,324 @@ function BusinessesTable({ businesses }: { businesses: Business[] }) {
         </div>
       </CardContent>
     </Card>
+  )
+}
+
+// Create Business Dialog Component
+function CreateBusinessDialog({ onBusinessCreated }: { onBusinessCreated: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    contact_email: '',
+    status: 'active' as 'active' | 'inactive'
+  })
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+
+    try {
+      const response = await fetch('/api/admin/businesses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        setOpen(false)
+        setFormData({ name: '', description: '', contact_email: '', status: 'active' })
+        onBusinessCreated()
+      } else {
+        alert('Error: ' + result.error)
+      }
+    } catch (error) {
+      alert('Error creating business: ' + (error instanceof Error ? error.message : 'Unknown error'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Business
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Create New Business</DialogTitle>
+          <DialogDescription>
+            Add a new business to the platform. All fields are required.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit}>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">Business Name</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Enter business name"
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="contact_email">Contact Email</Label>
+              <Input
+                id="contact_email"
+                type="email"
+                value={formData.contact_email}
+                onChange={(e) => setFormData(prev => ({ ...prev, contact_email: e.target.value }))}
+                placeholder="business@example.com"
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Brief description of the business"
+                rows={3}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="status">Status</Label>
+              <Select value={formData.status} onValueChange={(value: 'active' | 'inactive') => setFormData(prev => ({ ...prev, status: value }))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? 'Creating...' : 'Create Business'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// Edit Business Dialog Component
+function EditBusinessDialog({ business, onBusinessUpdated }: { business: Business, onBusinessUpdated: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [formData, setFormData] = useState({
+    name: business.name,
+    description: business.description || '',
+    contact_email: business.contact_email || '',
+    status: business.status as 'active' | 'inactive',
+    is_flagged: business.is_flagged || false,
+    admin_notes: business.admin_notes || ''
+  })
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+
+    try {
+      const response = await fetch(`/api/admin/businesses/${business.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        setOpen(false)
+        onBusinessUpdated()
+      } else {
+        alert('Error: ' + result.error)
+      }
+    } catch (error) {
+      alert('Error updating business: ' + (error instanceof Error ? error.message : 'Unknown error'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm">
+          <Edit className="h-4 w-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Edit Business</DialogTitle>
+          <DialogDescription>
+            Update business information. Changes will be saved immediately.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit}>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="edit-name">Business Name</Label>
+              <Input
+                id="edit-name"
+                value={formData.name}
+                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Enter business name"
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-contact_email">Contact Email</Label>
+              <Input
+                id="edit-contact_email"
+                type="email"
+                value={formData.contact_email}
+                onChange={(e) => setFormData(prev => ({ ...prev, contact_email: e.target.value }))}
+                placeholder="business@example.com"
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-description">Description</Label>
+              <Textarea
+                id="edit-description"
+                value={formData.description}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Brief description of the business"
+                rows={3}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-status">Status</Label>
+              <Select value={formData.status} onValueChange={(value: 'active' | 'inactive') => setFormData(prev => ({ ...prev, status: value }))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-admin_notes">Admin Notes</Label>
+              <Textarea
+                id="edit-admin_notes"
+                value={formData.admin_notes}
+                onChange={(e) => setFormData(prev => ({ ...prev, admin_notes: e.target.value }))}
+                placeholder="Internal notes about this business"
+                rows={2}
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="edit-is_flagged"
+                checked={formData.is_flagged}
+                onChange={(e) => setFormData(prev => ({ ...prev, is_flagged: e.target.checked }))}
+                className="rounded"
+              />
+              <Label htmlFor="edit-is_flagged">Flag this business</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? 'Updating...' : 'Update Business'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// Delete Business Dialog Component
+function DeleteBusinessDialog({ business, onBusinessDeleted }: { business: Business, onBusinessDeleted: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+
+  const handleDelete = async () => {
+    setLoading(true)
+
+    try {
+      const response = await fetch(`/api/admin/businesses/${business.id}`, {
+        method: 'DELETE'
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        setOpen(false)
+        onBusinessDeleted()
+      } else {
+        alert('Error: ' + result.error)
+      }
+    } catch (error) {
+      alert('Error deleting business: ' + (error instanceof Error ? error.message : 'Unknown error'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Delete Business</DialogTitle>
+          <DialogDescription>
+            Are you sure you want to delete "{business.name}"? This action cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-4">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <h4 className="font-medium text-red-800 mb-2">⚠️ Warning</h4>
+            <p className="text-sm text-red-700">
+              Deleting this business will permanently remove:
+            </p>
+            <ul className="text-sm text-red-700 mt-2 ml-4 list-disc">
+              <li>Business profile and settings</li>
+              <li>All associated cards (if any)</li>
+              <li>Customer relationships</li>
+              <li>Transaction history</li>
+            </ul>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+          <Button 
+            variant="destructive" 
+            onClick={handleDelete} 
+            disabled={loading}
+          >
+            {loading ? 'Deleting...' : 'Delete Business'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 } 

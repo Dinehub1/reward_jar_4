@@ -127,20 +127,24 @@ const signupFlow = {
 | **PWA/Web** | Card detected | Both wallet options | `/join/[cardId]?wallet=pwa` |
 | **Guest User** | Card preview | Login required for stamps | `/join/[cardId]?guest=true` |
 
-**QR Code Flow**:
+**Canonical QR Code Flow**:
 ```mermaid
 graph TD
-    A[Customer Scans QR] --> B{Authenticated?}
-    B -->|No| C[Guest Card Preview]
-    B -->|Yes| D[Check Device Type]
-    C --> E[Login Prompt for Stamps]
-    D --> F{Device?}
-    F -->|iPhone| G[Apple Wallet Option]
-    F -->|Android| H[Google Wallet Option]
-    F -->|Web| I[PWA + Both Options]
-    G --> J[Add to Apple Wallet]
-    H --> K[Add to Google Wallet]
-    I --> L[PWA Installation]
+    A[Customer Scans QR] --> B[/join/cardId Route]
+    B --> C{Authenticated?}
+    C -->|No| D[Guest Card Preview]
+    C -->|Yes| E[Check Device Type]
+    D --> F[Login Prompt for Stamps]
+    E --> G{Device?}
+    G -->|iPhone| H[Apple Wallet Option]
+    G -->|Android| I[Google Wallet Option]
+    G -->|Web| J[PWA + Both Options]
+    H --> K[Add to Apple Wallet]
+    I --> L[Add to Google Wallet]
+    J --> M[PWA Installation]
+    K --> N[/stamp/customerCardId for collection]
+    L --> N
+    M --> N
 ```
 
 ### Card Display & Visual Design

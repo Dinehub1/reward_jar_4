@@ -1,6 +1,11 @@
 // Centralized Admin Data Service
 // This service eliminates redundant API calls and provides caching
 
+// Extend globalThis interface to include our cache
+declare global {
+  var __adminDataCache: Map<string, { data: any, timestamp: number }> | undefined
+}
+
 interface AdminStats {
   totalBusinesses: number
   totalCustomers: number

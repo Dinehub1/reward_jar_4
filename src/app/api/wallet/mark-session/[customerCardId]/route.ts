@@ -322,12 +322,32 @@ export async function POST(
       // Continue without failing
     }
 
+    // Trigger admin dashboard cache invalidation for real-time updates
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/admin/dashboard-unified`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: isMembership ? 'session_marked' : 'stamp_added',
+          table: 'customer_cards',
+          recordId: customerCardId,
+          businessId: businessData.id,
+          metadata: result
+        })
+      })
+      console.log('✅ Admin dashboard cache invalidation triggered')
+    } catch (cacheError) {
+      console.warn('⚠️ Failed to trigger admin cache invalidation:', cacheError)
+      // Don't fail the main request for cache issues
+    }
+
     console.log('✅ QR scan processed successfully:', result)
 
     return NextResponse.json(result, {
       headers: {
         'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache'
+        'Pragma': 'no-cache',
+        'X-Admin-Cache-Invalidated': 'true'
       }
     })
     

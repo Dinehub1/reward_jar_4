@@ -173,15 +173,16 @@ export default function BillAmountModal({
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000))
       
-      // TODO: Replace with actual MCP integration
-      // const response = await fetch('/mcp/insert', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     table: 'stamp_transactions',
-      //     data: transactionData
-      //   })
-      // })
+      // MCP Integration: Use API route for stamp transactions
+      const response = await fetch('/api/business/stamp-transaction', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(transactionData)
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to process stamp transaction')
+      }
       
       // if (!response.ok) {
       //   throw new Error('Failed to record transaction')

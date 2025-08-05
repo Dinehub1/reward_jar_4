@@ -1,19 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin-client'
 
 export async function GET(request: NextRequest) {
   console.log('🎯 ADMIN CARDS DATA - Fetching card templates...')
   
   try {
     // Create a direct Supabase client with the environment variables
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    
-    if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Missing Supabase configuration')
-    }
-    
-    const supabase = createServerClient(supabaseUrl, supabaseKey)
+    const supabase = createAdminClient()
     
     // First, let's check if we can access the tables at all
     const { data: stampCardCount, error: countError } = await supabase
@@ -67,6 +60,7 @@ export async function GET(request: NextRequest) {
       .from('customer_cards')
       .select(`
         id,
+        customer_id,
         stamp_card_id,
         membership_card_id,
         current_stamps,

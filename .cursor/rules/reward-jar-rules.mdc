@@ -1,0 +1,27 @@
+[
+  {
+    "name": "Data Schema Consistency",
+    "description": "Prevent mismatches in data types or schemas across components and endpoints.",
+    "prompt": "When a data schema or TypeScript type is updated in one module or component (e.g. for rewards, wallet, or live preview), ensure the update is propagated to all dependent files and API contracts. Check for divergent definitions or outdated imports. Highlight inconsistent types used for the same conceptual entity."
+  },
+  {
+    "name": "Duplicate Component Detection",
+    "description": "Avoid redundant or conflicting implementations of components or utilities.",
+    "prompt": "If a new component or utility is added (e.g. for wallet or live preview), check for existing components with similar purpose or naming. Alert if logic/functionality is already implemented elsewhere. Recommend reusing or centralizing instead of re-implementing."
+  },
+  {
+    "name": "API Contract Stability",
+    "description": "Prevent breaking changes in internal or external APIs from localized updates.",
+    "prompt": "Monitor for updates to functions, props, or interfaces that are exported and used in API layers or other modules. Flag any change that could break existing usage, especially in endpoints, preview flows, or UI integrations. Highlight required downstream updates."
+  },
+  {
+    "name": "Shared Component Sync",
+    "description": "Ensure changes in shared components are reflected consistently across all usage sites.",
+    "prompt": "When a shared UI component like `LivePreview` is modified (structure, props, logic), track and ensure those changes are reflected in all usage sites. Flag mismatches in props, stale renders, or usage of outdated versions. Suggest centralized control when feasible."
+  },
+  {
+    "name": "Implementation Pattern Reuse",
+    "description": "Enforce reuse of existing logic or patterns instead of redundant implementations.",
+    "prompt": "Detect when similar logic or implementation patterns (e.g. wallet types, reward allocation) are being added again. Recommend referencing existing utilities, hooks, or design patterns. Suggest abstraction or DRY refactoring if duplication is detected."
+  }
+]

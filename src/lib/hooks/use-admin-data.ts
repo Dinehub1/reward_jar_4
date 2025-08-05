@@ -18,14 +18,36 @@ import type {
   PaginatedResponse
 } from '@/lib/supabase/types'
 
-// Generic fetcher for API routes
+// Standardized SWR Configuration for Admin Dashboard
+const ADMIN_SWR_CONFIG = {
+  refreshInterval: 30000, // 30 seconds - consistent across all hooks
+  revalidateOnFocus: true, // Always revalidate on focus for fresh data
+  revalidateOnReconnect: true, // Revalidate when connection restored
+  dedupingInterval: 10000, // 10 seconds deduping to prevent excessive requests
+  errorRetryCount: 3,
+  errorRetryInterval: 5000,
+  onError: (error: Error) => {
+    console.warn('❌ Admin SWR Error:', error.message)
+  }
+}
+
+// Generic fetcher for API routes with enhanced error handling
 const fetcher = async (url: string) => {
+  console.log(`🔍 SWR Fetching: ${url}`)
   const response = await fetch(url)
   if (!response.ok) {
-    const error = await response.text()
-    throw new Error(error || 'Failed to fetch data')
+    // Try to parse JSON error response first
+    try {
+      const errorData = await response.json()
+      throw new Error(errorData.error || errorData.message || `HTTP ${response.status}: Failed to fetch data`)
+    } catch (parseError) {
+      // If JSON parsing fails, use status text
+      throw new Error(`HTTP ${response.status}: ${response.statusText || 'Failed to fetch data'}`)
+    }
   }
-  return response.json()
+  const data = await response.json()
+  console.log(`✅ SWR Data fetched from ${url}:`, data.success ? 'Success' : 'Failed')
+  return data
 }
 
 // Admin Dashboard Hooks
@@ -34,18 +56,36 @@ const fetcher = async (url: string) => {
  * Fetches admin dashboard statistics
  * @returns SWR hook with admin stats data
  */
+// Define the unified dashboard data interface
+interface UnifiedDashboardData {
+  stats: {
+    totalBusinesses: number
+    totalCustomers: number
+    totalCards: number
+    totalStampCards: number
+    totalMembershipCards: number
+    activeCards: number
+    flaggedBusinesses: number
+    recentActivity: number
+    newThisWeek: number
+  }
+  businesses: Business[]
+  customers: any[]
+  cards: {
+    stampCards: any[]
+    membershipCards: any[]
+    customerCards: any[]
+  }
+  recentActivity: any[]
+  systemHealth: {
+    database: string
+    walletQueue: number
+    lastSync: string
+  }
+}
+
 export function useAdminStats() {
-  return useSWR<ApiResponse<AdminStats>>('/api/admin/dashboard-stats', fetcher, {
-    refreshInterval: 300000, // Refresh every 5 minutes (was 30 seconds!)
-    revalidateOnFocus: false, // Disable focus revalidation to prevent excessive calls
-    revalidateOnReconnect: true,
-    dedupingInterval: 60000, // Dedupe requests for 1 minute
-    errorRetryCount: 3,
-    errorRetryInterval: 5000,
-    onError: (error) => {
-      console.warn('Failed to fetch admin stats:', error)
-    }
-  })
+  return useSWR<ApiResponse<UnifiedDashboardData>>('/api/admin/dashboard-unified', fetcher, ADMIN_SWR_CONFIG)
 }
 
 /**
@@ -53,17 +93,7 @@ export function useAdminStats() {
  * @returns SWR hook with businesses data
  */
 export function useAdminBusinesses() {
-  return useSWR<ApiResponse<Business[]>>('/api/admin/businesses-simple', fetcher, {
-    refreshInterval: 300000, // Refresh every 5 minutes
-    revalidateOnFocus: false, // Disable focus revalidation to prevent excessive calls
-    revalidateOnReconnect: true,
-    dedupingInterval: 60000, // Dedupe requests for 1 minute
-    errorRetryCount: 3,
-    errorRetryInterval: 5000,
-    onError: (error) => {
-      console.warn('Failed to fetch businesses:', error)
-    }
-  })
+  return useSWR<ApiResponse<Business[]>>('/api/admin/dashboard-unified?section=businesses', fetcher, ADMIN_SWR_CONFIG)
 }
 
 /**
@@ -86,10 +116,7 @@ export function useAdminBusinessesDetailed() {
  * @returns SWR hook with customers data
  */
 export function useAdminCustomers() {
-  return useSWR<ApiResponse<Customer[]>>('/api/admin/customers-simple', fetcher, {
-    refreshInterval: 60000,
-    revalidateOnFocus: true
-  })
+  return useSWR<ApiResponse<Customer[]>>('/api/admin/dashboard-unified?section=customers', fetcher, ADMIN_SWR_CONFIG)
 }
 
 /**

@@ -45,7 +45,7 @@ export default function BusinessLayout({ children }: BusinessLayoutProps) {
         }
 
         console.log('BusinessLayout: Auth successful, setting user')
-        setUser(authStatus.user)
+        setUser(authStatus.user as any)
       } catch (error) {
         console.error('BusinessLayout: Auth check failed:', error)
         setAuthError('Authentication failed')
@@ -237,6 +237,18 @@ export default function BusinessLayout({ children }: BusinessLayoutProps) {
             <div className="text-sm text-muted-foreground hidden md:block">
               {new Date().toLocaleDateString()}
             </div>
+            
+            {/* Profile dropdown for desktop */}
+            <div className="hidden lg:flex items-center space-x-3">
+              <div className="text-right">
+                <div className="text-sm font-medium text-foreground">{user?.email?.split('@')[0]}</div>
+                <div className="text-xs text-muted-foreground">Business Account</div>
+              </div>
+              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+                <UserIcon className="w-4 h-4 text-primary-foreground" />
+              </div>
+            </div>
+            
             <ThemeToggle />
           </div>
         </div>

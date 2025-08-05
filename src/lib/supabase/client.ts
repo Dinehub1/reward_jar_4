@@ -63,5 +63,4 @@ export const createAuthClient = () => {
   }
 }
 
-// Re-export for backwards compatibility (deprecated)
-export default createClient 
+// Deprecated default export removed - import createClient directly 

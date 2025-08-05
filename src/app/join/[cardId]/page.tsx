@@ -43,6 +43,7 @@ export default function JoinCardPage() {
   const [deviceInfo, setDeviceInfo] = useState<DeviceInfo | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [isRegistering, setIsRegistering] = useState(false)
   const [customerCardId, setCustomerCardId] = useState<string | null>(null)
 
@@ -58,6 +59,8 @@ export default function JoinCardPage() {
   useEffect(() => {
     async function initialize() {
       try {
+        console.log('🔍 Loading card information for cardId:', cardId)
+        
         // Detect device
         const userAgent = navigator.userAgent
         const isIOS = /iPad|iPhone|iPod/.test(userAgent)
@@ -66,15 +69,17 @@ export default function JoinCardPage() {
         setDeviceInfo({
           type: isIOS ? 'ios' : isAndroid ? 'android' : 'desktop',
           userAgent,
-          supportsAppleWallet: isIOS,
-          supportsGoogleWallet: isAndroid || !isIOS
+          supportsAppleWallet: true, // Always show Apple Wallet for testing/demo
+          supportsGoogleWallet: true // Always show Google Wallet
         })
 
         // Load card information
         const supabase = createClient()
         
+        console.log('📊 Searching for stamp card with ID:', cardId)
+        
         // Try stamp cards first
-        let { data: stampCard } = await supabase
+        let { data: stampCard, error: stampError } = await supabase
           .from('stamp_cards')
           .select(`
             id,
@@ -87,12 +92,15 @@ export default function JoinCardPage() {
           .eq('status', 'active')
           .single()
 
+        console.log('📊 Stamp card query result:', { stampCard, stampError })
+
         if (stampCard) {
+          console.log('✅ Found stamp card:', stampCard.name)
           setCardInfo({
             id: stampCard.id,
             name: stampCard.name,
             reward_description: stampCard.reward_description,
-            business: stampCard.businesses,
+            business: stampCard.businesses?.[0] || { id: '', name: 'Unknown Business' },
             card_type: 'stamp',
             total_stamps: stampCard.total_stamps
           })
@@ -100,8 +108,10 @@ export default function JoinCardPage() {
           return
         }
 
+        console.log('📊 Searching for membership card with ID:', cardId)
+
         // Try membership cards
-        let { data: membershipCard } = await supabase
+        let { data: membershipCard, error: membershipError } = await supabase
           .from('membership_cards')
           .select(`
             id,
@@ -115,12 +125,15 @@ export default function JoinCardPage() {
           .eq('status', 'active')
           .single()
 
+        console.log('📊 Membership card query result:', { membershipCard, membershipError })
+
         if (membershipCard) {
+          console.log('✅ Found membership card:', membershipCard.name)
           setCardInfo({
             id: membershipCard.id,
             name: membershipCard.name,
             reward_description: `${membershipCard.total_sessions} sessions for $${membershipCard.cost}`,
-            business: membershipCard.businesses,
+            business: membershipCard.businesses?.[0] || { id: '', name: 'Unknown Business' },
             card_type: 'membership',
             total_sessions: membershipCard.total_sessions,
             cost: membershipCard.cost,
@@ -130,9 +143,10 @@ export default function JoinCardPage() {
           return
         }
 
+        console.log('❌ No card found with ID:', cardId)
         setError('Card not found or inactive')
       } catch (err) {
-        console.error('Error loading card:', err)
+        console.error('❌ Error loading card:', err)
         setError('Failed to load card information')
       } finally {
         setIsLoading(false)
@@ -150,84 +164,64 @@ export default function JoinCardPage() {
       return
     }
 
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(formData.email)) {
+      setError('Please enter a valid email address')
+      return
+    }
+
+    // Validate date format and that it's not in the future
+    const birthDate = new Date(formData.dateOfBirth)
+    const today = new Date()
+    if (isNaN(birthDate.getTime())) {
+      setError('Please enter a valid date of birth')
+      return
+    }
+    if (birthDate > today) {
+      setError('Date of birth cannot be in the future')
+      return
+    }
+
     setIsRegistering(true)
     setError(null)
 
     try {
-      const supabase = createClient()
+      const response = await fetch('/api/customer/card/join', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+              name: formData.name,
+          email: formData.email,
+          dateOfBirth: formData.dateOfBirth,
+          cardId: cardInfo.id,
+          cardType: cardInfo.card_type
+        }),
+      })
 
-      // Create or get customer
-      let { data: existingCustomer } = await supabase
-        .from('customers')
-        .select('id')
-        .eq('email', formData.email)
-        .single()
+      const result = await response.json()
 
-      let customerId = existingCustomer?.id
-
-      if (!customerId) {
-        // Create new customer
-        const { data: newCustomer, error: customerError } = await supabase
-          .from('customers')
-          .insert([{
-            name: formData.name,
-            email: formData.email,
-            phone: formData.phone || null,
-            date_of_birth: formData.dateOfBirth
-          }])
-          .select('id')
-          .single()
-
-        if (customerError) {
-          throw customerError
-        }
-        customerId = newCustomer.id
+      if (!result.success) {
+        throw new Error(result.error || 'Registration failed')
       }
 
-      // Check if customer already has this card
-      const { data: existingCard } = await supabase
-        .from('customer_cards')
-        .select('id')
-        .eq('customer_id', customerId)
-        .eq(cardInfo.card_type === 'stamp' ? 'stamp_card_id' : 'membership_card_id', cardInfo.id)
-        .single()
-
-      if (existingCard) {
-        setError('You already have this card!')
-        setIsRegistering(false)
-        return
+      setCustomerCardId(result.data.customerCardId)
+      
+      // Show appropriate message for existing vs new users
+      if (result.data.isExisting) {
+        setError(null) // Clear any previous errors
+        setSuccessMessage('Welcome back! You already have this card. Choose how to add it to your wallet.')
+        setStep(4) // Move to wallet selection
+      } else {
+        setSuccessMessage('Successfully registered! Choose how to add your card to your wallet.')
+        setStep(4) // Move to wallet selection for new users
       }
-
-      // Create customer card
-      const customerCardData = {
-        customer_id: customerId,
-        ...(cardInfo.card_type === 'stamp' ? {
-          stamp_card_id: cardInfo.id,
-          membership_card_id: null,
-          current_stamps: 0
-        } : {
-          stamp_card_id: null,
-          membership_card_id: cardInfo.id,
-          sessions_used: 0,
-          expiry_date: new Date(Date.now() + (cardInfo.duration_days || 365) * 24 * 60 * 60 * 1000).toISOString()
-        })
-      }
-
-      const { data: newCustomerCard, error: cardError } = await supabase
-        .from('customer_cards')
-        .insert([customerCardData])
-        .select('id')
-        .single()
-
-      if (cardError) {
-        throw cardError
-      }
-
-      setCustomerCardId(newCustomerCard.id)
-      setStep(4) // Move to wallet selection
     } catch (err) {
       console.error('Registration error:', err)
-      setError('Failed to register for card. Please try again.')
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      setError(`Failed to register for card: ${errorMessage}. Please try again.`)
     } finally {
       setIsRegistering(false)
     }
@@ -237,12 +231,23 @@ export default function JoinCardPage() {
     if (!customerCardId) return
 
     try {
+      if (walletType === 'pwa') {
+        // For PWA, open directly with GET request (no auth needed)
+        window.open(`/api/wallet/pwa/${customerCardId}`, '_blank')
+        setStep(5)
+        return
+      }
+
+      // For Apple and Google wallets, use GET (no auth needed for wallet generation)
       const response = await fetch(`/api/wallet/${walletType}/${customerCardId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        method: 'GET'
       })
 
-      if (walletType === 'apple' && response.ok) {
+      if (!response.ok) {
+        throw new Error(`${walletType} wallet API returned ${response.status}`)
+      }
+
+      if (walletType === 'apple') {
         const blob = await response.blob()
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
@@ -251,18 +256,15 @@ export default function JoinCardPage() {
         a.click()
         URL.revokeObjectURL(url)
         setStep(5)
-      } else if (walletType === 'google' && response.ok) {
+      } else if (walletType === 'google') {
         const html = await response.text()
         const newWindow = window.open('', '_blank')
         newWindow?.document.write(html)
         setStep(5)
-      } else if (walletType === 'pwa') {
-        window.open(`/api/wallet/pwa/${customerCardId}`, '_blank')
-        setStep(5)
       }
     } catch (error) {
       console.error(`Error adding to ${walletType} wallet:`, error)
-      setError(`Failed to add to ${walletType} wallet`)
+      setError(`Failed to add to ${walletType} wallet. Please try again.`)
     }
   }
 
@@ -434,7 +436,7 @@ export default function JoinCardPage() {
                 </Button>
                 <Button 
                   onClick={handleRegistration}
-                  disabled={isRegistering || !formData.name || !formData.email || !formData.dateOfBirth}
+                  disabled={isRegistering || !formData.name.trim() || !formData.email.trim() || !formData.dateOfBirth}
                   className="flex-1 bg-blue-600 hover:bg-blue-700"
                 >
                   {isRegistering ? 'Registering...' : 'Register'}
@@ -454,6 +456,12 @@ export default function JoinCardPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {successMessage && (
+                <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-green-800 text-sm">{successMessage}</p>
+                </div>
+              )}
+              
               <p className="text-gray-600 mb-6">
                 Choose how you'd like to store your {cardInfo.name} card:
               </p>

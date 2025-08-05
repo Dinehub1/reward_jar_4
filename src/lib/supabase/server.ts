@@ -74,14 +74,7 @@ export async function createServerClient(): Promise<ReturnType<typeof createSupa
   }
 }
 
-/**
- * Legacy function name for backwards compatibility
- * @deprecated Use createServerClient() instead
- */
-export async function createClient() {
-  console.warn('⚠️ DEPRECATED: createClient() is deprecated. Use createServerClient() instead.')
-  return createServerClient()
-}
+// Deprecated function removed - use createServerClient() directly
 
 /**
  * Get authenticated user from server context

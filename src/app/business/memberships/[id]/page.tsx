@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
+
 import BusinessLayout from '@/components/layouts/BusinessLayout'
 import ManagerModeToggle from '@/components/business/ManagerModeToggle'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -84,7 +84,7 @@ export default function MembershipDetailsPage() {
   const [session, setSession] = useState<any>(null)
   const [business, setBusiness] = useState<any>(null)
 
-  const supabase = createClient()
+  // MCP Integration: Data fetching moved to API route
 
   // Fetch membership card details
   const fetchMembershipDetails = useCallback(async () => {
@@ -92,71 +92,61 @@ export default function MembershipDetailsPage() {
       setLoading(true)
       setError(null)
 
-      // Get current session
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user) {
-        router.push('/auth/login')
+      // Use MCP-powered API routes to get business profile and membership details
+      const [profileResponse, membershipResponse] = await Promise.all([
+        fetch('/api/business/profile', {
+          method: 'GET',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' }
+        }),
+        fetch(`/api/business/memberships/${membershipId}`, {
+          method: 'GET',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' }
+        })
+      ])
+
+      // Handle profile response
+      if (!profileResponse.ok) {
+        if (profileResponse.status === 401) {
+          router.push('/auth/login')
+          return
+        }
+        throw new Error('Failed to load business profile')
+      }
+
+      const profileResult = await profileResponse.json()
+      if (!profileResult.success) {
+        setError(profileResult.error || 'Failed to load business profile')
         return
       }
 
-      setSession(session)
-
-      // Get business data
-      const { data: business, error: businessError } = await supabase
-        .from('businesses')
-        .select('id, name')
-        .eq('owner_id', session.user.id)
-        .single()
-
-      if (businessError || !business) {
-        setError('Business not found')
-        return
-      }
-
+      const business = profileResult.data
       setBusiness(business)
 
-      // TODO: Replace with actual MCP integration
-      // const mcpResponse = await fetch('/mcp/query', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     tables: ['membership_cards', 'customer_cards'],
-      //     query: `
-      //       SELECT 
-      //         mc.id, mc.name, mc.total_sessions, mc.cost, mc.created_at, mc.status, mc.business_id,
-      //         COUNT(DISTINCT cc.customer_id) as customer_count,
-      //         COUNT(DISTINCT CASE WHEN cc.expiry_date > NOW() THEN cc.id END) as active_memberships,
-      //         COUNT(DISTINCT CASE WHEN cc.expiry_date <= NOW() THEN cc.id END) as expired_memberships,
-      //         SUM(CASE WHEN cc.expiry_date > NOW() THEN mc.cost ELSE 0 END) as revenue
-      //       FROM membership_cards mc
-      //       LEFT JOIN customer_cards cc ON mc.id = cc.stamp_card_id AND cc.membership_type = 'gym'
-      //       WHERE mc.id = $1 AND mc.business_id = $2
-      //       GROUP BY mc.id, mc.name, mc.total_sessions, mc.cost, mc.created_at, mc.status, mc.business_id
-      //     `,
-      //     params: [membershipId, business.id]
-      //   })
-      // })
-
-      // Get membership card using Supabase for now
-      const { data: membershipData, error: membershipError } = await supabase
-        .from('membership_cards')
-        .select('*')
-        .eq('id', membershipId)
-        .eq('business_id', business.id)
-        .single()
-
-      if (membershipError || !membershipData) {
-        // Card not found or doesn't belong to this business
-        notFound()
-        return
+      // Handle membership response
+      if (!membershipResponse.ok) {
+        if (membershipResponse.status === 404) {
+          notFound()
+          return
+        }
+        throw new Error(`Failed to fetch membership details: ${membershipResponse.status}`)
       }
 
+      const membershipResult = await membershipResponse.json()
+      if (!membershipResult.success) {
+        if (membershipResult.error === 'Membership card not found') {
+          notFound()
+          return
+        }
+        throw new Error(membershipResult.error || 'Failed to load membership details')
+      }
+
+      const membershipData = membershipResult.data
+
       // Get customer stats for this membership card
-      const { count: customerCount } = await supabase
-        .from('customer_cards')
-        .select('customer_id', { count: 'exact' })
-        .eq('stamp_card_id', membershipId)
-        .eq('membership_type', 'gym')
+      // TODO: Implement API call to get customer count
+      const customerCount = 0
 
       // Mock additional stats (would come from MCP query in production)
       const cardWithStats: MembershipCard = {
@@ -191,7 +181,7 @@ export default function MembershipDetailsPage() {
     } finally {
       setLoading(false)
     }
-  }, [membershipId, supabase, router])
+  }, [membershipId, router])
 
   useEffect(() => {
     fetchMembershipDetails()

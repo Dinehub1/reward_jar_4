@@ -143,7 +143,7 @@ export default function AdminAlerts() {
           <div className="text-center py-8">
             <div className="text-red-500 mb-2">⚠️</div>
             <p className="text-lg font-medium">Error loading alerts</p>
-            <p className="text-muted-foreground">{error}</p>
+            <p className="text-muted-foreground">{(error as any) instanceof Error ? (error as any).message : String(error)}</p>
           </div>
         </div>
       </AdminLayoutClient>

@@ -1,81 +1,78 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin-client'
 
-export async function GET(request: NextRequest) {
-  console.log('🎯 ADMIN DASHBOARD STATS - Fetching real dashboard data from Supabase...')
-  
+/**
+ * GET /api/admin/dashboard-stats
+ * 
+ * Fetches admin dashboard statistics
+ * Used by the admin dashboard to display key metrics
+ */
+export async function GET(_request: NextRequest) {
   try {
+    console.log('📊 ADMIN DASHBOARD STATS - Fetching statistics...')
+    
     const supabase = createAdminClient()
     
-    // Fetch real data from Supabase database
+    // Fetch all statistics in parallel for better performance
     const [
-      businessesData,
-      customersData,
-      customerCardsData,
-      stampCardsData,
-      membershipCardsData,
-      flaggedBusinessesData,
-      recentBusinessesData
+      businessesResult,
+      customersResult,
+      customerCardsResult,
+      stampCardsResult,
+      membershipCardsResult,
+      flaggedBusinessesResult
     ] = await Promise.all([
-      supabase.from('businesses').select('id'),
-      supabase.from('customers').select('id'),
-      supabase.from('customer_cards').select('id'),
-      supabase.from('stamp_cards').select('id'),
-      supabase.from('membership_cards').select('id'),
-      supabase.from('businesses').select('id').eq('is_flagged', true),
-      supabase.from('businesses').select('id, name, contact_email, created_at').order('created_at', { ascending: false }).limit(5)
+      supabase.from('businesses').select('id', { count: 'exact' }),
+      supabase.from('customers').select('id', { count: 'exact' }),
+      supabase.from('customer_cards').select('id', { count: 'exact' }),
+      supabase.from('stamp_cards').select('id', { count: 'exact' }),
+      supabase.from('membership_cards').select('id', { count: 'exact' }),
+      supabase.from('businesses').select('id', { count: 'exact' }).eq('is_flagged', true)
     ])
 
-    // Count results with proper error handling
-    const totalBusinesses = businessesData.data?.length || 0
-    const totalCustomers = customersData.data?.length || 0
-    const totalCustomerCards = customerCardsData.data?.length || 0
-    const totalStampCards = stampCardsData.data?.length || 0
-    const totalMembershipCards = membershipCardsData.data?.length || 0
-    const flaggedBusinesses = flaggedBusinessesData.data?.length || 0
-    
-    console.log('📊 ADMIN DASHBOARD STATS - Real metrics from database:', {
-      totalBusinesses,
-      totalCustomers,
-      totalCustomerCards,
-      totalStampCards,
-      totalMembershipCards,
-      flaggedBusinesses
-    })
-    
-    const dashboardStats = {
-      totalBusinesses,
-      totalCustomers,
-      totalCards: totalCustomerCards, // Customer cards in use
-      totalStampCards, // Card templates
-      totalMembershipCards, // Card templates
-      activeCards: totalCustomerCards, // Customer cards in use
-      cardTemplates: totalStampCards + totalMembershipCards, // Total templates
-      flaggedBusinesses,
-      recentActivity: Math.min(totalCustomerCards, 15) // Recent activity based on actual data
+    // Check for errors
+    const errors = [
+      businessesResult.error,
+      customersResult.error,
+      customerCardsResult.error,
+      stampCardsResult.error,
+      membershipCardsResult.error,
+      flaggedBusinessesResult.error
+    ].filter(Boolean)
+
+    if (errors.length > 0) {
+      console.error('❌ ADMIN DASHBOARD STATS - Database errors:', errors)
+      throw new Error(`Database query failed: ${errors[0]?.message}`)
     }
-    
-    const result = {
+
+    // Calculate statistics
+    const stats = {
+      totalBusinesses: businessesResult.count || 0,
+      totalCustomers: customersResult.count || 0,
+      totalCards: customerCardsResult.count || 0,
+      totalStampCards: stampCardsResult.count || 0,
+      totalMembershipCards: membershipCardsResult.count || 0,
+      flaggedBusinesses: flaggedBusinessesResult.count || 0,
+      recentActivity: customerCardsResult.count || 0 // Using customer cards as activity metric
+    }
+
+    console.log('✅ ADMIN DASHBOARD STATS - Statistics calculated:', stats)
+
+    return NextResponse.json({
       success: true,
       data: {
-        stats: dashboardStats,
-        recentBusinesses: recentBusinessesData.data || []
-      }
-    }
-    
-    console.log('✅ ADMIN DASHBOARD STATS - Success:', dashboardStats)
-    
-    return NextResponse.json(result)
+        stats
+      },
+      timestamp: new Date().toISOString()
+    })
 
   } catch (error) {
     console.error('❌ ADMIN DASHBOARD STATS - Error:', error)
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Failed to fetch dashboard stats',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    )
+    
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to fetch dashboard statistics',
+      timestamp: new Date().toISOString()
+    }, { status: 500 })
   }
-} 
+}

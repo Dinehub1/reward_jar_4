@@ -89,8 +89,7 @@ export async function POST(request: NextRequest) {
           .createBucket('business-logos', {
             public: true,
             allowedMimeTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'],
-            fileSizeLimit: 5242880, // 5MB
-            avifAutoDetection: false
+            fileSizeLimit: 5242880 // 5MB
           })
 
         if (bucketError) {

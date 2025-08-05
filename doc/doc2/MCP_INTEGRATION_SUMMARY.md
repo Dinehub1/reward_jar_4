@@ -57,13 +57,14 @@ mcp_supabase_list_tables --schemas=["public"]
 mcp_supabase_execute_sql --query="SELECT count(*) FROM users WHERE role_id = 1"
 # ✅ Returns: Admin users with card creation privileges
 
--- Admin card creation queries working
+-- Admin card creation queries working (canonical schema)
 mcp_supabase_execute_sql --query="
-SELECT sc.name, b.name as business_name 
+SELECT sc.card_name, sc.reward, sc.stamps_required, sc.barcode_type, 
+       b.name as business_name, sc.stamp_config
 FROM stamp_cards sc 
 JOIN businesses b ON sc.business_id = b.id 
 ORDER BY sc.created_at DESC"
-# ✅ Returns: Cards created by admin, assigned to businesses
+# ✅ Returns: Cards with canonical fields (card_name, reward, stamps_required, barcode_type, stamp_config)
 
 -- Complex admin analytics working
 SELECT 'Admin Card Management', count(*) FROM stamp_cards...
@@ -295,31 +296,38 @@ The schema changes now support the complete admin dashboard system:
 
 ## 🎯 Admin Card Creation Integration (Updated)
 
-### MCP Commands for Admin Card Management
+### MCP Commands for Admin Card Management (Canonical Schema)
 
 ```bash
-# Verify admin-only card creation permissions
+# Verify admin-only card creation permissions with canonical fields
 mcp_supabase_execute_sql --query="
 SELECT 
   u.email,
   u.role_id,
-  COUNT(sc.id) as cards_created
+  COUNT(sc.id) as cards_created,
+  COUNT(CASE WHEN sc.barcode_type = 'QR_CODE' THEN 1 END) as qr_cards,
+  COUNT(CASE WHEN sc.barcode_type = 'PDF417' THEN 1 END) as pdf417_cards
 FROM users u
 LEFT JOIN businesses b ON b.owner_id = u.id
 LEFT JOIN stamp_cards sc ON sc.business_id = b.id
 WHERE u.role_id = 1
 GROUP BY u.email, u.role_id"
 
-# Monitor admin card creation activity
+# Monitor admin card creation activity with canonical schema
 mcp_supabase_execute_sql --query="
 SELECT 
-  sc.name as card_name,
+  sc.card_name,
+  sc.reward,
+  sc.stamps_required,
+  sc.barcode_type,
   b.name as business_name,
+  sc.stamp_config->>'minSpendAmount' as min_spend,
   sc.created_at,
   COUNT(cc.id) as customer_enrollments
 FROM stamp_cards sc
 JOIN businesses b ON sc.business_id = b.id
 LEFT JOIN customer_cards cc ON cc.stamp_card_id = sc.id
+GROUP BY sc.id, b.name
 ORDER BY sc.created_at DESC
 LIMIT 10"
 

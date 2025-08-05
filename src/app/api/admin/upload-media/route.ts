@@ -75,8 +75,7 @@ export async function POST(request: NextRequest) {
           .createBucket(bucketName, {
             public: true,
             allowedMimeTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp', 'image/svg+xml'],
-            fileSizeLimit: 5242880, // 5MB
-            avifAutoDetection: false
+            fileSizeLimit: 5242880 // 5MB
           })
 
         if (bucketError) {

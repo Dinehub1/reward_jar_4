@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase/server-only'
+import { createServerClient } from '@/lib/supabase/server-only'
 
-// Create a service role client that bypasses RLS
-const supabaseServiceRole = createServiceClient()
+// Create a server client for user operations
+async function getSupabaseServiceRole() {
+  return await createServerClient()
+}
 
 interface SignupData {
   userId: string
@@ -43,7 +45,8 @@ export async function POST(request: NextRequest) {
 
     // Step 1: Check if user already exists
     console.log('Step 1: Checking if user already exists...')
-    const { data: existingUser, error: checkUserError } = await supabaseServiceRole
+    const supabase = await getSupabaseServiceRole()
+    const { data: existingUser, error: checkUserError } = await supabase
       .from('users')
       .select('id, email, role_id')
       .eq('id', data.userId)
@@ -62,7 +65,7 @@ export async function POST(request: NextRequest) {
     } else {
       // Create user profile
       console.log('Step 2: Creating user profile...')
-      const { error: userError } = await supabaseServiceRole
+      const { error: userError } = await supabase
         .from('users')
         .insert({
           id: data.userId,
@@ -90,7 +93,7 @@ export async function POST(request: NextRequest) {
 
     // Step 3: Check if business already exists
     console.log('Step 3: Checking if business already exists...')
-    const { data: existingBusiness, error: checkBusinessError } = await supabaseServiceRole
+    const { data: existingBusiness, error: checkBusinessError } = await supabase
       .from('businesses')
       .select('id, name, owner_id')
       .eq('owner_id', data.userId)
@@ -119,7 +122,7 @@ export async function POST(request: NextRequest) {
 
       console.log('Business data to insert:', businessData)
 
-      const { error: businessError } = await supabaseServiceRole
+      const { error: businessError } = await supabase
         .from('businesses')
         .insert(businessData)
 

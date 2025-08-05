@@ -139,13 +139,24 @@ CREATE TABLE businesses (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Stamp card templates (for loyalty programs)
+-- Stamp card templates (for loyalty programs) - Canonical Schema
 CREATE TABLE stamp_cards (
   id UUID PRIMARY KEY,
   business_id UUID REFERENCES businesses(id),
-  name TEXT NOT NULL,
-  total_stamps INTEGER CHECK (total_stamps > 0 AND total_stamps <= 50),
-  reward_description TEXT NOT NULL,
+  card_name TEXT NOT NULL,              -- From Step 1: Card Name
+  reward TEXT NOT NULL,                 -- From Step 1: Reward Description
+  stamps_required INTEGER CHECK (stamps_required > 0 AND stamps_required <= 20), -- From Step 1: Slider
+  card_color TEXT,                      -- From Step 2: Color picker
+  icon_emoji TEXT,                      -- From Step 2: Emoji picker
+  barcode_type TEXT CHECK (barcode_type IN ('PDF417', 'QR_CODE')), -- From Step 2: Barcode selection
+  card_expiry_days INTEGER DEFAULT 60,  -- From Step 1: Card expiry
+  reward_expiry_days INTEGER DEFAULT 15, -- From Step 1: Reward expiry
+  stamp_config JSONB,                   -- From Step 3: Stamp rules
+  card_description TEXT,                -- From Step 4: Card description
+  how_to_earn_stamp TEXT,               -- From Step 4: How to earn
+  reward_details TEXT,                  -- From Step 4: Reward details
+  earned_stamp_message TEXT,            -- From Step 4: Stamp earned message
+  earned_reward_message TEXT,           -- From Step 4: Reward earned message
   status TEXT DEFAULT 'active'
 );
 
@@ -253,15 +264,26 @@ const marketingFunnel = {
 // 5. Customer Experience → stamp collection and rewards
 ```
 
-### API Architecture (Enhanced)
+### API Architecture (Enhanced with Card Creation)
 ```typescript
-// Admin API endpoints with proper authentication
+// Admin API endpoints with canonical card creation
 const adminEndpoints = {
   analytics: 'GET /api/admin/analytics?type={overview|business_activity|card_engagement}',
   testData: 'GET /api/admin/test-data', // Verification endpoint
-  businesses: 'GET /api/admin/businesses', // Now shows card_requested businesses
-  cards: 'GET /api/admin/cards',
+  businesses: 'GET /api/admin/businesses', // Shows card_requested businesses
+  cards: 'GET /api/admin/cards', // Card management dashboard
+  cardCreation: 'POST /api/admin/cards', // 5-step card creation endpoint
+  cardData: 'GET /api/admin/cards-data', // Canonical schema validation
   support: 'POST /api/admin/support/{action}'
+}
+
+// QR Provisioning endpoints (canonical flows)
+const qrEndpoints = {
+  customerJoin: '/join/[cardId]', // Customer onboarding QR
+  stampCollection: '/stamp/[customerCardId]', // Business scanning QR
+  appleWallet: '/api/wallet/apple/[customerCardId]', // PKPass generation
+  googleWallet: '/api/wallet/google/[customerCardId]', // JWT signing
+  pwaWallet: '/api/wallet/pwa/[customerCardId]' // Universal fallback
 }
 
 // Business API endpoints

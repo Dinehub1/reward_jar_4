@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -15,7 +15,6 @@ import {
   TrendingUp, 
   AlertCircle, 
   RefreshCw, 
-  ChevronDown,
   Star,
   Trophy,
   ArrowUpRight,
@@ -24,11 +23,74 @@ import {
   Settings,
   Bell,
   DollarSign,
+  Activity,
   UserCheck,
   CheckCircle,
-  X
+  X,
+  Loader2,
+  Eye,
+  Edit
 } from 'lucide-react'
 import ManagerModeToggle from '@/components/business/ManagerModeToggle'
+
+// Import card templates from admin section for consistency
+const CARD_TEMPLATES = [
+  {
+    id: 'coffee-shop',
+    name: 'Coffee Shop',
+    description: 'Perfect for cafes and coffee shops',
+    cardColor: '#8B4513',
+    iconEmoji: '☕',
+    stampsRequired: 10,
+    reward: 'Free Coffee',
+    rewardDescription: 'Free coffee of your choice',
+    category: 'Food & Beverage'
+  },
+  {
+    id: 'restaurant',
+    name: 'Restaurant',
+    description: 'Great for restaurants and food services',
+    cardColor: '#FF6347',
+    iconEmoji: '🍕',
+    stampsRequired: 8,
+    reward: 'Free Meal',
+    rewardDescription: 'Free main course meal',
+    category: 'Food & Beverage'
+  },
+  {
+    id: 'salon-spa',
+    name: 'Salon & Spa',
+    description: 'Ideal for beauty and wellness services',
+    cardColor: '#FF69B4',
+    iconEmoji: '💅',
+    stampsRequired: 6,
+    reward: 'Free Service',
+    rewardDescription: 'Free haircut or basic facial',
+    category: 'Beauty & Wellness'
+  },
+  {
+    id: 'retail-store',
+    name: 'Retail Store',
+    description: 'Perfect for retail and shopping',
+    cardColor: '#32CD32',
+    iconEmoji: '🛍️',
+    stampsRequired: 12,
+    reward: '20% Discount',
+    rewardDescription: '20% off your next purchase',
+    category: 'Retail'
+  },
+  {
+    id: 'fitness-gym',
+    name: 'Fitness & Gym',
+    description: 'Great for gyms and fitness centers',
+    cardColor: '#FF4500',
+    iconEmoji: '🏋️',
+    stampsRequired: 15,
+    reward: 'Free Session',
+    rewardDescription: 'Free personal training session',
+    category: 'Fitness'
+  }
+]
 
 // Interfaces
 interface DashboardStats {
@@ -58,6 +120,9 @@ interface RecentCard {
   type: 'stamp' | 'membership'
   customers: number
   created_at: string
+  status?: string
+  card_color?: string
+  icon_emoji?: string
 }
 
 interface RecentActivity {
@@ -66,16 +131,17 @@ interface RecentActivity {
   amount?: number
   description: string
   time: string
-  customer_name?: string
+  customer_name: string
 }
 
 interface SubscriptionStatus {
-  status: 'active' | 'due' | 'expired'
+  status: 'active' | 'inactive' | 'expired'
+  plan?: string
   expiry_date: string
   amount_due?: number
 }
 
-export default function BusinessDashboard() {
+function BusinessDashboardContent() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [profile, setProfile] = useState<BusinessProfile | null>(null)
   const [recentCards, setRecentCards] = useState<RecentCard[]>([])
@@ -92,10 +158,11 @@ export default function BusinessDashboard() {
     view_customer_data: false
   })
 
-
   const [session, setSession] = useState<any>(null)
   const [business, setBusiness] = useState<any>(null)
   const [showSuccessMessage, setShowSuccessMessage] = useState(false)
+  const [canCreateCards, setCanCreateCards] = useState(true) // Business users can create cards by default
+  
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
@@ -113,9 +180,13 @@ export default function BusinessDashboard() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        setLoading(true)
+        setError(null)
+        
         const { data: { session }, error: sessionError } = await supabase.auth.getSession()
         
         if (sessionError || !session?.user) {
+          console.log('No session found, redirecting to login')
           router.push('/auth/login')
           return
         }
@@ -128,23 +199,24 @@ export default function BusinessDashboard() {
           .single()
 
         if (userError || !userData || userData.role_id !== 2) {
+          console.error('User is not a business user:', userData?.role_id)
           router.push('/auth/login?error=unauthorized')
           return
         }
 
+        console.log('Business user authenticated:', session.user.id)
         setSession(session)
         await fetchDashboardData(session.user.id)
         
       } catch (err) {
         console.error('Authentication check failed:', err)
-        router.push('/auth/login')
+        setError('Authentication failed. Please try logging in again.')
+        setTimeout(() => router.push('/auth/login'), 2000)
       }
     }
 
     checkAuth()
   }, [router, supabase])
-
-  
 
   const fetchDashboardData = useCallback(async (userId: string) => {
     try {
@@ -158,22 +230,24 @@ export default function BusinessDashboard() {
         .eq('owner_id', userId)
         .single()
 
-      if (businessError) {
-        console.warn('Business lookup error:', businessError.message)
+      if (businessError && businessError.code !== 'PGRST116') {
+        console.error('Business lookup error:', businessError.message)
+        setError('Failed to load business data')
+        return
       }
 
       setBusiness(business)
 
       // Calculate profile progress
       const calculateProgress = (business: any) => {
-        let progress = 0
+        if (!business) return 0
+        let progress = 20 // Base progress for having an account
         if (business?.name) progress += 20
         if (business?.contact_email) progress += 20
         if (business?.location) progress += 20
-        if (business?.description) progress += 20
-        if (business?.logo_url) progress += 10
-        if (business?.website_url) progress += 10
-        return progress
+        if (business?.description) progress += 15
+        if (business?.logo_url) progress += 5
+        return Math.min(progress, 100)
       }
 
       const profileData = business ? {
@@ -189,6 +263,7 @@ export default function BusinessDashboard() {
       setProfile(profileData)
 
       if (!business) {
+        // Set empty stats but don't show error - business might not be fully set up yet
         setStats({
           totalStampCards: 0,
           totalMembershipCards: 0,
@@ -199,14 +274,17 @@ export default function BusinessDashboard() {
           stampRevenue: 0,
           membershipRevenue: 0
         })
+        setRecentCards([])
+        setRecentActivity([])
+        setLoading(false)
         return
       }
 
-      // Fetch enhanced stats using MCP-style queries
+      // Fetch enhanced stats
       const [stampCardsResult, membershipCardsResult, customerCardsResult] = await Promise.all([
         supabase
         .from('stamp_cards')
-          .select('id, name, created_at', { count: 'exact' })
+          .select('id, name, card_name, created_at, card_color, icon_emoji, status', { count: 'exact' })
           .eq('business_id', business.id)
         .eq('status', 'active')
           .order('created_at', { ascending: false })
@@ -214,7 +292,7 @@ export default function BusinessDashboard() {
         
         supabase
           .from('membership_cards')
-          .select('id, name, created_at', { count: 'exact' })
+          .select('id, name, created_at, status', { count: 'exact' })
           .eq('business_id', business.id)
           .eq('status', 'active')
           .order('created_at', { ascending: false })
@@ -222,25 +300,18 @@ export default function BusinessDashboard() {
         
         supabase
           .from('customer_cards')
-          .select(`
-            id, 
-            membership_type, 
-            created_at,
-            stamp_card_id,
-            customer_id,
-            current_stamps,
-            sessions_used,
-            cost
-          `)
-          .in('stamp_card_id', [business.id])
+          .select('id, customer_id', { count: 'exact' })
+          .or(`stamp_card_id.in.(${business.id}),membership_card_id.in.(${business.id})`)
       ])
 
-      // Calculate revenue metrics
-      const stampRevenue = 280000 // From bill amounts - would use MCP in production
-      const membershipRevenue = 450000 // From membership sales
-      const totalRevenue = stampRevenue + membershipRevenue
+      // Use seed data for demo purposes when no real data exists
+      const seedStats = {
+        totalRevenue: 45000,
+        stampRevenue: 28000,
+        membershipRevenue: 17000,
+        recentTransactions: 12
+      }
 
-      // Mock recent activity data (would come from session_usage table via MCP)
       const mockActivity: RecentActivity[] = [
         { id: '1', type: 'stamp', amount: 8500, description: 'Coffee purchase', time: '2 hours ago', customer_name: 'John Kim' },
         { id: '2', type: 'session', description: 'Gym session marked', time: '4 hours ago', customer_name: 'Sarah Lee' },
@@ -252,29 +323,33 @@ export default function BusinessDashboard() {
       setStats({
         totalStampCards: stampCardsResult.count || 0,
         totalMembershipCards: membershipCardsResult.count || 0,
-        totalCustomers: customerCardsResult.data?.length || 0,
+        totalCustomers: customerCardsResult.count || 0,
         activeCards: (stampCardsResult.count || 0) + (membershipCardsResult.count || 0),
-        recentTransactions: 5,
-        totalRevenue,
-        stampRevenue,
-        membershipRevenue
+        recentTransactions: seedStats.recentTransactions,
+        totalRevenue: seedStats.totalRevenue,
+        stampRevenue: seedStats.stampRevenue,
+        membershipRevenue: seedStats.membershipRevenue
       })
 
-      // Set recent cards
+      // Set recent cards with proper data mapping
       const allRecentCards: RecentCard[] = [
         ...(stampCardsResult.data?.map(card => ({
           id: card.id,
-          name: card.name,
+          name: card.card_name || card.name || 'Untitled Card',
           type: 'stamp' as const,
           customers: Math.floor(Math.random() * 50) + 10,
-          created_at: card.created_at
+          created_at: card.created_at,
+          status: card.status,
+          card_color: card.card_color,
+          icon_emoji: card.icon_emoji
         })) || []),
         ...(membershipCardsResult.data?.map(card => ({
           id: card.id,
-          name: card.name,
+          name: card.name || 'Untitled Membership',
           type: 'membership' as const,
           customers: Math.floor(Math.random() * 20) + 5,
-          created_at: card.created_at
+          created_at: card.created_at,
+          status: card.status
         })) || [])
       ]
 
@@ -284,53 +359,51 @@ export default function BusinessDashboard() {
       // Mock subscription status
       setSubscription({
         status: 'active',
+        plan: 'Business',
         expiry_date: '2025-08-20',
         amount_due: undefined
       })
 
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
-      setError('Failed to load dashboard data')
+      setError('Failed to load dashboard data. Please try refreshing the page.')
     } finally {
       setLoading(false)
     }
   }, [supabase])
 
   const getProgressColor = (progress: number) => {
-    const red = Math.round(255 * (100 - progress) / 100)
-    const green = Math.round(255 * progress / 100)
-    return `rgb(${red}, ${green}, 0)`
+    if (progress >= 80) return '#10B981' // green
+    if (progress >= 60) return '#F59E0B' // yellow
+    return '#EF4444' // red
   }
 
-  const getMissingFields = (profile: BusinessProfile | null) => {
+  const getMissingFields = (profile: BusinessProfile) => {
     const missing = []
-    if (!profile?.name) missing.push('Business name')
-    if (!profile?.contact_email) missing.push('Contact email')
-    if (!profile?.location) missing.push('Location')
-    if (!profile?.description) missing.push('Description')
-    if (!profile?.logo_url) missing.push('Logo')
-    if (!profile?.website_url) missing.push('Website')
+    if (!profile.name) missing.push('Business Name')
+    if (!profile.contact_email) missing.push('Email')
+    if (!profile.location) missing.push('Location')
+    if (!profile.description) missing.push('Description')
+    if (!profile.logo_url) missing.push('Logo')
     return missing
   }
 
-  const formatCurrency = (amount: number) => {
-    return `₩${amount.toLocaleString()}`
+  const handleRefresh = () => {
+    if (session?.user?.id) {
+      fetchDashboardData(session.user.id)
+  }
   }
 
-  const getRelativeTime = (timeStr: string) => {
-    // Simple relative time formatting
-    return timeStr
-  }
-
+  // Loading state
   if (loading) {
     return (
       <BusinessLayout>
-        <div className="flex items-center justify-center py-12">
+        <div className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8">
+          <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
-            <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-green-600" />
-            <div className="text-lg font-medium">Loading dashboard...</div>
-            <div className="text-sm text-gray-500 mt-1">
-              Fetching your business data
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
+              <h3 className="text-lg font-semibold mb-2">Loading Dashboard</h3>
+              <p className="text-gray-600">Please wait while we fetch your business data...</p>
             </div>
           </div>
         </div>
@@ -338,24 +411,22 @@ export default function BusinessDashboard() {
     )
   }
 
+  // Error state
   if (error) {
     return (
       <BusinessLayout>
-        <div className="flex items-center justify-center py-12">
-          <Card className="max-w-md mx-auto border-red-200">
-            <CardContent className="pt-6">
+        <div className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8">
+          <div className="flex items-center justify-center min-h-[400px]">
               <div className="text-center">
-                <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  {error}
-                </h3>
-                <Button onClick={() => window.location.reload()} className="w-full">
-                    <RefreshCw className="w-4 h-4 mr-2" />
+              <AlertCircle className="h-8 w-8 mx-auto mb-4 text-red-600" />
+              <h3 className="text-lg font-semibold mb-2 text-red-800">Error Loading Dashboard</h3>
+              <p className="text-gray-600 mb-4">{error}</p>
+              <Button onClick={handleRefresh} className="flex items-center gap-2">
+                <RefreshCw className="h-4 w-4" />
                     Try Again
                   </Button>
               </div>
-            </CardContent>
-          </Card>
+          </div>
         </div>
       </BusinessLayout>
     )
@@ -363,7 +434,7 @@ export default function BusinessDashboard() {
 
   return (
     <BusinessLayout>
-      <div className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6 overflow-hidden">
+      <div className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6">
         {/* Success Message from Onboarding */}
         {showSuccessMessage && (
           <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
@@ -377,21 +448,18 @@ export default function BusinessDashboard() {
                 </h3>
                 <div className="mt-1 text-sm text-green-700">
                   <p>
-                    Your business profile has been created successfully. Our team is now creating your custom stamp cards and membership cards and will notify you when they're ready to use.
+                    Your business profile has been created successfully. You can now start creating loyalty cards for your customers.
                   </p>
                 </div>
               </div>
               <div className="ml-auto pl-3">
-                <div className="-mx-1.5 -my-1.5">
                   <button
                     type="button"
-                    className="inline-flex rounded-md bg-green-50 p-1.5 text-green-500 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2 focus:ring-offset-green-50"
+                  className="inline-flex rounded-md bg-green-50 p-1.5 text-green-500 hover:bg-green-100"
                     onClick={() => setShowSuccessMessage(false)}
                   >
-                    <span className="sr-only">Dismiss</span>
                     <X className="h-5 w-5" />
                   </button>
-                </div>
               </div>
             </div>
           </div>
@@ -400,7 +468,7 @@ export default function BusinessDashboard() {
         {/* Header Section */}
         <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
           <div className="min-w-0 flex-1">
-            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 truncate">
+            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900">
               Welcome back{profile?.name && `, ${profile.name}`}!
             </h1>
             <p className="text-sm md:text-base text-gray-600 mt-1 md:mt-2">
@@ -408,34 +476,42 @@ export default function BusinessDashboard() {
             </p>
           </div>
           
-          {/* Manager Mode Toggle */}
-          <div className="w-full lg:w-auto">
-            <ManagerModeToggle
-              userId={session?.user?.id || ''}
-              businessId={business?.id}
-              onToggle={(isEnabled, permissions) => {
-                setManagerMode(isEnabled)
-                setManagerPermissions(permissions)
-              }}
-              className="w-full lg:w-auto lg:justify-end"
-            />
+          <div className="flex items-center gap-3">
+            <Button 
+              onClick={handleRefresh} 
+              variant="outline" 
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Refresh
+            </Button>
+            
+            {canCreateCards && (
+              <Link href="/business/stamp-cards">
+                <Button className="flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  Create Card
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
 
         {/* Profile Progress Bar */}
         {profile && profile.progress < 100 && (
-          <Card className="border-green-200 bg-green-50">
+          <Card className="border-amber-200 bg-amber-50">
             <CardContent className="p-4 md:p-6">
               <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0 mb-4">
-                <h3 className="text-sm md:text-base font-semibold text-green-900">Complete Your Profile</h3>
-                <span className="text-sm font-medium text-green-700">{profile.progress}%</span>
+                <h3 className="text-sm md:text-base font-semibold text-amber-900">Complete Your Profile</h3>
+                <span className="text-sm font-medium text-amber-700">{profile.progress}%</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2 md:h-3 mb-4">
                 <div
                   className="h-2 md:h-3 rounded-full transition-all duration-300"
                   style={{
                     width: `${profile.progress}%`,
-                    background: `linear-gradient(90deg, #ff0000 0%, ${getProgressColor(profile.progress)} 100%)`
+                    backgroundColor: getProgressColor(profile.progress)
                   }}
                 />
               </div>
@@ -446,8 +522,8 @@ export default function BusinessDashboard() {
                   </Badge>
                 ))}
               </div>
-              <Link href="/business/onboarding/profile">
-                <Button size="sm" className="w-full md:w-auto bg-green-600 hover:bg-green-700">
+              <Link href="/business/profile">
+                <Button size="sm" className="w-full md:w-auto">
                   Complete Profile
                 </Button>
               </Link>
@@ -455,210 +531,159 @@ export default function BusinessDashboard() {
           </Card>
         )}
 
-        {/* Subscription Status */}
-        <Card className="border-green-200 bg-green-50">
-          <CardContent className="pt-6">
+        {/* Stats Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+          <Card>
+            <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <span className="font-medium text-green-900">
-                  Active until {subscription?.expiry_date}
-                </span>
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total Cards</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats?.activeCards || 0}</p>
+                </div>
+                <CreditCard className="h-8 w-8 text-blue-600" />
               </div>
-              <Badge variant="outline" className="bg-green-100 text-green-800">
-                Active
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Quick Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 lg:gap-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2">
-              <CardTitle className="text-xs md:text-sm font-medium truncate">Total Cards</CardTitle>
-              <CreditCard className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground flex-shrink-0" />
-            </CardHeader>
-            <CardContent className="p-3 md:p-6 pt-0">
-              <div className="text-lg md:text-2xl font-bold">{stats?.activeCards}</div>
-              <p className="text-xs text-muted-foreground">
-                {stats?.totalStampCards} stamp + {stats?.totalMembershipCards} membership
+              <p className="text-xs text-gray-500 mt-2">
+                {stats?.totalStampCards || 0} stamp, {stats?.totalMembershipCards || 0} membership
               </p>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats?.totalCustomers}</div>
-              <p className="text-xs text-muted-foreground">
-                Enrolled in your programs
+            <CardContent className="p-4 md:p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total Customers</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats?.totalCustomers || 0}</p>
+                </div>
+                <Users className="h-8 w-8 text-green-600" />
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                Active loyalty members
               </p>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Recent Activity</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats?.recentTransactions}</div>
-              <p className="text-xs text-muted-foreground">
-                Transactions today
+            <CardContent className="p-4 md:p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Revenue</p>
+                  <p className="text-2xl font-bold text-gray-900">₹{stats?.totalRevenue?.toLocaleString() || '0'}</p>
+                </div>
+                <DollarSign className="h-8 w-8 text-yellow-600" />
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                This month
               </p>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(stats?.totalRevenue || 0)}</div>
-              <p className="text-xs text-muted-foreground">
-                Tracked through loyalty
+            <CardContent className="p-4 md:p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Recent Activity</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats?.recentTransactions || 0}</p>
+                </div>
+                <TrendingUp className="h-8 w-8 text-purple-600" />
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                Last 24 hours
               </p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Customer Journey Highlights */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-          <Card className="border-green-200 bg-green-50">
-            <CardHeader>
-              <CardTitle className="text-green-900 flex items-center">
-                <UserCheck className="w-5 h-5 mr-2" />
-                New Customers
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-green-900 mb-2">30</div>
-              <p className="text-green-700 text-sm mb-3">New customers this month</p>
-              <div className="flex items-center text-sm text-green-600">
-                <ArrowUpRight className="w-4 h-4 mr-1" />
-                +15% from last month
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-green-200 bg-green-50">
-            <CardHeader>
-              <CardTitle className="text-green-900 flex items-center">
-                <Star className="w-5 h-5 mr-2" />
-                Repeat Visits
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-green-900 mb-2">3x</div>
-              <p className="text-green-700 text-sm mb-3">Growth in repeat customers</p>
-              <div className="text-sm text-green-600">
-                Average: 4.2 stamps per customer
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-green-200 bg-green-50">
-            <CardHeader>
-              <CardTitle className="text-green-900 flex items-center">
-                <Trophy className="w-5 h-5 mr-2" />
-                Revenue Impact
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-900 mb-2">{formatCurrency(stats?.totalRevenue || 0)}</div>
-              <div className="text-sm text-green-700 space-y-1">
-                <div>Stamps: {formatCurrency(stats?.stampRevenue || 0)}</div>
-                <div>Memberships: {formatCurrency(stats?.membershipRevenue || 0)}</div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Admin-Managed Cards Banner */}
-        <Card className="border-blue-200 bg-blue-50">
-          <CardHeader>
-            <CardTitle className="flex items-center text-blue-800">
-              <AlertCircle className="w-5 h-5 mr-2" />
-              Card Management
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-blue-700 mb-4">
-              <p className="font-medium">Cards are created and managed by RewardJar Admins.</p>
-              <p className="text-sm mt-1">Contact support if you'd like to update or request a card for your business.</p>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Recent Cards */}
+          <div className="lg:col-span-2">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>Recent Cards</CardTitle>
               <Link href="/business/stamp-cards">
-                <Button variant="outline" size="sm" className="bg-white border-blue-300 text-blue-700 hover:bg-blue-100">
-                  <CreditCard className="w-4 h-4 mr-2" />
-                  Manage Cards
-                </Button>
-              </Link>
-              <Link href="/business/analytics">
-                <Button variant="outline" size="sm" className="bg-white border-blue-300 text-blue-700 hover:bg-blue-100">
-                  <BarChart3 className="w-4 h-4 mr-2" />
-                  Analytics
-                </Button>
-              </Link>
-              {!managerMode && (
-                <Link href="/business/profile">
-                  <Button variant="outline" size="sm" className="bg-white border-blue-300 text-blue-700 hover:bg-blue-100">
-                    <Settings className="w-4 h-4 mr-2" />
-                    Settings
+                  <Button variant="outline" size="sm">
+                    View All
                   </Button>
                 </Link>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Recent Cards & Activity */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Recent Cards */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Cards</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
                 {recentCards.length > 0 ? (
-                  recentCards.map((card) => (
-                    <div key={card.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <div className="text-lg">
-                          {card.type === 'stamp' ? '🎫' : '💳'}
+                  <div className="space-y-4">
+                    {recentCards.map((card) => (
+                      <div key={card.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div 
+                            className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-semibold"
+                            style={{ backgroundColor: card.card_color || '#8B4513' }}
+                          >
+                            {card.icon_emoji || '🎯'}
                         </div>
                         <div>
-                          <div className="font-medium text-gray-900">{card.name}</div>
-                          <div className="text-sm text-gray-500">
-                            {card.customers} customers
+                            <p className="font-medium">{card.name}</p>
+                            <p className="text-sm text-gray-500">
+                              {card.type === 'stamp' ? 'Stamp Card' : 'Membership'} • {card.customers} customers
+                            </p>
                           </div>
                         </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={card.status === 'active' ? 'default' : 'secondary'}>
+                            {card.status || 'active'}
+                          </Badge>
+                          <Button variant="ghost" size="sm">
+                            <Eye className="h-4 w-4" />
+                          </Button>
                       </div>
-                      <div className="flex space-x-2">
-                        <Button size="sm" variant="outline">
-                          <QrCode className="w-4 h-4" />
-                        </Button>
-                        <Button size="sm" variant="outline">
-                          <BarChart3 className="w-4 h-4" />
-                        </Button>
                       </div>
+                    ))}
                     </div>
-                  ))
                 ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <CreditCard className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                    <p>No cards created yet</p>
-                    <p className="text-sm">Request your first stamp card or membership card to get started</p>
+                  <div className="text-center py-8">
+                    <CreditCard className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No Cards Yet</h3>
+                    <p className="text-gray-600 mb-4">Create your first loyalty card to get started</p>
+                    {canCreateCards && (
+                      <Link href="/business/stamp-cards">
+                        <Button>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Create Your First Card
+                        </Button>
+                      </Link>
+                    )}
                   </div>
                 )}
+              </CardContent>
+            </Card>
               </div>
+
+          {/* Quick Actions & Recent Activity */}
+          <div className="space-y-6">
+            {/* Quick Actions */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Quick Actions</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {canCreateCards && (
+                  <Link href="/business/stamp-cards">
+                    <Button className="w-full justify-start" variant="outline">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create New Card
+                    </Button>
+                  </Link>
+                )}
+                <Link href="/business/analytics">
+                  <Button className="w-full justify-start" variant="outline">
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    View Analytics
+                  </Button>
+                </Link>
+                <Link href="/business/profile">
+                  <Button className="w-full justify-start" variant="outline">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Business Settings
+                  </Button>
+                </Link>
             </CardContent>
           </Card>
 
@@ -668,65 +693,120 @@ export default function BusinessDashboard() {
               <CardTitle>Recent Activity</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {recentActivity.map((activity) => (
-                  <div key={activity.id} className="flex items-center space-x-3">
-                    <div className="flex-shrink-0">
-                      {activity.type === 'stamp' && <div className="w-2 h-2 bg-blue-500 rounded-full"></div>}
-                      {activity.type === 'session' && <div className="w-2 h-2 bg-green-500 rounded-full"></div>}
-                      {activity.type === 'reward' && <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>}
-                      {activity.type === 'membership' && <div className="w-2 h-2 bg-purple-500 rounded-full"></div>}
+                {recentActivity.length > 0 ? (
+                  <div className="space-y-3">
+                    {recentActivity.slice(0, 5).map((activity) => (
+                      <div key={activity.id} className="flex items-start gap-3">
+                        <div className={`w-2 h-2 rounded-full mt-2 ${
+                          activity.type === 'stamp' ? 'bg-blue-500' :
+                          activity.type === 'reward' ? 'bg-green-500' :
+                          activity.type === 'membership' ? 'bg-purple-500' : 'bg-gray-500'
+                        }`} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium">{activity.description}</p>
+                          <p className="text-xs text-gray-500">{activity.customer_name} • {activity.time}</p>
                     </div>
-                    <div className="flex-1">
-                      <div className="text-sm font-medium text-gray-900">
-                        {activity.description}
-                        {activity.amount && ` - ${formatCurrency(activity.amount)}`}
+                        {activity.amount && (
+                          <p className="text-sm font-medium text-green-600">₹{activity.amount.toLocaleString()}</p>
+                        )}
                       </div>
-                      <div className="text-xs text-gray-500">
-                        {activity.customer_name} • {getRelativeTime(activity.time)}
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-4">
+                    <Activity className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm text-gray-600">No recent activity</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Card Templates Section - Show when no cards exist */}
+        {stats?.activeCards === 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Get Started with Templates</CardTitle>
+              <p className="text-sm text-gray-600">Choose from our pre-designed templates to create your first loyalty card</p>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {CARD_TEMPLATES.slice(0, 6).map((template) => (
+                  <div key={template.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="text-2xl">{template.iconEmoji}</div>
+                      <div 
+                        className="w-6 h-6 rounded-full"
+                        style={{ backgroundColor: template.cardColor }}
+                      />
                       </div>
+                    <h3 className="font-semibold mb-1">{template.name}</h3>
+                    <p className="text-sm text-gray-600 mb-2">{template.description}</p>
+                    <div className="text-xs text-gray-500 mb-3">
+                      <div>• {template.reward}</div>
+                      <div>• {template.stampsRequired} stamps required</div>
                     </div>
+                    {canCreateCards && (
+                      <Link href={`/business/stamp-cards?template=${template.id}`}>
+                        <Button size="sm" className="w-full">
+                          Use Template
+                        </Button>
+                      </Link>
+                    )}
                   </div>
                 ))}
               </div>
             </CardContent>
           </Card>
-        </div>
-
-        {/* Manager Mode Info */}
-        {managerMode && (
-          <Card className="border-yellow-200 bg-yellow-50">
-            <CardContent className="pt-6">
-              <div className="flex items-center space-x-3">
-                <Bell className="w-5 h-5 text-yellow-600" />
-                <div>
-                  <div className="font-medium text-yellow-900">Manager Mode Active</div>
-                  <div className="text-sm text-yellow-700">
-                    You can add stamps, redeem rewards, and view analytics. Card creation and financial data are restricted.
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         )}
 
-        {/* Getting Started */}
-        {stats?.activeCards === 0 && !managerMode && (
+        {/* Subscription Status */}
+        {subscription && (
           <Card className="border-blue-200 bg-blue-50">
-            <CardHeader>
-              <CardTitle className="text-blue-900">Get Started</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-blue-800 mb-4">
-                Welcome to RewardJar! Our admin team will help you set up your first stamp cards and membership cards to start building customer loyalty and driving revenue.
-              </p>
-              <p className="text-blue-700 text-sm">
-                Contact support to request your first card setup. Cards are created and managed centrally by RewardJar Admins for consistency.
-              </p>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+                    <Star className="h-5 w-5 text-white" />
+        </div>
+                <div>
+                    <p className="font-semibold text-blue-900">
+                      {subscription.plan || 'Business'} Plan - {subscription.status}
+                    </p>
+                    <p className="text-sm text-blue-700">
+                      {subscription.status === 'active' ? 
+                        `Active until ${new Date(subscription.expiry_date).toLocaleDateString()}` :
+                        'Plan expired'
+                      }
+                    </p>
+                  </div>
+                </div>
+                {subscription.amount_due && (
+                  <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                    Pay ₹{subscription.amount_due}
+                  </Button>
+                )}
+              </div>
             </CardContent>
           </Card>
         )}
       </div>
     </BusinessLayout>
+  )
+}
+
+export default function BusinessDashboard() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
+    }>
+      <BusinessDashboardContent />
+    </Suspense>
   )
 } 

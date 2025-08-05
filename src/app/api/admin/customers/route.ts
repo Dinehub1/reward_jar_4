@@ -32,10 +32,12 @@ export async function GET(request: NextRequest) {
     })
 
     // Build base query
-    let query = supabase.from('customers')
+    // Build query based on detailed flag
+    const baseQuery = supabase.from('customers')
     
+    let queryBuilder
     if (detailed) {
-      query = query.select(`
+      queryBuilder = baseQuery.select(`
         id,
         user_id,
         name,
@@ -71,7 +73,7 @@ export async function GET(request: NextRequest) {
         )
       `)
     } else {
-      query = query.select(`
+      queryBuilder = baseQuery.select(`
         id,
         user_id,
         name,
@@ -80,22 +82,16 @@ export async function GET(request: NextRequest) {
       `)
     }
 
-    // Apply search filter
+    // Apply search filter if provided
     if (search) {
-      query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%`)
+      queryBuilder = queryBuilder.or(`name.ilike.%${search}%,email.ilike.%${search}%`)
     }
 
-    // Handle pagination
-    if (page > 1) {
-      const offset = (page - 1) * limit
-      query = query.range(offset, offset + limit - 1)
-    } else {
-      query = query.limit(limit)
-    }
-
-    // Execute query with count for pagination
-    const { data: customers, error, count } = await query
+    // Execute query with ordering and pagination
+    const offset = (page - 1) * limit
+    const { data: customers, error, count } = await queryBuilder
       .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1)
 
     if (error) {
       console.error('💥 ADMIN CUSTOMERS API - Database error:', error)

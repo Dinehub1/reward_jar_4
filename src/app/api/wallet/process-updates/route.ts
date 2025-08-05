@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
           continue
         }
 
-        const card = customerCard as CustomerCard
+        const card = customerCard as unknown as CustomerCard
         
         // Determine card type and process accordingly
         const isStampCard = card.stamp_card_id !== null
@@ -195,6 +195,25 @@ export async function POST(request: NextRequest) {
         console.error(`❌ Error processing update ${update.id}:`, error)
         await markUpdateFailed(supabase, update.id, error instanceof Error ? error.message : 'Unknown error')
         failedCount++
+      }
+    }
+
+    // Trigger admin dashboard cache invalidation after wallet processing
+    if (processedCount > 0) {
+      try {
+        await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/admin/dashboard-unified`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'wallet_sync_complete',
+            processed_count: processedCount,
+            failed_count: failedCount,
+            timestamp: new Date().toISOString()
+          })
+        })
+        console.log('✅ Admin dashboard notified of wallet sync completion')
+      } catch (error) {
+        console.warn('⚠️ Failed to notify admin dashboard:', error)
       }
     }
 

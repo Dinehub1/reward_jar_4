@@ -29,12 +29,12 @@ jest.mock('swr', () => ({
 // Mock Supabase client
 const mockSupabaseClient = {
   auth: {
-    getSession: jest.fn(),
-    getUser: jest.fn(),
+    getSession: jest.fn() as jest.MockedFunction<() => Promise<any>>,
+    getUser: jest.fn() as jest.MockedFunction<() => Promise<any>>,
     onAuthStateChange: jest.fn(() => ({
       data: { subscription: { unsubscribe: jest.fn() } }
-    })),
-    signOut: jest.fn(),
+    })) as jest.Mock,
+    signOut: jest.fn() as jest.MockedFunction<() => Promise<any>>,
   },
   from: jest.fn(() => ({
     select: jest.fn().mockReturnThis(),
@@ -55,7 +55,7 @@ describe('Admin Dashboard Flow', () => {
     jest.clearAllMocks()
     
     // Mock successful fetch responses
-    global.fetch = jest.fn()
+    global.fetch = jest.fn() as jest.MockedFunction<typeof fetch>
   })
 
   afterEach(() => {

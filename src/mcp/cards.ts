@@ -267,3 +267,37 @@ export async function getCardsByBusiness(
     }
   }
 }
+
+/**
+ * Get membership card by ID
+ */
+export async function getMembershipCardById(cardId: string): Promise<MCPResponse<MCPMembershipCard>> {
+  try {
+    const supabase = createAdminClient()
+    
+    const { data, error } = await supabase
+      .from('membership_cards')
+      .select('*')
+      .eq('id', cardId)
+      .single()
+    
+    if (error) {
+      return {
+        success: false,
+        error: error.message,
+        code: error.code
+      }
+    }
+    
+    return {
+      success: true,
+      data
+    }
+    
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
+  }
+}
