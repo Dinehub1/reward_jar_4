@@ -92,13 +92,13 @@ async function fetchAdminData(): Promise<AdminData> {
     // Use relative URLs for server-side requests
     const baseUrl = typeof window === 'undefined' ? 'http://localhost:3000' : ''
     
-    // Fetch both endpoints in parallel to minimize total request time
+    // ✅ MIGRATED: Use single dashboard-unified endpoint for consistency
     const [statsRes, businessesRes] = await Promise.all([
-      fetch(`${baseUrl}/api/admin/panel-data`, { 
+      fetch(`${baseUrl}/api/admin/dashboard-unified`, { 
         cache: 'no-store',
         headers: { 'Cache-Control': 'no-cache' }
       }),
-      fetch(`${baseUrl}/api/admin/all-data`, { 
+      fetch(`${baseUrl}/api/admin/dashboard-unified`, { 
         cache: 'no-store',
         headers: { 'Cache-Control': 'no-cache' }
       })

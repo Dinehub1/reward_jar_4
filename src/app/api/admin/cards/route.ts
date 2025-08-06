@@ -5,6 +5,37 @@ import type { ApiResponse, StampConfig, CardFormData } from '@/lib/supabase/type
 import { normalizeCardData, createDatabasePayload, validateCardData } from '@/lib/utils/field-mapping'
 
 /**
+ * HEAD /api/admin/cards
+ * 
+ * Quick health check for cards API without fetching data
+ */
+export async function HEAD() {
+  try {
+    const supabase = createAdminClient()
+    
+    // Simple count query for health check
+    const { count, error } = await supabase
+      .from('stamp_cards')
+      .select('*', { count: 'exact', head: true })
+      .limit(1)
+
+    if (error) {
+      return new NextResponse(null, { status: 500 })
+    }
+
+    return new NextResponse(null, { 
+      status: 200,
+      headers: {
+        'X-Total-Cards': count?.toString() || '0'
+      }
+    })
+  } catch (error) {
+    console.error('Cards API health check error:', error)
+    return new NextResponse(null, { status: 500 })
+  }
+}
+
+/**
  * GET /api/admin/cards
  * 
  * Fetches all cards for admin panel with optional filtering

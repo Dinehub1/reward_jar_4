@@ -29,7 +29,8 @@ import {
   Download,
   Share,
   Bell,
-  Loader2
+  Loader2,
+  QrCode
 } from 'lucide-react'
 
 interface BusinessDetails {
@@ -611,16 +612,24 @@ function BusinessCards({ business }: { business: BusinessDetails }) {
                 {business.stamp_cards.map((card) => (
                   <div key={card.id} className="p-3 border rounded-lg">
                     <div className="flex items-center justify-between">
-                      <div>
+                      <div className="flex-1">
                         <h4 className="font-semibold">{card.name}</h4>
                         <p className="text-sm text-gray-600">{card.reward_description}</p>
                         <p className="text-xs text-gray-500">
                           {card.total_stamps} stamps required
                         </p>
                       </div>
-                      <Badge variant={card.status === 'active' ? 'default' : 'secondary'}>
-                        {card.status}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={card.status === 'active' ? 'default' : 'secondary'}>
+                          {card.status}
+                        </Badge>
+                        <Link href={`/admin/cards/stamp/${card.id}`}>
+                          <Button variant="outline" size="sm">
+                            <QrCode className="w-4 h-4 mr-2" />
+                            View Details
+                          </Button>
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -643,16 +652,24 @@ function BusinessCards({ business }: { business: BusinessDetails }) {
                 {business.membership_cards.map((card) => (
                   <div key={card.id} className="p-3 border rounded-lg">
                     <div className="flex items-center justify-between">
-                      <div>
+                      <div className="flex-1">
                         <h4 className="font-semibold">{card.name}</h4>
                         <p className="text-sm text-gray-600">{card.membership_type}</p>
                         <p className="text-xs text-gray-500">
                           ${card.price} / {card.duration_months} months
                         </p>
                       </div>
-                      <Badge variant={card.status === 'active' ? 'default' : 'secondary'}>
-                        {card.status}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={card.status === 'active' ? 'default' : 'secondary'}>
+                          {card.status}
+                        </Badge>
+                        <Link href={`/admin/cards/membership/${card.id}`}>
+                          <Button variant="outline" size="sm">
+                            <QrCode className="w-4 h-4 mr-2" />
+                            View Details
+                          </Button>
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 ))}

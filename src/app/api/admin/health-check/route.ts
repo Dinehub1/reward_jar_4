@@ -125,7 +125,8 @@ export async function GET(request: NextRequest) {
     
     // Test dashboard stats endpoint
     try {
-      const statsResponse = await fetch(`${baseUrl}/api/admin/dashboard-stats`)
+      // ✅ MIGRATED: Use dashboard-unified endpoint for consistency
+      const statsResponse = await fetch(`${baseUrl}/api/admin/dashboard-unified`)
       results.api_endpoints.dashboard_stats = statsResponse.ok ? 'success' : `failed (${statsResponse.status})`
     } catch (statsError) {
       results.api_endpoints.dashboard_stats = 'error'

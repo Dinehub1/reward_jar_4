@@ -64,8 +64,8 @@ export default function TestCardsPage() {
     setIsLoading(true)
     
     try {
-      // Simulate loading test data
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // Simulate loading test data with shorter delay
+      await new Promise(resolve => setTimeout(resolve, 500))
       
       const mockCardTests: CardTest[] = [
         {

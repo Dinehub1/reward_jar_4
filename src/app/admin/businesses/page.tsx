@@ -98,9 +98,9 @@ export default function BusinessesPage() {
     }
   }
 
-  // Auto-refresh effect
+  // Auto-refresh effect - disabled by default in development
   useEffect(() => {
-    if (!autoRefreshEnabled) return
+    if (!autoRefreshEnabled || process.env.NODE_ENV === 'development') return
 
     const interval = setInterval(() => {
       if (!loading && !isRefreshing) {

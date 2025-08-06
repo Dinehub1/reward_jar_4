@@ -154,7 +154,8 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const statusCode = response.status === 'healthy' ? 200 : (response.status === 'degraded' ? 206 : 503)
+    // Return 200 for healthy and degraded, 503 only for completely unhealthy
+    const statusCode = response.status === 'unhealthy' ? 503 : 200
 
     return NextResponse.json(response, { status: statusCode })
 

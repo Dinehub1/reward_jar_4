@@ -52,6 +52,26 @@ export function createAdminClient() {
       headers: {
         'x-client-info': 'rewardjar-admin',
         'x-admin-client': 'true'
+      },
+      // Enhanced fetch configuration with increased timeout
+      fetch: (url: RequestInfo | URL, init?: RequestInit) => {
+        const enhancedInit: RequestInit = {
+          ...init,
+          // Increase timeout to 30 seconds for admin operations
+          signal: AbortSignal.timeout(30000)
+        }
+        
+        console.log(`🔗 SUPABASE FETCH - URL: ${url}, Timeout: 30s`)
+        
+        return fetch(url, enhancedInit).catch(error => {
+          console.error('🚨 SUPABASE FETCH ERROR:', {
+            url: url.toString(),
+            error: error.message,
+            code: error.code,
+            cause: error.cause
+          })
+          throw error
+        })
       }
     }
   })

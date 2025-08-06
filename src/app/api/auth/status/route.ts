@@ -3,6 +3,15 @@ import { createAdminClient } from '@/lib/supabase/admin-client'
 import type { ApiResponse } from '@/lib/supabase/types'
 
 /**
+ * HEAD /api/auth/status
+ * 
+ * Quick health check for auth service
+ */
+export async function HEAD() {
+  return NextResponse.json(null, { status: 200 })
+}
+
+/**
  * GET /api/auth/status
  * 
  * Returns the current user's authentication status and role

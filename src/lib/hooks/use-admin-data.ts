@@ -6,6 +6,7 @@
  */
 
 import useSWR from 'swr'
+import { adminNotifications } from '@/lib/admin-events'
 import type { 
   AdminStats, 
   Business, 
@@ -18,7 +19,7 @@ import type {
   PaginatedResponse
 } from '@/lib/supabase/types'
 
-// Standardized SWR Configuration for Admin Dashboard
+// ✅ ENHANCED: Standardized SWR Configuration with admin notifications
 const ADMIN_SWR_CONFIG = {
   refreshInterval: 30000, // 30 seconds - consistent across all hooks
   revalidateOnFocus: true, // Always revalidate on focus for fresh data
@@ -26,28 +27,78 @@ const ADMIN_SWR_CONFIG = {
   dedupingInterval: 10000, // 10 seconds deduping to prevent excessive requests
   errorRetryCount: 3,
   errorRetryInterval: 5000,
-  onError: (error: Error) => {
+  onError: (error: Error, key: string) => {
     console.warn('❌ Admin SWR Error:', error.message)
+    
+    // ✅ ADMIN NOTIFICATION: Notify admins of persistent API errors
+    if (error.message.includes('500') || error.message.includes('timeout')) {
+      adminNotifications.systemError(
+        'Admin API Error',
+        `Persistent error on ${key}: ${error.message}`,
+        { endpoint: key, error: error.message }
+      )
+    }
   }
 }
 
-// Generic fetcher for API routes with enhanced error handling
+// ✅ ENHANCED: Generic fetcher with retry logic and admin notifications
 const fetcher = async (url: string) => {
   console.log(`🔍 SWR Fetching: ${url}`)
-  const response = await fetch(url)
-  if (!response.ok) {
-    // Try to parse JSON error response first
-    try {
-      const errorData = await response.json()
-      throw new Error(errorData.error || errorData.message || `HTTP ${response.status}: Failed to fetch data`)
-    } catch (parseError) {
-      // If JSON parsing fails, use status text
-      throw new Error(`HTTP ${response.status}: ${response.statusText || 'Failed to fetch data'}`)
+  
+  // Add timeout for slow endpoints
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 second timeout
+  
+  try {
+    const response = await fetch(url, {
+      signal: controller.signal,
+      credentials: 'include'
+    })
+    
+    clearTimeout(timeoutId)
+    
+    if (!response.ok) {
+      // Try to parse JSON error response first
+      try {
+        const errorData = await response.json()
+        const errorMessage = errorData.error || errorData.message || `HTTP ${response.status}: Failed to fetch data`
+        
+        // ✅ ADMIN NOTIFICATION: Notify about API failures
+        if (response.status >= 500) {
+          adminNotifications.systemError(
+            'Admin API Failure',
+            `${url} returned ${response.status}: ${errorMessage}`,
+            { url, status: response.status, error: errorMessage }
+          )
+        }
+        
+        throw new Error(errorMessage)
+      } catch (parseError) {
+        // If JSON parsing fails, use status text
+        const errorMessage = `HTTP ${response.status}: ${response.statusText || 'Failed to fetch data'}`
+        throw new Error(errorMessage)
+      }
     }
+    
+    const data = await response.json()
+    console.log(`✅ SWR Data fetched from ${url}:`, data.success ? 'Success' : 'Failed')
+    return data
+    
+  } catch (error) {
+    clearTimeout(timeoutId)
+    
+    if (error instanceof Error && error.name === 'AbortError') {
+      const timeoutError = `Request timeout: ${url} took longer than 15 seconds`
+      adminNotifications.systemError(
+        'Admin API Timeout',
+        timeoutError,
+        { url, timeout: 15000 }
+      )
+      throw new Error(timeoutError)
+    }
+    
+    throw error
   }
-  const data = await response.json()
-  console.log(`✅ SWR Data fetched from ${url}:`, data.success ? 'Success' : 'Failed')
-  return data
 }
 
 // Admin Dashboard Hooks
@@ -155,8 +206,10 @@ export function useAdminCustomerCards() {
 /**
  * Fetches comprehensive admin panel data
  * @returns SWR hook with all admin panel data
+ * @deprecated Use useAdminStats() instead - migrated to dashboard-unified API
  */
 export function useAdminPanelData() {
+  // ✅ MIGRATED: Now uses dashboard-unified endpoint for consistency
   return useSWR<ApiResponse<{
     stats: AdminStats
     businesses: Business[]
@@ -164,7 +217,7 @@ export function useAdminPanelData() {
     stampCards: StampCard[]
     membershipCards: MembershipCard[]
     customerCards: CustomerCard[]
-  }>>('/api/admin/panel-data', fetcher, {
+  }>>('/api/admin/dashboard-unified', fetcher, {
     refreshInterval: 30000,
     revalidateOnFocus: true
   })

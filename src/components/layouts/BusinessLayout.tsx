@@ -5,7 +5,8 @@ import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
-import { getAuthStatus, signOut } from '@/lib/auth-protection'
+import { getAuthStatus } from '@/lib/auth-protection'
+import { useAdminAuth } from '@/lib/hooks/use-admin-auth'
 import { Menu, X, LogOut, User as UserIcon } from 'lucide-react'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 
@@ -20,6 +21,9 @@ export default function BusinessLayout({ children }: BusinessLayoutProps) {
   const [authError, setAuthError] = useState<string | null>(null)
   const router = useRouter()
   const pathname = usePathname()
+  
+  // ✅ STANDARDIZED: Use consistent auth pattern across all layouts
+  const { signOut: adminSignOut } = useAdminAuth(false)
   const supabase = createClient()
 
   useEffect(() => {
@@ -58,9 +62,10 @@ export default function BusinessLayout({ children }: BusinessLayoutProps) {
     checkAuth()
   }, [router])
 
+  // ✅ STANDARDIZED: Use consistent sign-out pattern
   const handleSignOut = async () => {
     try {
-      await signOut()
+      await adminSignOut()
       router.push('/auth/login')
     } catch (error) {
       console.error('Sign out failed:', error)

@@ -123,7 +123,8 @@ describe('Admin Dashboard Flow', () => {
           json: () => Promise.resolve(mockAuthResponse)
         })
       }
-      if (url.includes('/api/admin/dashboard-stats')) {
+      // ✅ MIGRATED: Updated to use dashboard-unified endpoint
+    if (url.includes('/api/admin/dashboard-unified')) {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve(mockStatsResponse)
@@ -169,7 +170,7 @@ describe('Admin Dashboard Flow', () => {
       json: () => Promise.resolve(mockResponse)
     })
 
-    const response = await fetch('/api/admin/dashboard-stats')
+    const response = await fetch('/api/admin/dashboard-unified')
     const data = await response.json()
 
     expect(response.ok).toBe(true)
@@ -240,7 +241,7 @@ describe('Admin Dashboard Flow', () => {
     })
 
     try {
-      const response = await fetch('/api/admin/dashboard-stats')
+      const response = await fetch('/api/admin/dashboard-unified')
       if (!response.ok) {
         throw new Error('API request failed')
       }

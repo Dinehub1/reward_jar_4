@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Apple, Chrome, Globe, Check, X, RefreshCw, Smartphone } from 'lucide-react'
+import { adminNotifications } from '@/lib/admin-events'
 
 interface WalletStatus {
   type: 'apple' | 'google' | 'pwa'
@@ -49,6 +50,11 @@ export function WalletProvisioningStatus({
       }
     } catch (error) {
       console.error('Failed to check wallet statuses:', error)
+      // ✅ ADMIN NOTIFICATION: Notify about wallet status check failures
+      adminNotifications.walletFailure(
+        cardId,
+        `Failed to check wallet statuses: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
     }
   }
 
@@ -65,10 +71,16 @@ export function WalletProvisioningStatus({
         const data = await response.json()
         setWalletStatuses(data.statuses)
       } else {
-        throw new Error('Provisioning failed')
+        const errorText = await response.text()
+        throw new Error(`Provisioning failed: ${errorText}`)
       }
     } catch (error) {
       console.error('Wallet provisioning failed:', error)
+      // ✅ ADMIN NOTIFICATION: Notify about wallet provisioning failures
+      adminNotifications.walletFailure(
+        cardId,
+        `Wallet provisioning failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
       // Update statuses to show failures
       setWalletStatuses(prev => prev.map(status => ({
         ...status,

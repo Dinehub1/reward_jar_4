@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { useAdminAuth } from '@/lib/hooks/use-admin-auth'
 import type { User } from '@supabase/supabase-js'
 import { User as UserIcon, Home, LogOut } from 'lucide-react'
 
@@ -17,6 +18,9 @@ export default function CustomerLayout({ children }: CustomerLayoutProps) {
   const [loading, setLoading] = useState(true)
   const router = useRouter()
   const supabase = createClient()
+  
+  // ✅ STANDARDIZED: Use consistent auth pattern across all layouts
+  const { signOut: adminSignOut } = useAdminAuth(false)
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -74,9 +78,17 @@ export default function CustomerLayout({ children }: CustomerLayoutProps) {
     return () => subscription.unsubscribe()
   }, [router, supabase])
 
+  // ✅ STANDARDIZED: Use consistent sign-out pattern
   const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    router.push('/')
+    try {
+      await adminSignOut()
+      router.push('/')
+    } catch (error) {
+      console.error('Sign out failed:', error)
+      // Fallback to direct supabase sign out
+      await supabase.auth.signOut()
+      router.push('/')
+    }
   }
 
   if (loading) {

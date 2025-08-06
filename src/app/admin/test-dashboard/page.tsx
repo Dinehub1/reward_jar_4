@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { AdminLayoutClient } from '@/components/layouts/AdminLayoutClient'
+import { shouldEnableAutoRefresh, getPollingInterval } from '@/lib/utils/dev-mode'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -53,20 +54,25 @@ export default function TestDashboardPage() {
   useEffect(() => {
     loadDashboardData()
     
-    // Simulate real-time updates
-    const interval = setInterval(() => {
-      updateMetrics()
-    }, 5000)
+    // Use development mode utilities for auto-refresh
+    const autoRefreshEnabled = shouldEnableAutoRefresh('test-dashboard')
+    
+    if (autoRefreshEnabled) {
+      // Simulate real-time updates with environment-appropriate interval
+      const interval = setInterval(() => {
+        updateMetrics()
+      }, getPollingInterval(30000))
 
-    return () => clearInterval(interval)
+      return () => clearInterval(interval)
+    }
   }, [])
 
   const loadDashboardData = async () => {
     setIsLoading(true)
     
     try {
-      // Simulate loading dashboard stats
-      await new Promise(resolve => setTimeout(resolve, 1500))
+      // Simulate loading dashboard stats with shorter delay for better UX
+      await new Promise(resolve => setTimeout(resolve, 800))
       
       const mockMetrics: SystemMetric[] = [
         {

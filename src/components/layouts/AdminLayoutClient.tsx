@@ -126,14 +126,10 @@ export function AdminLayoutClient({ children, requireAuth = true }: AdminLayoutC
     return <LoadingState />
   }
 
-  // If auth is required but user is not admin, redirect to login
+  // If auth is required but user is not admin, show access denied
   if (requireAuth && !isAdmin) {
-    console.log('❌ AdminLayoutClient: Access denied - redirecting to login')
-    // Use setTimeout to avoid redirect during render
-    setTimeout(() => {
-      router.push('/auth/login?error=admin_required')
-    }, 0)
-    return <LoadingState />
+    console.log('❌ AdminLayoutClient: Access denied - showing access denied state')
+    return <AccessDeniedState />
   }
 
   return (

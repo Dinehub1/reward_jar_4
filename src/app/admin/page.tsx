@@ -7,9 +7,11 @@ import { Badge } from '@/components/ui/badge'
 import { AdminLayoutClient } from '@/components/layouts/AdminLayoutClient'
 import { useAdminStats, useAdminBusinesses } from '@/lib/hooks/use-admin-data'
 import { useAdminRealtime, useAdminNotifications } from '@/lib/hooks/use-admin-realtime'
+import { adminNotifications, useAdminEvents } from '@/lib/admin-events'
 import { CardSkeleton, TableSkeleton } from '@/components/ui/skeleton'
 import { BusinessCreationDialog } from '@/components/admin/BusinessCreationDialog'
-import { RefreshCw, Database, Activity, FileText, Zap, AlertTriangle, Plus, CreditCard, Building2, Eye } from 'lucide-react'
+import { RefreshCw, Database, Activity, FileText, Zap, AlertTriangle, Plus, CreditCard, Building2, Eye, Bell } from 'lucide-react'
+import React from 'react'
 import type { AdminStats, Business } from '@/lib/supabase/types'
 
 // Icons for the dashboard
@@ -374,6 +376,23 @@ export default function AdminDashboard() {
   // Real-time subscriptions for automatic updates
   const { isConnected: realtimeConnected } = useAdminRealtime()
   const { sendNotification } = useAdminNotifications()
+  
+  // ✅ ADMIN EVENTS: Subscribe to admin events for notifications
+  const { events: adminEvents } = useAdminEvents()
+  
+  // ✅ ADMIN CLEANUP COMPLETED: Notify about system improvements
+  React.useEffect(() => {
+    // ✅ COMPLETED: Migrated all redundant APIs to dashboard-unified
+    adminNotifications.endpointDeprecated('/api/admin/panel-data', '/api/admin/dashboard-unified')
+    adminNotifications.endpointDeprecated('/api/admin/dashboard-stats', '/api/admin/dashboard-unified')
+    adminNotifications.endpointDeprecated('/api/admin/all-data', '/api/admin/dashboard-unified')
+    
+    // ✅ COMPLETED: System improvements notification
+    adminNotifications.cleanupComplete(
+      'Admin System Cleanup Phase 1',
+      'API consolidation, auth standardization, error handling, and notification system implemented'
+    )
+  }, [])
 
   // Extract data from unified API response
   const statsData = unifiedResponse?.data?.stats
@@ -398,10 +417,23 @@ export default function AdminDashboard() {
       await refetchUnified()
       setLastRefresh(new Date())
       console.log('✅ Unified data refresh completed successfully')
+      
+      // ✅ ADMIN NOTIFICATION: Notify about successful cleanup/refresh
+      adminNotifications.cleanupComplete(
+        'Dashboard Data Refresh',
+        'All admin dashboard data has been successfully refreshed'
+      )
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
       setRefreshError(errorMessage)
       console.error('❌ Unified data refresh failed:', error)
+      
+      // ✅ ADMIN NOTIFICATION: Notify about refresh failures
+      adminNotifications.systemError(
+        'Dashboard Refresh Failed',
+        errorMessage,
+        { action: 'data_refresh', error: errorMessage }
+      )
     } finally {
       setRefreshing(false)
     }
@@ -506,6 +538,43 @@ export default function AdminDashboard() {
             </Button>
           </div>
         </div>
+
+        {/* ✅ ADMIN NOTIFICATIONS PANEL */}
+        {adminEvents.length > 0 && (
+          <Card className="border-blue-200 bg-blue-50 dark:bg-blue-900/20">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-blue-700">
+                <Bell className="w-5 h-5" />
+                Recent Admin Events
+                <Badge variant="secondary">{adminEvents.length}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="space-y-2 max-h-32 overflow-y-auto">
+                {adminEvents.slice(0, 3).map(event => (
+                  <div key={event.id} className="flex items-start gap-3 p-2 rounded-lg bg-white/60 dark:bg-gray-800/60">
+                    <div className={`mt-1 ${
+                      event.severity === 'critical' ? 'text-red-500' :
+                      event.severity === 'error' ? 'text-red-400' :
+                      event.severity === 'warning' ? 'text-yellow-500' : 'text-blue-500'
+                    }`}>
+                      {event.severity === 'critical' ? '🚨' :
+                       event.severity === 'error' ? '❌' :
+                       event.severity === 'warning' ? '⚠️' : 'ℹ️'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{event.title}</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-300 truncate">{event.message}</p>
+                      <p className="text-xs text-gray-500">
+                        {event.timestamp.toLocaleTimeString()}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Error Banner */}
         {refreshError && (

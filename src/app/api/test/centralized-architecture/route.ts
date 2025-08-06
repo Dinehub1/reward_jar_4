@@ -4,6 +4,26 @@ import { createAdminClient } from '@/lib/supabase/admin-client'
 import type { ApiResponse } from '@/lib/supabase/types'
 
 /**
+ * HEAD /api/test/centralized-architecture
+ * 
+ * Quick health check for centralized architecture without running full tests
+ */
+export async function HEAD() {
+  try {
+    // Quick environment check
+    const envHealth = getEnvironmentHealth()
+    
+    if (envHealth.status === 'healthy') {
+      return new NextResponse(null, { status: 200 })
+    } else {
+      return new NextResponse(null, { status: 503 })
+    }
+  } catch (error) {
+    return new NextResponse(null, { status: 500 })
+  }
+}
+
+/**
  * GET /api/test/centralized-architecture
  * 
  * Comprehensive test of the new centralized Supabase architecture

@@ -5,7 +5,7 @@
  * Uses API routes instead of direct Supabase calls for data fetching.
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { ApiResponse } from '@/lib/supabase/types'
@@ -24,7 +24,7 @@ interface AdminAuthActions {
 
 /**
  * Hook for admin authentication management
- * Optimized to reduce excessive API calls
+ * Optimized to prevent infinite polling and excessive API calls
  */
 export function useAdminAuth(requireAuth: boolean = true): AdminAuthState & AdminAuthActions {
   const [state, setState] = useState<AdminAuthState>({
@@ -36,12 +36,37 @@ export function useAdminAuth(requireAuth: boolean = true): AdminAuthState & Admi
   
   const router = useRouter()
   const supabase = createClient()
+  
+  // Prevent multiple simultaneous auth checks
+  const authCheckInProgress = useRef(false)
+  const authResolved = useRef(false)
 
   const checkAuth = async () => {
-    if (!requireAuth) {
-      setState(prev => ({ ...prev, isLoading: false, isAdmin: true }))
+    console.log('🔍 AUTH HOOK - checkAuth called:', { 
+      authResolved: authResolved.current, 
+      authCheckInProgress: authCheckInProgress.current,
+      requireAuth 
+    })
+    
+    // If auth is already resolved or in progress, don't check again
+    if (authResolved.current || authCheckInProgress.current) {
+      console.log('🔍 AUTH HOOK - Skipping auth check (already resolved or in progress)')
       return
     }
+    
+    if (!requireAuth) {
+      setState(prev => ({ ...prev, isLoading: false, isAdmin: true }))
+      authResolved.current = true
+      return
+    }
+
+    // Prevent multiple simultaneous auth checks
+    if (authCheckInProgress.current) {
+      return
+    }
+    
+    authCheckInProgress.current = true
+    console.log('🔍 AUTH HOOK - Starting auth check...')
 
     try {
       setState(prev => ({ ...prev, isLoading: true, error: null }))
@@ -75,7 +100,7 @@ export function useAdminAuth(requireAuth: boolean = true): AdminAuthState & Admi
         // If no session on first attempt, wait briefly for hydration
         if (!session && attempts < maxAttempts) {
           // No session found, waiting for hydration
-          await new Promise(resolve => setTimeout(resolve, 100))
+          await new Promise(resolve => setTimeout(resolve, 200 + attempts * 100))
         }
       }
 
@@ -112,8 +137,10 @@ export function useAdminAuth(requireAuth: boolean = true): AdminAuthState & Admi
 
       const result: ApiResponse<{ isAdmin: boolean; user?: any }> = await response.json()
       // API result processed
+      console.log('🔍 AUTH HOOK - API Result:', result)
 
       if (!result.success) {
+        console.log('🚨 AUTH HOOK - API Result not successful:', result.error)
         setState({
           isAdmin: false,
           isLoading: false,
@@ -130,8 +157,10 @@ export function useAdminAuth(requireAuth: boolean = true): AdminAuthState & Admi
         error: null
       }
       
+      console.log('✅ AUTH HOOK - Setting final auth state:', newState)
       // Setting final auth state
       setState(newState)
+      authResolved.current = true
 
     } catch (error) {
       console.error('Auth check error:', error)
@@ -141,6 +170,9 @@ export function useAdminAuth(requireAuth: boolean = true): AdminAuthState & Admi
         user: null,
         error: error instanceof Error ? error.message : 'Unknown error'
       })
+      authResolved.current = true
+    } finally {
+      authCheckInProgress.current = false
     }
   }
 
@@ -153,6 +185,9 @@ export function useAdminAuth(requireAuth: boolean = true): AdminAuthState & Admi
         user: null,
         error: null
       })
+      // Reset auth state for future logins
+      authResolved.current = false
+      authCheckInProgress.current = false
       router.push('/auth/login')
     } catch (error) {
       console.error('Sign out error:', error)
@@ -165,25 +200,43 @@ export function useAdminAuth(requireAuth: boolean = true): AdminAuthState & Admi
 
   useEffect(() => {
     let isMounted = true
+    let timeoutId: NodeJS.Timeout
     
     const performAuthCheck = async () => {
-      // Add minimum loading time to prevent flash
-      const minLoadingTime = new Promise(resolve => setTimeout(resolve, 200))
+      console.log('🔍 AUTH HOOK - performAuthCheck called:', { 
+        authResolved: authResolved.current,
+        isMounted 
+      })
       
-      const authCheckPromise = checkAuth()
+      // Only perform auth check once per component lifecycle
+      if (authResolved.current) {
+        console.log('🔍 AUTH HOOK - Auth already resolved, skipping')
+        return
+      }
       
-      // Wait for both the auth check and minimum loading time
-      await Promise.all([authCheckPromise, minLoadingTime])
+      try {
+        await checkAuth()
+      } catch (error) {
+        console.error('🚨 AUTH HOOK - performAuthCheck error:', error)
+      }
       
       // Only update state if component is still mounted
       if (!isMounted) return
     }
     
-    performAuthCheck()
+    console.log('🔍 AUTH HOOK - useEffect triggered, starting performAuthCheck')
+    
+    // Use immediate execution with a small delay to ensure the component is mounted
+    timeoutId = setTimeout(() => {
+      if (isMounted) {
+        performAuthCheck()
+      }
+    }, 10)
 
     // Listen for auth state changes (optimized to reduce API calls)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log('🔍 AUTH HOOK - Auth state change:', { event, hasSession: !!session })
         if (!isMounted) return
         
         if (event === 'SIGNED_OUT' || !session) {
@@ -193,8 +246,11 @@ export function useAdminAuth(requireAuth: boolean = true): AdminAuthState & Admi
             user: null,
             error: null
           })
-        } else if (event === 'SIGNED_IN') {
-          // Re-check auth when user signs in
+          // Reset for future auth checks
+          authResolved.current = false
+          authCheckInProgress.current = false
+        } else if (event === 'SIGNED_IN' && !authResolved.current) {
+          // Re-check auth when user signs in, but only if not already resolved
           performAuthCheck()
         }
         // Don't check auth on every token refresh to reduce API calls
@@ -203,9 +259,10 @@ export function useAdminAuth(requireAuth: boolean = true): AdminAuthState & Admi
 
     return () => {
       isMounted = false
+      if (timeoutId) clearTimeout(timeoutId)
       subscription.unsubscribe()
     }
-  }, [requireAuth])
+  }, []) // Empty dependency array - run only once
 
   return {
     ...state,

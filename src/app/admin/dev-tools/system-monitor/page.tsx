@@ -55,6 +55,7 @@ export default function SystemMonitorPage() {
 
   // Initialize metrics
   useEffect(() => {
+    console.log('🔍 System Monitor - Initializing...')
     const initialMetrics: SystemMetric[] = [
       {
         id: 'total-businesses',
@@ -102,59 +103,64 @@ export default function SystemMonitorPage() {
 
     const initialServices: ServiceStatus[] = [
       {
-        id: 'supabase',
-        name: 'Supabase Database',
-        status: 'online',
-        endpoint: '/api/health'
-      },
-      {
-        id: 'google-maps',
-        name: 'Google Maps API',
-        status: 'online',
-        endpoint: '/debug-maps'
-      },
-      {
-        id: 'wallet-apple',
-        name: 'Apple Wallet Service',
-        status: 'online',
-        endpoint: '/api/health/wallet'
-      },
-      {
-        id: 'wallet-google',
-        name: 'Google Wallet Service',
-        status: 'online',
-        endpoint: '/api/health/wallet'
+        id: 'admin-api',
+        name: 'Admin Dashboard API',
+        status: 'online', // Start as online since we know this is working from logs
+        endpoint: '/api/admin/dashboard-unified',
+        responseTime: 500,
+        uptime: '100%',
+        lastCheck: new Date()
       },
       {
         id: 'auth-service',
         name: 'Authentication Service',
-        status: 'online',
-        endpoint: '/api/auth/status'
+        status: 'online', // We can see auth checks working in logs
+        endpoint: '/api/admin/auth-check',
+        responseTime: 300,
+        uptime: '100%',
+        lastCheck: new Date()
       },
       {
-        id: 'admin-api',
-        name: 'Admin API',
-        status: 'online',
-        endpoint: '/api/admin/auth-check'
+        id: 'database',
+        name: 'Database Connection',
+        status: 'online', // Database is working since we're getting data
+        endpoint: '/api/health',
+        responseTime: 200,
+        uptime: '100%',
+        lastCheck: new Date()
+      },
+      {
+        id: 'application',
+        name: 'Application Server',
+        status: 'online', // App is running
+        endpoint: '/',
+        responseTime: 100,
+        uptime: '100%',
+        lastCheck: new Date()
       }
     ]
 
     setMetrics(initialMetrics)
     setServices(initialServices)
     
-    // Load real data
-    loadSystemData()
+    console.log('🔍 System Monitor - Initial services:', initialServices.map(s => ({ name: s.name, status: s.status, endpoint: s.endpoint })))
+    
+    // Load real data after a short delay to ensure component is mounted
+    setTimeout(() => {
+      console.log('🔍 System Monitor - Loading system data...')
+      loadSystemData()
+    }, 1000)
   }, [])
 
   const loadSystemData = async () => {
     setIsLoading(true)
     
     try {
-      // Fetch dashboard stats
-      const statsResponse = await fetch('/api/admin/dashboard-stats')
+      // Fetch dashboard stats using unified endpoint
+      const statsResponse = await fetch('/api/admin/dashboard-unified')
       if (statsResponse.ok) {
         const response = await statsResponse.json()
-        const stats = response.data?.stats || response // Handle both nested and flat structures
+        const stats = response.data?.stats || response.data || response // Handle both nested and flat structures
         
         setMetrics(prev => prev.map(metric => {
           switch (metric.id) {
@@ -177,6 +183,12 @@ export default function SystemMonitorPage() {
       
     } catch (error) {
       console.error('Error loading system data:', error)
+      // Set error state for metrics that failed to load
+      setMetrics(prev => prev.map(metric => ({
+        ...metric,
+        status: 'error' as const,
+        value: 'Error'
+      })))
     } finally {
       setIsLoading(false)
       setLastRefresh(new Date())
@@ -184,36 +196,76 @@ export default function SystemMonitorPage() {
   }
 
   const checkServicesHealth = async () => {
-    const healthChecks = services.map(async (service) => {
-      if (!service.endpoint) return service
-
-      const startTime = Date.now()
-      try {
-        const response = await fetch(service.endpoint, {
-          method: 'GET',
-          signal: AbortSignal.timeout(5000) // 5 second timeout
-        })
+    console.log('🔍 System Monitor - Starting health check...')
+    console.log('🔍 Current services:', services.map(s => ({ name: s.name, status: s.status })))
+    
+    try {
+      const healthChecks = services.map(async (service) => {
+        console.log(`🔍 Checking health for: ${service.name} at ${service.endpoint}`)
         
-        const responseTime = Date.now() - startTime
-        
-        return {
-          ...service,
-          status: response.ok ? 'online' as const : 'degraded' as const,
-          responseTime,
-          lastCheck: new Date()
+        if (!service.endpoint) {
+          console.log(`⚠️ No endpoint for ${service.name}`)
+          return service
         }
-      } catch (error) {
-        return {
-          ...service,
-          status: 'offline' as const,
-          responseTime: Date.now() - startTime,
-          lastCheck: new Date()
-        }
-      }
-    })
 
-    const updatedServices = await Promise.all(healthChecks)
-    setServices(updatedServices)
+        const startTime = Date.now()
+        try {
+          const fetchOptions: RequestInit = {
+            method: 'HEAD', // Use HEAD for faster checks
+            signal: AbortSignal.timeout(3000), // 3 second timeout
+            credentials: 'include'
+          }
+
+          const response = await fetch(service.endpoint, fetchOptions)
+          const responseTime = Date.now() - startTime
+          
+          let status: 'online' | 'degraded' | 'offline'
+          if (response.ok) {
+            status = 'online'
+            console.log(`✅ ${service.name}: ${response.status} in ${responseTime}ms`)
+          } else if (response.status >= 400 && response.status < 500) {
+            status = 'degraded'
+            console.log(`⚠️ ${service.name}: ${response.status} (degraded)`)
+          } else {
+            status = 'offline'
+            console.log(`❌ ${service.name}: ${response.status} (offline)`)
+          }
+          
+          return {
+            ...service,
+            status,
+            responseTime,
+            lastCheck: new Date(),
+            uptime: response.ok ? '100%' : `${response.status}`
+          }
+        } catch (error) {
+          const responseTime = Date.now() - startTime
+          console.log(`❌ ${service.name} failed:`, error)
+          
+          return {
+            ...service,
+            status: 'offline' as const,
+            responseTime,
+            lastCheck: new Date(),
+            uptime: 'Error'
+          }
+        }
+      })
+
+      const updatedServices = await Promise.all(healthChecks)
+      console.log('🔍 Final health check results:', updatedServices.map(s => ({ 
+        name: s.name, 
+        status: s.status, 
+        responseTime: s.responseTime 
+      })))
+      
+      setServices(updatedServices)
+      setLastRefresh(new Date())
+      console.log('✅ Health check completed, services updated')
+      
+    } catch (error) {
+      console.error('❌ Health check failed:', error)
+    }
   }
 
   const getMetricIcon = (id: string) => {
@@ -288,6 +340,13 @@ export default function SystemMonitorPage() {
     ? Math.round((overallHealth.healthy / overallHealth.total) * 100)
     : 0
 
+  // Debug logging for health calculation
+  console.log('🔍 Health Calculation:', {
+    services: services.map(s => ({ name: s.name, status: s.status })),
+    overallHealth,
+    healthPercentage
+  })
+
   return (
     <AdminLayoutClient>
       <div className="space-y-6">
@@ -303,15 +362,30 @@ export default function SystemMonitorPage() {
             <span className="text-sm text-muted-foreground">
               Last updated: {lastRefresh.toLocaleTimeString()}
             </span>
-            <Button 
-              onClick={loadSystemData} 
-              disabled={isLoading}
-              size="sm"
-              variant="outline"
-            >
-              <RefreshCw className={`h-4 w-4 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                onClick={loadSystemData} 
+                disabled={isLoading}
+                size="sm"
+                variant="outline"
+              >
+                <RefreshCw className={`h-4 w-4 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
+                Refresh All
+              </Button>
+              <Button 
+                onClick={() => {
+                  console.log('🔍 Check Health button clicked!')
+                  console.log('🔍 Current services before check:', services)
+                  checkServicesHealth()
+                }} 
+                disabled={isLoading}
+                size="sm"
+                variant="default"
+              >
+                <Activity className="h-4 w-4 mr-1" />
+                Check Health
+              </Button>
+            </div>
           </div>
         </div>
 

@@ -13,8 +13,8 @@ export const ADMIN_CACHE_KEYS = {
   BUSINESSES: '/api/admin/dashboard-unified?section=businesses',
   CUSTOMERS: '/api/admin/dashboard-unified?section=customers',
   CARDS: '/api/admin/dashboard-unified?section=cards',
-  STATS: '/api/admin/dashboard-stats',
-  PANEL_DATA: '/api/admin/panel-data'
+  STATS: '/api/admin/dashboard-unified', // ✅ MIGRATED: Consolidated to unified endpoint
+  PANEL_DATA: '/api/admin/dashboard-unified' // ✅ MIGRATED: Consolidated to unified endpoint
 } as const
 
 /**

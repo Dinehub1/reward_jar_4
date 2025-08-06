@@ -156,9 +156,14 @@ export default function ApiHealthPage() {
   const [isRunningAll, setIsRunningAll] = useState(false)
   const [activeCategory, setActiveCategory] = useState<string>('all')
 
-  // Auto-run health checks on page load
+  // Auto-run health checks on page load only in production
   useEffect(() => {
-    handleCheckAll()
+    if (process.env.NODE_ENV === 'production') {
+      handleCheckAll()
+    } else {
+      // In development, just set initial loading state
+      setEndpoints(prev => prev.map(ep => ({ ...ep, status: 'idle' })))
+    }
   }, [])
 
   const checkEndpoint = async (endpoint: ApiEndpoint): Promise<ApiEndpoint> => {
@@ -172,11 +177,15 @@ export default function ApiHealthPage() {
       ))
 
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 second timeout (increased for slow APIs)
 
+      // Use HEAD method for health checks to make them faster
+      const method = endpoint.method === 'GET' ? 'HEAD' : endpoint.method
+      
       const response = await fetch(endpoint.url, {
-        method: endpoint.method,
+        method: method,
         signal: controller.signal,
+        credentials: 'include', // Include cookies for auth
         headers: {
           'Content-Type': 'application/json'
         }
@@ -224,7 +233,7 @@ export default function ApiHealthPage() {
 
       if (error.name === 'AbortError') {
         status = 'timeout'
-        errorMessage = 'Request timeout (10s)'
+        errorMessage = 'Request timeout (15s)'
       }
 
       return {
@@ -246,13 +255,60 @@ export default function ApiHealthPage() {
 
   const handleCheckAll = async () => {
     setIsRunningAll(true)
+    console.log('🔍 Starting all API health checks...')
     
     try {
-      const promises = endpoints.map(checkEndpoint)
-      const results = await Promise.all(promises)
-      setEndpoints(results)
+      // Reset all endpoints to loading state first
+      setEndpoints(prev => prev.map(ep => ({ ...ep, status: 'loading' as const })))
+      
+      // Run checks with controlled concurrency (3 at a time)
+      const concurrencyLimit = 3
+      const results: ApiEndpoint[] = []
+      
+      for (let i = 0; i < endpoints.length; i += concurrencyLimit) {
+        const chunk = endpoints.slice(i, i + concurrencyLimit)
+        console.log(`🔍 Testing endpoints ${i + 1}-${Math.min(i + concurrencyLimit, endpoints.length)}`)
+        
+        const chunkResults = await Promise.allSettled(
+          chunk.map(endpoint => checkEndpoint(endpoint))
+        )
+        
+        chunkResults.forEach((result, index) => {
+          if (result.status === 'fulfilled') {
+            results.push(result.value)
+          } else {
+            console.error(`❌ Failed to check ${chunk[index].name}:`, result.reason)
+            results.push({
+              ...chunk[index],
+              status: 'error',
+              error: 'Check failed',
+              responseTime: 0,
+              lastChecked: new Date()
+            })
+          }
+        })
+        
+        // Update UI with partial results
+        setEndpoints(prev => {
+          const updated = [...prev]
+          results.forEach(result => {
+            const index = updated.findIndex(ep => ep.id === result.id)
+            if (index !== -1) {
+              updated[index] = result
+            }
+          })
+          return updated
+        })
+        
+        // Small delay between chunks to avoid overwhelming server
+        if (i + concurrencyLimit < endpoints.length) {
+          await new Promise(resolve => setTimeout(resolve, 500))
+        }
+      }
+      
+      console.log('✅ All API health checks completed')
     } catch (error) {
-      console.error('Error running all checks:', error)
+      console.error('❌ Error running all checks:', error)
     } finally {
       setIsRunningAll(false)
     }
