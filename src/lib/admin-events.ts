@@ -5,7 +5,7 @@
  * deprecated endpoints, audit issues, and critical failures.
  */
 
-import { createAdminClient } from '@/lib/supabase/admin-client'
+import React from 'react'
 
 export interface AdminEvent {
   id: string
@@ -149,9 +149,18 @@ class AdminEventManager {
 
   /**
    * ✅ Store event in database for audit trail
+   * Only works in server-side contexts (API routes, server components)
    */
   private async storeEventInDatabase(event: AdminEvent): Promise<void> {
     try {
+      // Only import and use admin client in server-side contexts
+      if (typeof window !== 'undefined') {
+        console.log('📝 ADMIN EVENT (client-side):', event.title)
+        return
+      }
+
+      // Dynamic import to avoid loading admin client in browser
+      const { createAdminClient } = await import('@/lib/supabase/admin-client')
       const adminClient = createAdminClient()
       
       // TODO: Create admin_events table in Supabase
@@ -287,5 +296,3 @@ export function useAdminEvents() {
     clearOldEvents: () => adminEvents.clearOldEvents()
   }
 }
-
-import React from 'react'

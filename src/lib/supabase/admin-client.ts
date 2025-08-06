@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from './types'
+import { getServiceRoleKey } from '@/lib/env'
 
 /**
  * 🔐 ADMIN-ONLY SUPABASE CLIENT 🔐
@@ -26,22 +27,14 @@ import type { Database } from './types'
 
 export function createAdminClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   
   if (!supabaseUrl) {
     throw new Error('🚨 ADMIN CLIENT ERROR: NEXT_PUBLIC_SUPABASE_URL is required')
   }
   
-  if (!serviceRoleKey) {
-    // In development, provide helpful error message
-    if (process.env.NODE_ENV === 'development') {
-      console.error('🚨 ADMIN CLIENT ERROR: SUPABASE_SERVICE_ROLE_KEY not found')
-      console.error('💡 Add SUPABASE_SERVICE_ROLE_KEY to your .env.local file')
-      console.error('📖 See doc/doc2/3_SUPABASE_SETUP.md for setup instructions')
-    }
-    
-    throw new Error('🚨 ADMIN CLIENT ERROR: SUPABASE_SERVICE_ROLE_KEY is required for admin operations')
-  }
+  // Use the secure helper function to get the service role key
+  // This will handle all validation and security checks
+  const serviceRoleKey = getServiceRoleKey()
   
   return createClient<Database>(supabaseUrl, serviceRoleKey, {
     auth: {

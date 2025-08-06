@@ -4,7 +4,9 @@
 // Core Application Variables
 export const NEXT_PUBLIC_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 export const NEXT_PUBLIC_SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-export const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
+
+// 🔐 Service Role Key - Only for server-side usage
+// DO NOT access directly - use getServiceRoleKey() instead for proper validation
 
 // Base URL Configuration with proper fallbacks
 // Priority: BASE_URL -> NEXT_PUBLIC_BASE_URL -> localhost for development
@@ -43,7 +45,6 @@ export function validateEnvironmentVariables() {
   const required = {
     NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    SUPABASE_SERVICE_ROLE_KEY,
     APPLE_TEAM_IDENTIFIER,
     APPLE_PASS_TYPE_IDENTIFIER,
   }
@@ -53,6 +54,30 @@ export function validateEnvironmentVariables() {
   if (missing.length > 0) {
     console.error('Missing required environment variables:', missing.map(([key]) => key))
     throw new Error(`Missing required environment variables: ${missing.map(([key]) => key).join(', ')}`)
+  }
+
+  return true
+}
+
+// Validation function specifically for admin operations (server-side only)
+export function validateAdminEnvironmentVariables() {
+  if (typeof window !== 'undefined') {
+    throw new Error('validateAdminEnvironmentVariables can only be called server-side')
+  }
+  
+  const required = {
+    NEXT_PUBLIC_SUPABASE_URL,
+    NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    APPLE_TEAM_IDENTIFIER,
+    APPLE_PASS_TYPE_IDENTIFIER,
+  }
+
+  const missing = Object.entries(required).filter(([_, value]) => !value)
+  
+  if (missing.length > 0) {
+    console.error('Missing required admin environment variables:', missing.map(([key]) => key))
+    throw new Error(`Missing required admin environment variables: ${missing.map(([key]) => key).join(', ')}`)
   }
 
   return true
@@ -97,6 +122,73 @@ export function getBaseUrl(): string {
   
   // For server-side usage
   return BASE_URL
+}
+
+/**
+ * 🔐 SECURE SERVICE ROLE KEY ACCESS
+ * 
+ * This function safely retrieves the SUPABASE_SERVICE_ROLE_KEY with proper validation.
+ * 
+ * ⚠️ SECURITY REQUIREMENTS:
+ * - Only call this server-side (API routes, server components)
+ * - Never use in client components or browser code
+ * - Provides clear error messages for missing configuration
+ * 
+ * @throws {Error} If service role key is missing or accessed client-side
+ * @returns {string} The validated service role key
+ */
+export const getServiceRoleKey = (): string => {
+  // Prevent client-side access
+  if (typeof window !== 'undefined') {
+    throw new Error('🚨 SECURITY VIOLATION: SUPABASE_SERVICE_ROLE_KEY cannot be accessed in browser/client context')
+  }
+  
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  
+  if (!serviceRoleKey) {
+    // Enhanced error message for development
+    if (process.env.NODE_ENV === 'development') {
+      console.error('🚨 MISSING ENVIRONMENT VARIABLE: SUPABASE_SERVICE_ROLE_KEY')
+      console.error('💡 Add SUPABASE_SERVICE_ROLE_KEY to your .env.local file')
+      console.error('📁 Create .env.local in your project root if it doesn\'t exist')
+      console.error('📖 See doc/doc2/3_SUPABASE_SETUP.md for setup instructions')
+      console.error('🔗 Get your service role key from: https://supabase.com/dashboard/project/[project-id]/settings/api')
+    }
+    
+    throw new Error('💡 Missing SUPABASE_SERVICE_ROLE_KEY in .env.local - Required for admin operations')
+  }
+  
+  return serviceRoleKey
+}
+
+/**
+ * Check if service role key is properly configured
+ * Safe to call from anywhere as it doesn't throw
+ */
+export const isServiceRoleKeyConfigured = (): boolean => {
+  // Safe check that doesn't throw
+  if (typeof window !== 'undefined') {
+    return false // Always false on client-side for security
+  }
+  
+  return !!process.env.SUPABASE_SERVICE_ROLE_KEY
+}
+
+/**
+ * Get environment status for admin dashboard
+ * Safe to call from client-side as it doesn't expose sensitive data
+ */
+export const getEnvironmentStatus = () => {
+  const isClient = typeof window !== 'undefined'
+  
+  return {
+    nodeEnv: process.env.NODE_ENV || 'unknown',
+    hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+    hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    hasServiceRoleKey: isClient ? null : isServiceRoleKeyConfigured(), // null on client for security
+    walletAvailability: getWalletAvailability(),
+    baseUrl: getBaseUrl(),
+  }
 }
 
 // Get the production URL for Apple Wallet (Apple requires HTTPS and no localhost)

@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react' 
 import { AdminLayoutClient } from '@/components/layouts/AdminLayoutClient'
+import { EnvironmentStatusCard } from '@/components/admin/EnvironmentStatusCard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -930,6 +931,9 @@ export default function DevToolsPage() {
             </CardContent>
           </Card>
         )}
+
+        {/* Environment Status */}
+        <EnvironmentStatusCard />
 
         {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

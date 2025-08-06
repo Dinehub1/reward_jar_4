@@ -3,82 +3,93 @@
 import { ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { motion } from 'framer-motion'
 import { useAdminAuth } from '@/lib/hooks/use-admin-auth'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
+import { ModernSidebar } from '@/components/modern/layout/ModernSidebar'
+import { designTokens } from '@/lib/design-tokens'
+import { User, LogOut } from 'lucide-react'
 
 interface AdminLayoutClientProps {
   children: ReactNode
   requireAuth?: boolean
 }
 
-// Admin Sidebar Component
-function AdminSidebar() {
-  const router = useRouter()
-
-  const menuItems = [
-    { href: '/admin', label: 'Dashboard', icon: '📊' },
-    { href: '/admin/businesses', label: 'Businesses', icon: '🏢' },
-    { href: '/admin/customers', label: 'Customers', icon: '👥' },
-    { href: '/admin/cards', label: 'Cards', icon: '🎴' },
-    { href: '/admin/alerts', label: 'Alerts', icon: '🚨' },
-    { href: '/admin/support', label: 'Support', icon: '💬' },
-    { href: '/admin/dev-tools', label: 'Developer Tools', icon: '🛠️' },
-  ]
-
+// Modern Admin Header Component
+const ModernAdminHeader: React.FC<{ user: any, signOut: () => void }> = ({ user, signOut }) => {
   return (
-    <div className="w-64 bg-card border-r min-h-screen">
-      <div className="p-6">
-        <h2 className="text-xl font-bold mb-6">Admin Panel</h2>
-        <nav className="space-y-2">
-          {menuItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="flex items-center space-x-3 px-3 py-2 rounded-md hover:bg-muted transition-colors"
+    <motion.header 
+      className="border-b bg-white/80 backdrop-blur-sm"
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: designTokens.animation.easing.out }}
+      style={{ borderColor: 'rgb(226 232 240 / 0.8)' }}
+    >
+      <div className="flex h-16 items-center justify-between px-6">
+        <div className="flex items-center space-x-4">
+          {/* Breadcrumb or page title can go here */}
+        </div>
+        <div className="flex items-center space-x-4">
+          {user && (
+            <motion.div 
+              className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
             >
-              <span className="text-lg">{item.icon}</span>
-              <span>{item.label}</span>
-            </Link>
-          ))}
-        </nav>
-      </div>
-    </div>
-  )
-}
-
-// Admin Header Component
-function AdminHeader() {
-  return (
-    <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex h-14 items-center px-6">
-        <div className="flex items-center space-x-4 ml-auto">
+              <User className="w-4 h-4 text-gray-600" />
+              <span className="text-sm font-medium text-gray-700">
+                {user.email}
+              </span>
+            </motion.div>
+          )}
           <ThemeToggle />
-          <Link
-            href="/auth/login"
-            className="text-sm font-medium text-muted-foreground hover:text-foreground"
+          <motion.button
+            onClick={() => signOut()}
+            className="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-gray-600 hover:text-red-600 hover:bg-red-50 transition-colors"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
           >
-            Logout
-          </Link>
+            <LogOut className="w-4 h-4" />
+            <span className="text-sm font-medium">Sign Out</span>
+          </motion.button>
         </div>
       </div>
-    </header>
+    </motion.header>
   )
 }
 
-// Loading State Component
+
+
+// Modern Loading State Component
 function LoadingState() {
   return (
-    <div className="flex min-h-screen">
-      <AdminSidebar />
+    <div className="flex min-h-screen bg-gray-50">
+      <ModernSidebar />
       <div className="flex-1">
-        <AdminHeader />
+        <ModernAdminHeader user={null} signOut={() => {}} />
         <main className="p-6">
-          <div className="flex items-center justify-center min-h-[400px]">
+          <motion.div 
+            className="flex items-center justify-center min-h-[400px]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3 }}
+          >
             <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-              <div className="text-lg">Loading...</div>
+              <motion.div 
+                className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+              />
+              <motion.div 
+                className="text-lg font-medium text-gray-600"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.2 }}
+              >
+                Loading admin panel...
+              </motion.div>
             </div>
-          </div>
+          </motion.div>
         </main>
       </div>
     </div>
@@ -133,40 +144,28 @@ export function AdminLayoutClient({ children, requireAuth = true }: AdminLayoutC
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Admin Header */}
-      <header className="border-b bg-card">
-        <div className="flex h-16 items-center justify-between px-6">
-          <div className="flex items-center space-x-4">
-            <Link href="/admin" className="text-xl font-bold text-primary">
-              RewardJar Admin
-            </Link>
-          </div>
-          <div className="flex items-center space-x-4">
-            {user && (
-              <span className="text-sm text-muted-foreground">
-                {user.email}
-              </span>
-            )}
-            <ThemeToggle />
-            <button
-              onClick={() => signOut()}
-              className="text-sm text-muted-foreground hover:text-foreground"
-            >
-              Sign Out
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Layout */}
+    <motion.div 
+      className="min-h-screen bg-gray-50"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.4, ease: designTokens.animation.easing.out }}
+    >
+      {/* Modern Main Layout */}
       <div className="flex">
-        <AdminSidebar />
-        <main className="flex-1 p-6">
-          {children}
-        </main>
+        <ModernSidebar />
+        <div className="flex-1 flex flex-col">
+          <ModernAdminHeader user={user} signOut={signOut} />
+          <motion.main 
+            className="flex-1 p-6 overflow-auto"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.1, ease: designTokens.animation.easing.out }}
+          >
+            {children}
+          </motion.main>
+        </div>
       </div>
-    </div>
+    </motion.div>
   )
 }
 

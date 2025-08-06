@@ -2,13 +2,14 @@
 
 import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { ModernButton } from '@/components/modern/ui/ModernButton'
 import { Badge } from '@/components/ui/badge'
 import { AdminLayoutClient } from '@/components/layouts/AdminLayoutClient'
 import { useAdminStats, useAdminBusinesses } from '@/lib/hooks/use-admin-data'
 import { useAdminRealtime, useAdminNotifications } from '@/lib/hooks/use-admin-realtime'
 import { adminNotifications, useAdminEvents } from '@/lib/admin-events'
-import { CardSkeleton, TableSkeleton } from '@/components/ui/skeleton'
+import { ModernCardSkeleton, ModernTableSkeleton } from '@/components/modern/ui/ModernSkeleton'
+import { PageTransition } from '@/components/modern/layout/PageTransition'
 import { BusinessCreationDialog } from '@/components/admin/BusinessCreationDialog'
 import { RefreshCw, Database, Activity, FileText, Zap, AlertTriangle, Plus, CreditCard, Building2, Eye, Bell } from 'lucide-react'
 import React from 'react'
@@ -170,7 +171,7 @@ function BusinessesTable({ businesses, onRefresh }: { businesses: Business[], on
                   </div>
                 </div>
                 <div className="flex gap-2 ml-4">
-                  <Button
+                  <ModernButton
                     variant="outline"
                     size="sm"
                     onClick={() => handleViewBusiness(business.id)}
@@ -178,10 +179,10 @@ function BusinessesTable({ businesses, onRefresh }: { businesses: Business[], on
                   >
                     <Eye className="w-4 h-4" />
                     View
-                  </Button>
+                  </ModernButton>
                   {business.card_requested && (
                     <>
-                      <Button
+                      <ModernButton
                         variant="outline"
                         size="sm"
                         onClick={() => handleCreateStampCard(business.id)}
@@ -189,8 +190,8 @@ function BusinessesTable({ businesses, onRefresh }: { businesses: Business[], on
                       >
                         <CreditCard className="w-4 h-4" />
                         Stamp Card
-                      </Button>
-                      <Button
+                      </ModernButton>
+                      <ModernButton
                         variant="outline"
                         size="sm"
                         onClick={() => handleCreateMembershipCard(business.id)}
@@ -198,7 +199,7 @@ function BusinessesTable({ businesses, onRefresh }: { businesses: Business[], on
                       >
                         <Building2 className="w-4 h-4" />
                         Membership Card
-                      </Button>
+                      </ModernButton>
                     </>
                   )}
                 </div>
@@ -273,14 +274,15 @@ function QuickActionsPanel({ onRefreshAll }: { onRefreshAll: () => Promise<void>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="cursor-pointer hover:shadow-md transition-shadow">
           <CardContent className="p-4">
-            <Button 
+            <ModernButton 
               className="w-full" 
               onClick={() => performQuickAction('Refresh All Data', onRefreshAll)}
               disabled={isPerformingAction}
+              variant="gradient"
             >
               <RefreshCw className={`mr-2 h-4 w-4 ${isPerformingAction ? 'animate-spin' : ''}`} />
               Refresh All Data
-            </Button>
+            </ModernButton>
             <p className="text-xs text-muted-foreground mt-2">
               Refresh all dashboard data
             </p>
@@ -289,7 +291,7 @@ function QuickActionsPanel({ onRefreshAll }: { onRefreshAll: () => Promise<void>
 
         <Card className="cursor-pointer hover:shadow-md transition-shadow">
           <CardContent className="p-4">
-            <Button 
+            <ModernButton 
               className="w-full" 
               variant="outline"
               onClick={() => performQuickAction('Clear Cache', clearCache)}
@@ -297,7 +299,7 @@ function QuickActionsPanel({ onRefreshAll }: { onRefreshAll: () => Promise<void>
             >
               <Database className="mr-2 h-4 w-4" />
               Clear Cache
-            </Button>
+            </ModernButton>
             <p className="text-xs text-muted-foreground mt-2">
               Clear browser cache
             </p>
@@ -306,7 +308,7 @@ function QuickActionsPanel({ onRefreshAll }: { onRefreshAll: () => Promise<void>
 
         <Card className="cursor-pointer hover:shadow-md transition-shadow">
           <CardContent className="p-4">
-            <Button 
+            <ModernButton 
               className="w-full" 
               variant="outline"
               onClick={() => performQuickAction('Sync Wallets', syncWallets)}
@@ -314,7 +316,7 @@ function QuickActionsPanel({ onRefreshAll }: { onRefreshAll: () => Promise<void>
             >
               <Activity className="mr-2 h-4 w-4" />
               Sync Wallets
-            </Button>
+            </ModernButton>
             <p className="text-xs text-muted-foreground mt-2">
               Sync wallet updates
             </p>
@@ -323,7 +325,7 @@ function QuickActionsPanel({ onRefreshAll }: { onRefreshAll: () => Promise<void>
 
         <Card className="cursor-pointer hover:shadow-md transition-shadow">
           <CardContent className="p-4">
-            <Button 
+            <ModernButton 
               className="w-full" 
               variant="outline"
               onClick={() => performQuickAction('Generate Reports', generateReports)}
@@ -331,7 +333,7 @@ function QuickActionsPanel({ onRefreshAll }: { onRefreshAll: () => Promise<void>
             >
               <FileText className="mr-2 h-4 w-4" />
               Generate Reports
-            </Button>
+            </ModernButton>
             <p className="text-xs text-muted-foreground mt-2">
               Generate system reports
             </p>
@@ -450,11 +452,11 @@ export default function AdminDashboard() {
                 Centralized control center for RewardJar 4.0 platform
               </p>
             </div>
-            <Button disabled>Loading...</Button>
+            <ModernButton disabled>Loading...</ModernButton>
           </div>
 
           {/* Skeleton for stats cards */}
-          <CardSkeleton count={4} />
+          <ModernCardSkeleton count={4} />
           
           {/* Skeleton for content */}
           <div className="grid gap-4 md:grid-cols-2">
@@ -464,7 +466,7 @@ export default function AdminDashboard() {
                 <CardDescription>Loading business data...</CardDescription>
               </CardHeader>
               <CardContent>
-                <TableSkeleton rows={3} columns={2} />
+                <ModernTableSkeleton rows={3} columns={2} />
               </CardContent>
             </Card>
             
@@ -474,7 +476,7 @@ export default function AdminDashboard() {
                 <CardDescription>Loading system metrics...</CardDescription>
               </CardHeader>
               <CardContent>
-                <TableSkeleton rows={4} columns={2} />
+                <ModernTableSkeleton rows={4} columns={2} />
               </CardContent>
             </Card>
           </div>
@@ -493,12 +495,12 @@ export default function AdminDashboard() {
               <div className="text-sm mt-2">{(error as any) instanceof Error ? (error as any).message : String(error)}</div>
             </div>
             <div className="space-x-2">
-              <Button onClick={() => refetchAll()} variant="outline">
+              <ModernButton onClick={() => refetchAll()} variant="outline">
                 Try Again
-              </Button>
-              <Button onClick={() => window.location.reload()}>
+              </ModernButton>
+              <ModernButton onClick={() => window.location.reload()}>
                 Refresh Page
-              </Button>
+              </ModernButton>
             </div>
           </div>
         </div>
@@ -508,7 +510,8 @@ export default function AdminDashboard() {
 
   return (
     <AdminLayoutClient>
-      <div className="space-y-6">
+      <PageTransition>
+        <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
@@ -528,14 +531,14 @@ export default function AdminDashboard() {
                 <span>Refresh failed</span>
               </div>
             )}
-            <Button 
+            <ModernButton 
               onClick={refetchAll} 
               disabled={loading || refreshing}
-              variant={refreshError ? "destructive" : "default"}
+              variant={refreshError ? "destructive" : "gradient"}
             >
               <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
               {refreshing ? 'Refreshing...' : refreshError ? 'Retry' : 'Refresh Data'}
-            </Button>
+            </ModernButton>
           </div>
         </div>
 
@@ -585,14 +588,14 @@ export default function AdminDashboard() {
                 <span className="text-sm">
                   Data refresh failed: {refreshError}
                 </span>
-                <Button 
+                <ModernButton 
                   size="sm" 
                   variant="outline" 
                   onClick={() => setRefreshError(null)}
                   className="ml-auto"
                 >
                   Dismiss
-                </Button>
+                </ModernButton>
               </div>
             </CardContent>
           </Card>
@@ -661,7 +664,7 @@ export default function AdminDashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-1 gap-3">
-                      <Button
+                      <ModernButton
                         variant="outline"
                         onClick={() => window.open('/admin/cards/new', '_blank')}
                         className="flex items-center justify-start gap-2 h-auto py-3"
@@ -671,9 +674,9 @@ export default function AdminDashboard() {
                           <div className="font-medium">Create New Card</div>
                           <div className="text-sm text-muted-foreground">Start the card creation wizard</div>
                         </div>
-                      </Button>
+                      </ModernButton>
                       
-                      <Button
+                      <ModernButton
                         variant="outline"
                         onClick={() => window.open('/admin/businesses', '_blank')}
                         className="flex items-center justify-start gap-2 h-auto py-3"
@@ -683,9 +686,9 @@ export default function AdminDashboard() {
                           <div className="font-medium">Manage Businesses</div>
                           <div className="text-sm text-muted-foreground">View all business accounts</div>
                         </div>
-                      </Button>
+                      </ModernButton>
                       
-                      <Button
+                      <ModernButton
                         variant="outline"
                         onClick={() => window.open('/admin/customers', '_blank')}
                         className="flex items-center justify-start gap-2 h-auto py-3"
@@ -695,7 +698,7 @@ export default function AdminDashboard() {
                           <div className="font-medium">Customer Management</div>
                           <div className="text-sm text-muted-foreground">View customer accounts</div>
                         </div>
-                      </Button>
+                      </ModernButton>
                     </div>
                   </CardContent>
                 </Card>
@@ -738,7 +741,8 @@ export default function AdminDashboard() {
         {activeTab === 'quick-actions' && (
           <QuickActionsPanel onRefreshAll={refetchAll} />
         )}
-      </div>
+        </div>
+      </PageTransition>
     </AdminLayoutClient>
   )
 } 

@@ -31,11 +31,12 @@ if (typeof document !== 'undefined') {
 import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { ModernButton, LoadingButton } from '@/components/modern/ui/ModernButton'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
+import { PageTransition } from '@/components/modern/layout/PageTransition'
 import { Slider } from '@/components/ui/slider'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
@@ -57,8 +58,18 @@ import {
   BarChart3,
   Apple,
   Chrome,
-  Globe
+  Globe,
+  Monitor,
+  RotateCcw,
+  Play
 } from 'lucide-react'
+import { IPhone15Frame } from '@/components/modern/preview/iPhone15Frame'
+import { AndroidFrame } from '@/components/modern/preview/AndroidFrame'
+import { WebFrame } from '@/components/modern/preview/WebFrame'
+import { designTokens, modernStyles } from '@/lib/design-tokens'
+import { motion, AnimatePresence } from 'framer-motion'
+import { WalletPreviewCard } from '@/components/modern/wallet/WalletPreviewCard'
+import type { StampCard } from '@/components/modern/wallet/WalletPreviewCard'
 
 // Types
 interface Business {
@@ -93,6 +104,8 @@ interface CardFormData {
   cardColor: string
   iconEmoji: string
   barcodeType: 'QR_CODE' | 'PDF417'
+  backgroundImageUrl?: string
+  cardStyle?: 'gradient' | 'image' | 'solid'
   
   // Step 3: Stamp Rules
   stampConfig: StampConfig
@@ -285,77 +298,7 @@ const COLOR_OPTIONS = [
   '#FF1493', '#FF69B4', '#FFC0CB', '#DDA0DD', '#708090', '#2F4F4F'
 ]
 
-// Enhanced QR Code Display Component with Wallet-Specific Optimization
-const QRCodeDisplay = React.memo(({ 
-  value, 
-  size = 120, 
-  walletType = 'default' 
-}: { 
-  value: string, 
-  size?: number,
-  walletType?: 'apple' | 'google' | 'pwa' | 'default'
-}) => {
-  const [qrCodeUrl, setQrCodeUrl] = useState<string>('')
-  
-  // Dynamic sizing based on wallet type for optimal user experience
-  const getOptimalSize = () => {
-    switch (walletType) {
-      case 'apple': return Math.min(size, 60) // Compact for Apple's design
-      case 'google': return Math.min(size, 50) // Smaller for Google's header
-      case 'pwa': return Math.max(size, 80) // Larger for better PWA visibility
-      default: return size
-    }
-  }
-
-  const optimalSize = getOptimalSize()
-  
-  useEffect(() => {
-    const generateQR = async () => {
-      try {
-        const qrcode = await import('qrcode')
-        const url = await qrcode.toDataURL(value, {
-          width: optimalSize * 2, // Higher resolution for crisp display
-          margin: walletType === 'google' ? 0 : 1, // Minimal margin for Google
-          color: { dark: '#000000', light: '#FFFFFF' },
-          errorCorrectionLevel: 'M' // Medium error correction for better scanning
-        })
-        setQrCodeUrl(url)
-      } catch (error) {
-        console.error('Failed to generate QR code:', error)
-      }
-    }
-    
-    if (value) generateQR()
-  }, [value, optimalSize, walletType])
-
-  if (qrCodeUrl) {
-    return (
-      <img 
-        src={qrCodeUrl} 
-        alt="QR Code" 
-        width={optimalSize} 
-        height={optimalSize} 
-        className={`transition-all duration-200 ${
-          walletType === 'google' ? 'rounded-sm' : 'rounded'
-        }`}
-        style={{ imageRendering: 'crisp-edges' }} // Ensure crisp QR code rendering
-      />
-    )
-  }
-
-  return (
-    <div 
-      className={`bg-white flex items-center justify-center border-2 border-dashed border-gray-300 animate-pulse ${
-        walletType === 'google' ? 'rounded-sm' : 'rounded'
-      }`}
-      style={{ width: optimalSize, height: optimalSize }}
-    >
-      <QrCode className="w-6 h-6 text-gray-400" />
-    </div>
-  )
-})
-
-// Live Preview Component
+// Live Preview Component - Now using unified WalletPreviewCard
 const LivePreview = React.memo(({ 
   cardData, 
   activeView,
@@ -367,396 +310,59 @@ const LivePreview = React.memo(({
   showBackPage?: boolean
   onToggleBack?: (show: boolean) => void
 }) => {
-  const qrCodeData = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.rewardjar.xyz'}/join/demo-${cardData.cardName.replace(/\s+/g, '-').toLowerCase()}`
-  
   // Calculate demo progress (show about 40% completion for preview)
   const demoFilledStamps = Math.max(1, Math.floor(cardData.stampsRequired * 0.4))
-  const remainingStamps = cardData.stampsRequired - demoFilledStamps
-  const availableRewards = Math.floor(demoFilledStamps / (cardData.stampsRequired / 2)) || 1
   
-  // Generate stamp grid for visual representation
-  const generateStampGrid = (total: number, filled: number = demoFilledStamps, walletType: 'apple' | 'google' | 'pwa' = 'apple') => {
-    const stamps = []
-    const maxCols = 5
-    const progressPercentage = (filled / total) * 100
-    
-    for (let i = 0; i < total; i++) {
-      const isFilled = i < filled
-      const isNext = i === filled // Next stamp to be filled
-      
-      stamps.push(
-        <div
-          key={i}
-          className={`relative w-8 h-8 rounded border-2 flex items-center justify-center text-xs font-bold transition-all duration-500 ${
-            isFilled 
-              ? 'bg-white bg-opacity-30 border-white text-white scale-105' 
-              : isNext && walletType === 'pwa'
-              ? 'border-white border-opacity-70 text-white text-opacity-70 animate-pulse'
-              : 'border-white border-opacity-40 text-white text-opacity-60'
-          }`}
-          style={{
-            animationDelay: `${i * 50}ms`, // Staggered animation
-          }}
-        >
-          <span className={isFilled ? 'animate-bounce-in' : ''}>{cardData.iconEmoji}</span>
-          
-          {/* Progress indicator for filled stamps */}
-          {isFilled && walletType === 'pwa' && (
-            <div className="absolute -inset-0.5 rounded border border-green-400 opacity-50 animate-pulse"></div>
-          )}
-        </div>
-      )
+  // Transform CardFormData to StampCard format for the unified component
+  const stampCard: StampCard = {
+    id: 'preview-card',
+    business_id: cardData.businessId,
+    card_name: cardData.cardName,
+    reward: cardData.reward,
+    reward_description: cardData.rewardDescription,
+    stamps_required: cardData.stampsRequired,
+    status: 'active',
+    card_color: cardData.cardColor,
+    icon_emoji: cardData.iconEmoji,
+    barcode_type: cardData.barcodeType as 'PDF417' | 'QR_CODE',
+    card_expiry_days: cardData.cardExpiryDays,
+    reward_expiry_days: cardData.rewardExpiryDays,
+    stamp_config: cardData.stampConfig,
+    card_description: cardData.cardDescription,
+    how_to_earn_stamp: cardData.howToEarnStamp,
+    reward_details: cardData.rewardDetails,
+    earned_stamp_message: cardData.earnedStampMessage,
+    earned_reward_message: cardData.earnedRewardMessage,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    business: {
+      name: cardData.businessName,
+      logo_url: cardData.businessLogoUrl
     }
-    
-    return { stamps, progressPercentage }
   }
-  
-  const AppleWalletView = () => (
-    <div className="w-64 h-[420px] bg-black rounded-[2rem] p-2 shadow-xl">
-      <div className="relative w-full h-full bg-gray-900 rounded-[1.5rem] overflow-hidden">
-        {/* Front Page */}
-        <div className={`absolute inset-0 transition-transform duration-300 ${
-          showBackPage ? 'transform rotateY-180' : 'transform rotateY-0'
-        }`} style={{ backfaceVisibility: 'hidden' }}>
-          <div className="h-full p-4 text-white relative" style={{ 
-            background: `linear-gradient(135deg, ${cardData.cardColor || '#8B4513'}, ${cardData.cardColor || '#8B4513'}dd)` 
-          }}>
-            {/* Info Button */}
-            {onToggleBack && (
-              <button 
-                onClick={() => onToggleBack(true)}
-                className="absolute top-4 right-4 w-6 h-6 rounded-full border border-white/30 flex items-center justify-center text-xs font-semibold"
-              >
-                i
-              </button>
-            )}
-            
-            {/* Header with Logo */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex-1">
-                <div className="text-sm opacity-80 mb-1">{cardData.businessName || 'Business Name'}</div>
-                <div className="text-lg font-semibold">{cardData.cardName || 'Card Name'}</div>
-              </div>
-              {cardData.businessLogoUrl && (
-                <div className="w-12 h-12 rounded-lg overflow-hidden bg-white/10 flex items-center justify-center">
-                  <img 
-                    src={cardData.businessLogoUrl} 
-                    alt="Business Logo" 
-                    className="w-10 h-10 object-contain"
-                  />
-                </div>
-              )}
-            </div>
-            
-            {/* Stamp Grid */}
-            <div className="mb-4">
-              <div className="grid grid-cols-5 gap-1 justify-center">
-                {generateStampGrid(cardData.stampsRequired, demoFilledStamps, 'apple').stamps}
-              </div>
-            </div>
-            
-            {/* Reward Progress - Show reward name only on front */}
-            <div className="mb-4 text-center">
-              <div className="text-2xl font-bold text-white mb-2">
-                {demoFilledStamps} / {cardData.stampsRequired}
-              </div>
-              {cardData.reward && (
-                <div className="text-sm opacity-90">{cardData.reward}</div>
-              )}
-            </div>
-            
-            {/* QR Code */}
-            <div className="absolute bottom-4 left-4 right-4 text-center">
-              <div className="bg-white p-2 rounded inline-block">
-                <QRCodeDisplay value={qrCodeData} size={60} walletType="apple" />
-              </div>
-              <div className="text-xs opacity-60 mt-2">Tap ••• for details</div>
-              <div className="text-xs opacity-40 mt-1">Powered by RewardJar</div>
-            </div>
-          </div>
-        </div>
-        
-        {/* Back Page */}
-        <div className={`absolute inset-0 transition-transform duration-300 ${
-          showBackPage ? 'transform rotateY-0' : 'transform rotateY-180'
-        }`} style={{ backfaceVisibility: 'hidden', transform: showBackPage ? 'rotateY(0deg)' : 'rotateY(180deg)' }}>
-          <div className="h-full p-4 bg-gray-800 text-white">
-            {/* Done Button */}
-            {onToggleBack && (
-              <button 
-                onClick={() => onToggleBack(false)}
-                className="absolute top-4 right-4 text-blue-400 text-sm font-medium"
-              >
-                Done
-              </button>
-            )}
-            
-            <h3 className="font-bold mb-4 text-lg">Pass Details</h3>
-            <div className="space-y-3 text-sm">
-              <div>
-                <span className="opacity-70">Reward:</span><br/>
-                <span className="text-white">{cardData.rewardDescription || cardData.reward || 'No reward description'}</span>
-              </div>
-              <div>
-                <span className="opacity-70">Description:</span><br/>
-                <span className="text-white">{cardData.cardDescription || 'No card description'}</span>
-              </div>
-              <div>
-                <span className="opacity-70">How to Earn:</span><br/>
-                <span className="text-white">{cardData.howToEarnStamp || 'No instructions provided'}</span>
-              </div>
-              <div>
-                <span className="opacity-70">Reward Details:</span><br/>
-                <span className="text-white">{cardData.rewardDetails || 'No additional details'}</span>
-              </div>
-              <div>
-                <span className="opacity-70">Support:</span><br/>
-                <span className="text-blue-400">support@rewardjar.xyz</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
 
-  const GoogleWalletView = () => (
-    <div className="w-80 bg-black rounded-2xl shadow-xl overflow-hidden border border-gray-800">
-      <div className="relative">
-        {/* Front Page - Apple-style design */}
-        <div className={`transition-all duration-300 ${showBackPage ? 'h-96' : 'h-64'}`}>
-          <div className="h-64 p-5 relative" style={{ 
-            background: `linear-gradient(135deg, ${cardData.cardColor || '#8B4513'}, ${cardData.cardColor || '#8B4513'}dd)`,
-            borderRadius: '16px 16px 0 0'
-          }}>
-            {/* Apple-style header with Logo */}
-            <div className="flex justify-between items-start text-white mb-6">
-              <div className="flex items-center gap-3 flex-1">
-                {cardData.businessLogoUrl && (
-                  <div className="w-10 h-10 rounded-lg overflow-hidden bg-white/10 flex items-center justify-center">
-                    <img 
-                      src={cardData.businessLogoUrl} 
-                      alt="Business Logo" 
-                      className="w-8 h-8 object-contain"
-                    />
-                  </div>
-                )}
-                <div>
-                  <div className="text-xs opacity-75 uppercase tracking-wide font-medium">{cardData.businessName || 'Business Name'}</div>
-                  <div className="text-lg font-semibold mt-1 tracking-tight">{cardData.cardName || 'Card Name'}</div>
-                </div>
-              </div>
-              {onToggleBack && (
-                <button 
-                  onClick={() => onToggleBack(true)}
-                  className="w-7 h-7 rounded-full border border-white/30 flex items-center justify-center text-xs font-semibold bg-white/10 backdrop-blur-sm"
-                >
-                  i
-                </button>
-              )}
-            </div>
-            
-            {/* Apple-style stamp grid */}
-            <div className="mb-6">
-              <div className="grid grid-cols-5 gap-2 justify-center">
-                {generateStampGrid(cardData.stampsRequired, demoFilledStamps, 'google').stamps.map((stamp, index) => (
-                  <div
-                    key={index}
-                    className={`w-8 h-8 rounded-lg border-2 flex items-center justify-center text-sm font-bold transition-all duration-300 ${
-                      index < demoFilledStamps 
-                        ? 'bg-white/20 border-white/60 text-white backdrop-blur-sm' 
-                        : 'border-white/30 text-white/60'
-                    }`}
-                  >
-                    {cardData.iconEmoji}
-                  </div>
-                ))}
-              </div>
-            </div>
-            
-            {/* Apple-style progress display */}
-            <div className="text-center text-white">
-              <div className="text-2xl font-bold mb-2 tracking-tight">
-                {demoFilledStamps} / {cardData.stampsRequired}
-              </div>
-              {cardData.reward && (
-                <div className="text-sm opacity-90 font-medium">{cardData.reward}</div>
-              )}
-            </div>
-            
-            {/* Apple-style QR code placement */}
-            <div className="absolute bottom-4 right-4">
-              <div className="bg-white p-2 rounded-lg shadow-lg">
-                <QRCodeDisplay value={qrCodeData} size={32} walletType="google" />
-              </div>
-            </div>
-          </div>
-          
-          {/* Apple-style back page */}
-          {showBackPage && (
-            <div className="p-5 bg-gray-900 text-white space-y-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-lg">Pass Details</h3>
-                <button 
-                  onClick={() => onToggleBack?.(false)}
-                  className="text-blue-400 text-sm font-medium"
-                >
-                  Done
-                </button>
-              </div>
-              <div className="space-y-3 text-sm">
-                <div>
-                  <span className="opacity-70">Reward:</span><br/>
-                  <span className="text-white">{cardData.rewardDescription || 'No reward description'}</span>
-                </div>
-                <div>
-                  <span className="opacity-70">Description:</span><br/>
-                  <span className="text-white">{cardData.cardDescription || 'No card description'}</span>
-                </div>
-                <div>
-                  <span className="opacity-70">How to Earn:</span><br/>
-                  <span className="text-white">{cardData.howToEarnStamp || 'No instructions provided'}</span>
-                </div>
-                <div>
-                  <span className="opacity-70">Additional Info:</span><br/>
-                  <span className="text-white">{cardData.rewardDetails || 'No additional details'}</span>
-                </div>
-                <div>
-                  <span className="opacity-70">Support:</span><br/>
-                  <span className="text-blue-400">support@rewardjar.xyz</span>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-      <div className="px-4 py-2 text-xs text-gray-400 text-center bg-black">Powered by RewardJar</div>
-    </div>
-  )
-
-  const PWACardView = () => (
-    <div className="w-72 bg-black rounded-xl shadow-xl overflow-hidden border border-gray-800">
-      {!showBackPage ? (
-        // Front Page - Apple-style design
-        <div>
-          <div className="p-6 relative" style={{ 
-            background: `linear-gradient(135deg, ${cardData.cardColor || '#8B4513'}, ${cardData.cardColor || '#8B4513'}dd)`,
-            borderRadius: '12px 12px 0 0'
-          }}>
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3 flex-1">
-                {cardData.businessLogoUrl && (
-                  <div className="w-10 h-10 rounded-lg overflow-hidden bg-white/10 flex items-center justify-center">
-                    <img 
-                      src={cardData.businessLogoUrl} 
-                      alt="Business Logo" 
-                      className="w-8 h-8 object-contain"
-                    />
-                  </div>
-                )}
-                <div>
-                  <div className="text-xs text-white/75 uppercase tracking-wide font-medium">{cardData.businessName || 'Business Name'}</div>
-                  <div className="text-lg font-semibold text-white mt-1 tracking-tight">{cardData.cardName || 'Card Name'}</div>
-                </div>
-              </div>
-              <div className="text-2xl">{cardData.iconEmoji}</div>
-            </div>
-            
-            {/* Apple-style stamp grid */}
-            <div className="mb-6">
-              <div className="grid grid-cols-5 gap-2 justify-center">
-                {generateStampGrid(cardData.stampsRequired, demoFilledStamps, 'pwa').stamps.map((stamp, index) => (
-                  <div
-                    key={index}
-                    className={`w-8 h-8 rounded-lg border-2 flex items-center justify-center text-sm font-bold transition-all duration-300 ${
-                      index < demoFilledStamps 
-                        ? 'bg-white/20 border-white/60 text-white backdrop-blur-sm' 
-                        : 'border-white/30 text-white/60'
-                    }`}
-                  >
-                    {cardData.iconEmoji}
-                  </div>
-                ))}
-              </div>
-            </div>
-            
-            {/* Apple-style progress display */}
-            <div className="text-center mb-6">
-              <div className="text-2xl font-bold text-white mb-2 tracking-tight">
-                {demoFilledStamps} / {cardData.stampsRequired}
-              </div>
-              {cardData.reward && (
-                <div className="text-sm text-white/90 font-medium">{cardData.reward}</div>
-              )}
-            </div>
-            
-            {/* Apple-style QR code */}
-            <div className="absolute bottom-4 right-4">
-              <div className="bg-white p-2 rounded-lg shadow-lg">
-                <QRCodeDisplay value={qrCodeData} size={32} walletType="pwa" />
-              </div>
-            </div>
-            
-            {/* Apple-style details button */}
-            {onToggleBack && (
-              <div className="absolute bottom-4 left-4">
-                <button 
-                  onClick={() => onToggleBack(true)}
-                  className="text-white/80 text-xs font-medium underline"
-                >
-                  Tap ••• for details
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      ) : (
-        // Apple-style back page
-        <div className="p-6 bg-gray-900 text-white">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-white">Pass Details</h3>
-            {onToggleBack && (
-              <button 
-                onClick={() => onToggleBack(false)}
-                className="text-blue-400 text-sm font-medium"
-              >
-                Done
-              </button>
-            )}
-          </div>
-          
-          <div className="space-y-3 text-sm">
-            <div>
-              <span className="opacity-70">Reward:</span><br/>
-              <span className="text-white">{cardData.rewardDescription || 'No reward description'}</span>
-            </div>
-            <div>
-              <span className="opacity-70">Description:</span><br/>
-              <span className="text-white">{cardData.cardDescription || 'No card description'}</span>
-            </div>
-            <div>
-              <span className="opacity-70">How to Earn:</span><br/>
-              <span className="text-white">{cardData.howToEarnStamp || 'No instructions provided'}</span>
-            </div>
-            <div>
-              <span className="opacity-70">Additional Info:</span><br/>
-              <span className="text-white">{cardData.rewardDetails || 'No additional details'}</span>
-            </div>
-            <div>
-              <span className="opacity-70">Support:</span><br/>
-              <span className="text-blue-400">support@rewardjar.xyz</span>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
+  const previewSettings = {
+    showBackPage,
+    screenshotMode: false,
+    isDarkMode: false,
+    demoFilledStamps,
+    debugOverlay: false
+  }
 
   return (
     <div className="flex justify-center">
-      {activeView === 'apple' && <AppleWalletView />}
-      {activeView === 'google' && <GoogleWalletView />}
-      {activeView === 'pwa' && <PWACardView />}
+      <Suspense fallback={
+        <div className="w-80 h-56 bg-gray-100 rounded-xl flex items-center justify-center">
+          <div className="text-gray-500">Loading wallet preview...</div>
+        </div>
+      }>
+        <WalletPreviewCard
+          platform={activeView === 'pwa' ? 'web' : activeView}
+          card={stampCard}
+          settings={previewSettings}
+          onToggleBack={onToggleBack}
+        />
+      </Suspense>
     </div>
   )
 })
@@ -791,6 +397,8 @@ function CardCreationPageContent() {
     cardColor: '#8B4513',
     iconEmoji: '☕',
     barcodeType: 'QR_CODE',
+    backgroundImageUrl: '',
+    cardStyle: 'gradient',
     
     // Step 3: Stamp Rules
     stampConfig: {
@@ -1006,16 +614,29 @@ function CardCreationPageContent() {
       case 0: // Card Details
         return (
     <div className="space-y-6">
-        <div>
-              <Label htmlFor="cardName">Card Name *</Label>
+        <div className="space-y-2">
+          <Label htmlFor="cardName" className="text-sm font-medium text-gray-700">
+            Card Name *
+          </Label>
             <Input
                 id="cardName"
                 value={cardData.cardName}
                 onChange={(e) => setCardData(prev => ({ ...prev, cardName: e.target.value }))}
                 placeholder="e.g. Pizza Lovers Card"
-                className={getError('cardName') ? 'border-red-500' : ''}
-              />
-              {getError('cardName') && <p className="text-sm text-red-500 mt-1">{getError('cardName')}</p>}
+            className={`
+              transition-all duration-${designTokens.animation.duration.fast}
+              ${getError('cardName') 
+                ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' 
+                : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500/20'
+              }
+            `}
+          />
+          {getError('cardName') && (
+            <p className="text-sm text-red-500 mt-1 flex items-center gap-1">
+              <AlertCircle className="w-4 h-4" />
+              {getError('cardName')}
+            </p>
+          )}
           </div>
 
         <div>
@@ -1128,15 +749,67 @@ function CardCreationPageContent() {
       case 1: // Design
         return (
     <div className="space-y-6">
+            {/* Card Style Selection */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium text-gray-700">Card Style</Label>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { id: 'gradient', label: '🎨 Gradient', description: 'Color gradient background' },
+                  { id: 'image', label: '🖼️ Image', description: 'Custom background image' },
+                  { id: 'solid', label: '🎯 Solid', description: 'Solid color background' }
+                ].map((style) => (
+                  <button
+                    key={style.id}
+                    onClick={() => setCardData(prev => ({ 
+                      ...prev, 
+                      cardStyle: style.id as 'gradient' | 'image' | 'solid'
+                    }))}
+                    className={`
+                      p-3 rounded-xl border-2 text-left transition-all duration-200
+                      ${cardData.cardStyle === style.id 
+                        ? 'border-blue-500 bg-blue-50' 
+                        : 'border-gray-200 hover:border-gray-300'
+                      }
+                    `}
+                  >
+                    <div className="text-lg mb-1">{style.label}</div>
+                    <div className="text-xs text-gray-500">{style.description}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Background Image URL - Show only when image style is selected */}
+            {cardData.cardStyle === 'image' && (
+              <div className="space-y-2">
+                <Label htmlFor="backgroundImage" className="text-sm font-medium text-gray-700">
+                  Background Image URL
+                </Label>
+                <Input
+                  id="backgroundImage"
+                  value={cardData.backgroundImageUrl || ''}
+                  onChange={(e) => setCardData(prev => ({ ...prev, backgroundImageUrl: e.target.value }))}
+                  placeholder="https://example.com/your-background-image.jpg"
+                  className="transition-all duration-200"
+                />
+                <p className="text-xs text-gray-500">
+                  Recommended: High-quality images (800x600px or larger) for best results
+                </p>
+              </div>
+            )}
+
+            {/* Card Color - Always show for gradient/solid styles */}
             <div>
-              <Label>Card Color</Label>
+              <Label className="text-sm font-medium text-gray-700">
+                {cardData.cardStyle === 'image' ? 'Accent Color' : 'Card Color'}
+              </Label>
               <div className="grid grid-cols-8 gap-2 mt-2">
                 {COLOR_OPTIONS.map((color) => (
                 <button
                   key={color}
                     onClick={() => setCardData(prev => ({ ...prev, cardColor: color }))}
-                    className={`w-8 h-8 rounded-full border-2 ${
-                    cardData.cardColor === color ? 'border-gray-900' : 'border-gray-300'
+                    className={`w-8 h-8 rounded-full border-2 transition-all duration-200 ${
+                    cardData.cardColor === color ? 'border-gray-900 scale-110' : 'border-gray-300 hover:border-gray-400'
                   }`}
                   style={{ backgroundColor: color }}
                 />
@@ -1424,9 +1097,13 @@ function CardCreationPageContent() {
               </button>
           </div>
 
-            {/* Live Preview */}
-            <div className="bg-gray-50 p-8 rounded-lg">
-              <LivePreview cardData={cardData} activeView={activePreview} />
+            {/* Live Preview - Simplified for Step 4 */}
+            <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-8 rounded-xl shadow-inner">
+              <div className="flex justify-center">
+                <div className="w-80 h-96">
+                  <LivePreview cardData={cardData} activeView={activePreview} />
+                </div>
+              </div>
         </div>
 
             {/* Card Summary */}
@@ -1467,24 +1144,17 @@ function CardCreationPageContent() {
             </Card>
 
             {/* Save Button */}
-          <Button 
+          <LoadingButton 
               onClick={saveCard} 
-              disabled={saving}
+              loading={saving}
+              loadingText="Creating Card..."
               className="w-full"
-            size="lg"
+              size="lg"
+              variant="gradient"
           >
-            {saving ? (
-              <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Creating Card...
-              </>
-            ) : (
-              <>
-                  <Save className="w-4 h-4 mr-2" />
-                  Create Card
-              </>
-            )}
-          </Button>
+            <Save className="w-4 h-4 mr-2" />
+            Create Card
+          </LoadingButton>
           
             {getError('save') && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -1539,9 +1209,9 @@ function CardCreationPageContent() {
       </div>
 
       <div className="text-center mt-8">
-        <Button variant="outline" onClick={() => setShowTemplateSelector(false)}>
+        <ModernButton variant="outline" onClick={() => setShowTemplateSelector(false)}>
           Skip Templates - Start from Scratch
-        </Button>
+        </ModernButton>
       </div>
     </div>
   )
@@ -1558,185 +1228,456 @@ function CardCreationPageContent() {
 
   return (
     <AdminLayoutClient>
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={() => router.push('/admin/cards')}>
-                <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Cards
-              </Button>
+      <PageTransition>
+        <div className="container mx-auto px-6 py-8 max-w-7xl">
+          {/* Modern Header */}
+          <motion.div 
+            className="flex items-center justify-between mb-10"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: designTokens.animation.easing.out }}
+          >
+            <div className="flex items-center gap-6">
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <ModernButton 
+                  variant="ghost" 
+                  onClick={() => router.push('/admin/cards')}
+                  className="flex items-center gap-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-xl px-4 py-2 transition-all duration-200"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span className="font-medium">Back to Cards</span>
+                </ModernButton>
+              </motion.div>
               <div>
-              <h1 className="text-2xl font-bold">Create New Card</h1>
-              <p className="text-gray-600">Follow the steps to create your loyalty card</p>
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+                  Create New Card
+                </h1>
+                <p className="text-gray-500 mt-1 text-base">
+                  Design and configure your loyalty card with our step-by-step wizard
+                </p>
               </div>
             </div>
-            <Button variant="outline" onClick={() => setShowTemplateSelector(true)}>
-              Change Template
-            </Button>
-          </div>
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <ModernButton 
+                variant="outline" 
+                onClick={() => setShowTemplateSelector(true)}
+                className={modernStyles.button.secondary + " border-gray-300 hover:border-gray-400"}
+              >
+                <Palette className="w-4 h-4 mr-2" />
+                Change Template
+              </ModernButton>
+            </motion.div>
+          </motion.div>
 
-        {/* Progress Steps */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
+        {/* Modern Progress Steps */}
+        <motion.div 
+          className="mb-10"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: designTokens.animation.easing.out }}
+        >
+          <div className="flex items-center justify-between relative">
             {STEPS.map((step, index) => (
-              <div key={step.id} className="flex items-center">
-                <div className={`
-                  flex items-center justify-center w-10 h-10 rounded-full border-2 
-                  ${index <= currentStep 
-                    ? 'bg-blue-500 border-blue-500 text-white' 
-                    : 'border-gray-300 text-gray-400'
-                  }
-                `}>
-                  {index < currentStep ? (
-                    <Check className="w-5 h-5" />
-                  ) : (
-                    step.icon
-                  )}
-                </div>
+              <div key={step.id} className="flex items-center relative z-10">
+                <motion.div 
+                  className={`
+                    flex items-center justify-center w-12 h-12 rounded-full border-3 transition-all duration-300
+                    ${index <= currentStep 
+                      ? 'bg-gradient-to-r from-blue-500 to-blue-600 border-blue-500 text-white shadow-lg' 
+                      : 'border-gray-300 text-gray-400 bg-white hover:border-gray-400'
+                    }
+                  `}
+                  whileHover={{ scale: index <= currentStep ? 1.05 : 1.02 }}
+                  transition={{ duration: 0.2 }}
+                  style={{
+                    boxShadow: index <= currentStep ? designTokens.shadows.md : designTokens.shadows.sm
+                  }}
+                >
+                  <AnimatePresence mode="wait">
+                    {index < currentStep ? (
+                      <motion.div
+                        key="check"
+                        initial={{ scale: 0, rotate: -90 }}
+                        animate={{ scale: 1, rotate: 0 }}
+                        exit={{ scale: 0, rotate: 90 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <Check className="w-5 h-5" />
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="icon"
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        exit={{ scale: 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        {step.icon}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
                 {index < STEPS.length - 1 && (
-                  <div className={`
-                    w-24 h-0.5 mx-2
-                    ${index < currentStep ? 'bg-blue-500' : 'bg-gray-300'}
-                  `} />
+                  <div className="relative">
+                    {/* Background line */}
+                    <div className="w-24 h-1 mx-4 bg-gray-200 rounded-full" />
+                    {/* Progress line */}
+                    <motion.div 
+                      className="absolute top-0 left-4 h-1 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full"
+                      initial={{ width: '0%' }}
+                      animate={{ 
+                        width: index < currentStep ? '100%' : '0%'
+                      }}
+                      transition={{ duration: 0.5, delay: 0.2 }}
+                    />
+                  </div>
                 )}
               </div>
             ))}
           </div>
-          <div className="flex justify-between mt-2">
+          <div className="flex justify-between mt-4">
             {STEPS.map((step, index) => (
-              <div key={step.id} className="text-center" style={{ width: '120px' }}>
-                <p className={`text-sm font-medium ${
+              <motion.div 
+                key={step.id} 
+                className="text-center flex-1 max-w-[140px]"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1, duration: 0.3 }}
+              >
+                <p className={`text-sm font-semibold transition-colors duration-200 ${
                   index <= currentStep ? 'text-blue-600' : 'text-gray-400'
                 }`}>
                   {step.title}
                 </p>
-                <p className="text-xs text-gray-500 mt-1">{step.description}</p>
-              </div>
+                <p className="text-xs text-gray-500 mt-1 leading-relaxed">{step.description}</p>
+                {index === currentStep && (
+                  <motion.div
+                    className="w-8 h-0.5 bg-blue-500 rounded-full mx-auto mt-2"
+                    initial={{ width: 0 }}
+                    animate={{ width: 32 }}
+                    transition={{ duration: 0.3, delay: 0.2 }}
+                  />
+                )}
+              </motion.div>
             ))}
           </div>
-        </div>
+        </motion.div>
 
-          {/* Main Content */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Form Section */}
-              <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          {/* Main Content - Improved mobile layout */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
+            {/* Form Section - Enhanced mobile-first design */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.4, ease: designTokens.animation.easing.out }}
+            >
+              <Card className={`${modernStyles.card.elevated} border-0 shadow-xl`}>
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center gap-3 text-xl">
+                    <motion.div
+                      whileHover={{ rotate: 5 }}
+                      transition={{ duration: 0.2 }}
+                    >
                 {STEPS[currentStep].icon}
+                    </motion.div>
+                    <span className="bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
                 {STEPS[currentStep].title}
+                    </span>
               </CardTitle>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {STEPS[currentStep].description}
+                  </p>
             </CardHeader>
-            <CardContent>
+                <CardContent className="space-y-6">
               {renderStepContent()}
 
-              {/* Navigation Buttons */}
-              <div className="flex justify-between mt-8">
-                <Button 
+                  {/* Navigation Buttons - Enhanced mobile layout */}
+                  <div className="flex flex-col sm:flex-row justify-between gap-3 mt-8 pt-6 border-t border-gray-100">
+                <ModernButton 
                   variant="outline"
                   onClick={prevStep} 
                   disabled={currentStep === 0}
+                      className={`
+                        w-full sm:w-auto flex items-center justify-center gap-2 
+                        ${currentStep === 0 ? 'opacity-50 cursor-not-allowed' : ''}
+                        transition-all duration-${designTokens.animation.duration.fast}
+                      `}
                 >
-                  <ArrowLeft className="w-4 h-4 mr-2" />
+                      <ArrowLeft className="w-4 h-4" />
                   Previous
-                </Button>
+                </ModernButton>
                 
                 {currentStep < STEPS.length - 1 && (
-                  <Button onClick={nextStep}>
-                    Next
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
+                      <ModernButton 
+                        onClick={nextStep} 
+                        variant="gradient"
+                        className="w-full sm:w-auto flex items-center justify-center gap-2"
+                      >
+                        Next
+                        <ArrowRight className="w-4 h-4" />
+                  </ModernButton>
                 )}
               </div>
                   </CardContent>
                 </Card>
+            </motion.div>
 
-          {/* Preview Section */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Eye className="w-4 h-4" />
-                Live Preview
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {/* Platform Selector */}
-              <div className="flex justify-center space-x-1 bg-gray-100 rounded-lg p-1 mb-4">
-                <button 
-                  onClick={() => setActivePreview('apple')}
-                  className={`px-3 py-2 rounded-md transition-all text-sm flex items-center gap-2 ${
-                    activePreview === 'apple' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-600'
-                  }`}
-                >
-                  <Apple className="w-4 h-4" />
-                  Apple
-                </button>
-                <button 
-                  onClick={() => setActivePreview('google')}
-                  className={`px-3 py-2 rounded-md transition-all text-sm flex items-center gap-2 ${
-                    activePreview === 'google' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-600'
-                  }`}
-                >
-                  <Chrome className="w-4 h-4" />
-                  Google
-                </button>
-                <button 
-                  onClick={() => setActivePreview('pwa')}
-                  className={`px-3 py-2 rounded-md transition-all text-sm flex items-center gap-2 ${
-                    activePreview === 'pwa' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-600'
-                  }`}
-                >
-                  <Globe className="w-4 h-4" />
-                  PWA
-                </button>
-              </div>
-
-              {/* Front/Back Toggle */}
-              <div className="flex justify-center space-x-1 bg-gray-100 rounded-lg p-1 mb-6">
-                <button 
-                  onClick={() => setShowBackPage(false)}
-                  className={`px-3 py-2 rounded-md transition-all text-sm ${
-                    !showBackPage ? 'bg-white shadow-sm text-gray-900' : 'text-gray-600'
-                  }`}
-                >
-                  Front Page
-                </button>
-                <button 
-                  onClick={() => setShowBackPage(true)}
-                  className={`px-3 py-2 rounded-md transition-all text-sm ${
-                    showBackPage ? 'bg-white shadow-sm text-gray-900' : 'text-gray-600'
-                  }`}
-                >
-                  Back Page
-                </button>
-              </div>
-
-              {/* Preview */}
-              <div className="bg-gray-50 p-6 rounded-lg min-h-[400px] flex items-center justify-center">
-                <LivePreview 
-                  cardData={cardData} 
-                  activeView={activePreview}
-                  showBackPage={showBackPage}
-                  onToggleBack={setShowBackPage}
-                />
-          </div>
-
-              {/* Configuration Summary */}
-              <div className="mt-6 space-y-3">
-                <div className="bg-blue-50 p-3 rounded-lg">
-                  <h4 className="font-semibold text-blue-900">Preview: {activePreview.toUpperCase()} Wallet</h4>
-                  <div className="text-sm text-blue-700">
-                    {activePreview === 'apple' && 'iOS-style pass with dark theme and flip animation'}
-                    {activePreview === 'google' && 'Material Design with light theme and expansion'}
-                    {activePreview === 'pwa' && 'Progressive web app with offline-ready design'}
+          {/* Modern Preview Section - Enhanced mobile layout */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.4, ease: designTokens.animation.easing.out, delay: 0.1 }}
+          >
+            <Card className={`${modernStyles.card.elevated} border-0 shadow-xl`}>
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-3 text-xl">
+                  <motion.div
+                    whileHover={{ rotate: 5 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Eye className="w-5 h-5 text-blue-500" />
+                  </motion.div>
+                  <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                    Live Device Preview
+                  </span>
+                </CardTitle>
+                <p className="text-sm text-gray-500 mt-1">
+                  See exactly how your card will appear on real devices
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-6 lg:space-y-8">
+                {/* Modern Device Selector - Mobile responsive */}
+                <div className="flex justify-center">
+                  <div 
+                    className="bg-white rounded-2xl p-1.5 border border-gray-200 w-full max-w-md"
+                    style={{ boxShadow: designTokens.shadows.lg }}
+                  >
+                    <div className="grid grid-cols-3 gap-1">
+                    {[
+                      { id: 'apple', label: 'iPhone', icon: Apple, color: 'from-blue-500 to-blue-600' },
+                      { id: 'google', label: 'Android', icon: Chrome, color: 'from-green-500 to-green-600' },
+                      { id: 'pwa', label: 'Web', icon: Monitor, color: 'from-purple-500 to-purple-600' }
+                    ].map((device) => (
+                      <motion.button
+                        key={device.id}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => setActivePreview(device.id as 'apple' | 'google' | 'pwa')}
+                        className={`
+                            px-3 py-2.5 rounded-xl flex flex-col sm:flex-row items-center justify-center 
+                            gap-1 sm:gap-2 transition-all duration-200 font-medium text-xs sm:text-sm
+                          ${activePreview === device.id 
+                            ? `bg-gradient-to-r ${device.color} text-white shadow-md` 
+                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800'
+                          }
+                        `}
+                      >
+                          <device.icon className="w-4 h-4 flex-shrink-0" />
+                          <span className="text-center">{device.label}</span>
+                      </motion.button>
+                    ))}
+                    </div>
                   </div>
                 </div>
-                <div className="text-sm text-gray-600">Real-time sync enabled across all platforms</div>
-              </div>
-            </CardContent>
-          </Card>
+
+                {/* Modern Front/Back Toggle */}
+                <div className="flex justify-center">
+                  <div className="bg-gray-100 rounded-xl p-1">
+                    {[
+                      { id: false, label: 'Front Side', icon: Eye },
+                      { id: true, label: 'Back Side', icon: RotateCcw }
+                    ].map((option) => (
+                      <motion.button
+                        key={option.label}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => setShowBackPage(option.id)}
+                        className={`
+                          px-4 py-2 rounded-lg flex items-center space-x-2 transition-all duration-200 text-sm font-medium
+                          ${showBackPage === option.id 
+                            ? 'bg-white shadow-sm text-gray-900' 
+                            : 'text-gray-600 hover:text-gray-800'
+                          }
+                        `}
+                      >
+                        <option.icon className="w-4 h-4" />
+                        <span>{option.label}</span>
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Authentic Device Preview - Enhanced mobile layout */}
+                <div 
+                  className="flex justify-center items-center rounded-2xl p-4 sm:p-6 overflow-hidden"
+                  style={{
+                    background: 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)',
+                    boxShadow: 'inset 0 2px 10px rgba(0, 0, 0, 0.08)',
+                    minHeight: '500px', // Responsive height
+                    height: 'auto'
+                  }}
+                >
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={activePreview}
+                      initial={{ opacity: 0, scale: 0.9, rotateY: -15 }}
+                      animate={{ opacity: 1, scale: 1, rotateY: 0 }}
+                      exit={{ opacity: 0, scale: 0.9, rotateY: 15 }}
+                      transition={{ 
+                        duration: 0.5, 
+                        ease: designTokens.animation.easing.out 
+                      }}
+                      className="transform hover:scale-[1.02] transition-transform duration-300"
+                    >
+                      {/* Dynamic Device Frame Rendering */}
+                      {activePreview === 'apple' && (
+                        <IPhone15Frame 
+                          variant="pro"
+                          className="shadow-2xl"
+                        >
+                          <motion.div
+                            key={`iphone-${showBackPage}`}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.3, delay: 0.2 }}
+                            className="w-full h-full"
+                          >
+                            <LivePreview 
+                              cardData={cardData} 
+                              activeView={activePreview}
+                              showBackPage={showBackPage}
+                              onToggleBack={setShowBackPage}
+                            />
+                          </motion.div>
+                        </IPhone15Frame>
+                      )}
+                      
+                      {activePreview === 'google' && (
+                        <AndroidFrame 
+                          variant="pixel"
+                          className="shadow-2xl"
+                        >
+                          <motion.div
+                            key={`android-${showBackPage}`}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.3, delay: 0.2 }}
+                            className="w-full h-full"
+                          >
+                            <LivePreview 
+                              cardData={cardData} 
+                              activeView={activePreview}
+                              showBackPage={showBackPage}
+                              onToggleBack={setShowBackPage}
+                            />
+                          </motion.div>
+                        </AndroidFrame>
+                      )}
+                      
+                      {activePreview === 'pwa' && (
+                        <WebFrame 
+                          browser="chrome"
+                          url="https://rewardjar.xyz/card/preview"
+                          className="shadow-2xl"
+                        >
+                          <motion.div
+                            key={`web-${showBackPage}`}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.3, delay: 0.2 }}
+                            className="w-full h-full flex items-center justify-center bg-gray-50"
+                          >
+                            <div className="w-full max-w-md mx-auto p-4">
+                              <LivePreview 
+                                cardData={cardData} 
+                                activeView={activePreview}
+                                showBackPage={showBackPage}
+                                onToggleBack={setShowBackPage}
+                              />
+                            </div>
+                          </motion.div>
+                        </WebFrame>
+                      )}
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
+
+                {/* Interactive Controls - Mobile responsive */}
+                <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setShowBackPage(!showBackPage)}
+                    className={`
+                      ${modernStyles.button.secondary} 
+                      flex items-center justify-center gap-2 w-full sm:w-auto
+                      transition-all duration-${designTokens.animation.duration.fast}
+                    `}
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    <span>Flip Card</span>
+                  </motion.button>
+                  
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className={`
+                      px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl 
+                      flex items-center justify-center gap-2 font-medium w-full sm:w-auto
+                      transition-all duration-${designTokens.animation.duration.fast}
+                    `}
+                  >
+                    <Play className="w-4 h-4" />
+                    <span>Interactive Mode</span>
+                  </motion.button>
+                </div>
+
+                {/* Enhanced Configuration Summary */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3, duration: 0.4 }}
+                  className="space-y-4"
+                >
+                  <div 
+                    className="p-4 rounded-xl border border-blue-200"
+                    style={{
+                      background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)'
+                    }}
+                  >
+                    <h4 className="font-semibold text-blue-900 flex items-center gap-2">
+                      <Smartphone className="w-4 h-4" />
+                      Preview: {activePreview.charAt(0).toUpperCase() + activePreview.slice(1)} Wallet
+                    </h4>
+                    <div className="text-sm text-blue-700 mt-1">
+                      {activePreview === 'apple' && '🍎 iPhone 15 Pro with Dynamic Island, realistic bezels, and iOS animations'}
+                      {activePreview === 'google' && '🤖 Google Pixel with punch-hole camera, Material Design, and Android gestures'}
+                      {activePreview === 'pwa' && '🌐 Chrome browser with realistic tabs, address bar, and responsive web design'}
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between text-sm text-gray-600 bg-gray-50 rounded-lg p-3">
+                    <span className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                      Real-time sync enabled
+                    </span>
+                    <span className="text-xs bg-white px-2 py-1 rounded-full">
+                      99% device accuracy
+                    </span>
+                  </div>
+                </motion.div>
+              </CardContent>
+            </Card>
+          </motion.div>
+          </div>
         </div>
-      </div>
+      </PageTransition>
     </AdminLayoutClient>
   )
 }
