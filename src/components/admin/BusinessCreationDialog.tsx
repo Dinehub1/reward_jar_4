@@ -17,6 +17,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Plus, Building2, Mail, FileText, Settings, AlertCircle } from 'lucide-react'
+import { LogoUpload } from '@/components/ui/logo-upload'
 
 interface BusinessFormData {
   name: string
@@ -24,6 +25,7 @@ interface BusinessFormData {
   contact_email: string
   status: 'active' | 'inactive' | 'pending'
   card_requested: boolean
+  logo_url?: string
 }
 
 interface BusinessCreationDialogProps {
@@ -33,14 +35,17 @@ interface BusinessCreationDialogProps {
 export function BusinessCreationDialog({ onBusinessCreated }: BusinessCreationDialogProps) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [logoFile, setLogoFile] = useState<File | null>(null)
   
   const [formData, setFormData] = useState<BusinessFormData>({
     name: '',
     description: '',
     contact_email: '',
     status: 'active',
-    card_requested: false
+    card_requested: false,
+    logo_url: undefined
   })
 
   const validateForm = (): boolean => {
@@ -69,12 +74,45 @@ export function BusinessCreationDialog({ onBusinessCreated }: BusinessCreationDi
     setErrors({})
 
     try {
+      let logoUrl = formData.logo_url
+
+      // Upload logo if provided
+      if (logoFile) {
+        setUploading(true)
+        
+        const logoFormData = new FormData()
+        logoFormData.append('file', logoFile)
+        logoFormData.append('type', 'logo')
+        logoFormData.append('businessId', 'temp-' + Date.now()) // Temporary ID for upload
+
+        const uploadResponse = await fetch('/api/admin/upload-media', {
+          method: 'POST',
+          body: logoFormData
+        })
+
+        const uploadResult = await uploadResponse.json()
+        setUploading(false)
+
+        if (!uploadResult.success) {
+          setErrors({ logo: uploadResult.error || 'Failed to upload logo' })
+          setLoading(false)
+          return
+        }
+
+        logoUrl = uploadResult.data.publicUrl
+      }
+
+      const businessPayload = {
+        ...formData,
+        logo_url: logoUrl
+      }
+
       const response = await fetch('/api/admin/businesses', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(businessPayload)
       })
 
       const result = await response.json()
@@ -86,8 +124,10 @@ export function BusinessCreationDialog({ onBusinessCreated }: BusinessCreationDi
           description: '',
           contact_email: '',
           status: 'active',
-          card_requested: false
+          card_requested: false,
+          logo_url: undefined
         })
+        setLogoFile(null)
         
         // Close dialog
         setOpen(false)
@@ -112,6 +152,7 @@ export function BusinessCreationDialog({ onBusinessCreated }: BusinessCreationDi
       setErrors({ submit: 'Network error. Please try again.' })
     } finally {
       setLoading(false)
+      setUploading(false)
     }
   }
 
@@ -201,6 +242,14 @@ export function BusinessCreationDialog({ onBusinessCreated }: BusinessCreationDi
             />
           </div>
 
+          {/* Logo Upload */}
+          <LogoUpload
+            value={logoFile}
+            onChange={setLogoFile}
+            disabled={loading || uploading}
+            error={errors.logo}
+          />
+
           {/* Status */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
@@ -263,13 +312,13 @@ export function BusinessCreationDialog({ onBusinessCreated }: BusinessCreationDi
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={loading}
+            disabled={loading || uploading}
             className="bg-green-600 hover:bg-green-700"
           >
-            {loading ? (
+            {loading || uploading ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Creating...
+                {uploading ? 'Uploading Logo...' : 'Creating...'}
               </>
             ) : (
               <>

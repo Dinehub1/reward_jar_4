@@ -5,6 +5,121 @@ import type { ApiResponse, StampConfig, CardFormData } from '@/lib/supabase/type
 import { normalizeCardData, createDatabasePayload, validateCardData } from '@/lib/utils/field-mapping'
 
 /**
+ * GET /api/admin/cards
+ * 
+ * Fetches all cards for admin panel with optional filtering
+ */
+export async function GET(request: NextRequest) {
+  try {
+    const supabase = createAdminClient()
+    const url = new URL(request.url)
+    
+    // Parse query parameters
+    const businessId = url.searchParams.get('business_id')
+    const cardType = url.searchParams.get('type') // 'stamp' | 'membership'
+    const status = url.searchParams.get('status')
+    const page = parseInt(url.searchParams.get('page') || '1')
+    const limit = Math.min(parseInt(url.searchParams.get('limit') || '20'), 100)
+    const offset = (page - 1) * limit
+
+    console.log('🎫 ADMIN CARDS API - Fetching cards:', {
+      businessId,
+      cardType,
+      status,
+      page,
+      limit
+    })
+
+    let stampCards = []
+    let membershipCards = []
+
+    // Fetch stamp cards
+    if (!cardType || cardType === 'stamp') {
+      let stampQuery = supabase
+        .from('stamp_cards')
+        .select(`
+          *,
+          businesses!inner (
+            id,
+            name,
+            contact_email,
+            logo_url
+          )
+        `)
+
+      if (businessId) stampQuery = stampQuery.eq('business_id', businessId)
+      if (status) stampQuery = stampQuery.eq('status', status)
+
+      const { data: stampData, error: stampError } = await stampQuery
+        .range(offset, offset + limit - 1)
+        .order('created_at', { ascending: false })
+
+      if (stampError) {
+        console.error('💥 ADMIN CARDS API - Stamp cards error:', stampError)
+      } else {
+        stampCards = stampData || []
+      }
+    }
+
+    // Fetch membership cards  
+    if (!cardType || cardType === 'membership') {
+      let membershipQuery = supabase
+        .from('membership_cards')
+        .select(`
+          *,
+          businesses!inner (
+            id,
+            name,
+            contact_email,
+            logo_url
+          )
+        `)
+
+      if (businessId) membershipQuery = membershipQuery.eq('business_id', businessId)
+      if (status) membershipQuery = membershipQuery.eq('status', status)
+
+      const { data: membershipData, error: membershipError } = await membershipQuery
+        .range(offset, offset + limit - 1) 
+        .order('created_at', { ascending: false })
+
+      if (membershipError) {
+        console.error('💥 ADMIN CARDS API - Membership cards error:', membershipError)
+      } else {
+        membershipCards = membershipData || []
+      }
+    }
+
+    // Combine and format results
+    const allCards = [
+      ...stampCards.map(card => ({ ...card, card_type: 'stamp' })),
+      ...membershipCards.map(card => ({ ...card, card_type: 'membership' }))
+    ]
+
+    // Sort by created_at if combining both types
+    if (!cardType) {
+      allCards.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: allCards,
+      pagination: {
+        page,
+        limit,
+        total: allCards.length
+      }
+    } as ApiResponse<any[]>)
+
+  } catch (error) {
+    console.error('💥 ADMIN CARDS API - GET error:', error)
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch cards' } as ApiResponse<never>,
+      { status: 500 }
+    )
+  }
+}
+
+/**
  * POST /api/admin/cards
  * 
  * Creates a new card (stamp or membership) via admin interface

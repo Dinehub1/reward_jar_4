@@ -22,6 +22,7 @@ function AdminSidebar() {
     { href: '/admin/cards', label: 'Cards', icon: '🎴' },
     { href: '/admin/alerts', label: 'Alerts', icon: '🚨' },
     { href: '/admin/support', label: 'Support', icon: '💬' },
+    { href: '/admin/dev-tools', label: 'Developer Tools', icon: '🛠️' },
   ]
 
   return (

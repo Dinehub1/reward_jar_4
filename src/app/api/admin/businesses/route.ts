@@ -49,6 +49,7 @@ export async function GET(request: NextRequest) {
         contact_email,
         owner_id,
         status,
+        logo_url,
         is_flagged,
         admin_notes,
         card_requested,
@@ -118,7 +119,8 @@ export async function POST(request: NextRequest) {
       contact_email,
       owner_id,
       status = 'active',
-      card_requested = false
+      card_requested = false,
+      logo_url
     } = body
 
     console.log('🔍 Admin API: Creating business:', { name, contact_email, owner_id })
@@ -182,6 +184,7 @@ export async function POST(request: NextRequest) {
       owner_id: owner_id || user.id, // Default to admin user if no owner specified
       status,
       card_requested,
+      logo_url: logo_url || null,
       is_flagged: false,
       admin_notes: `Created by admin ${user.email} on ${new Date().toISOString()}`
     }

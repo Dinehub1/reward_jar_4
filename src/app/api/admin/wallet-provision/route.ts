@@ -15,6 +15,31 @@ interface WalletStatus {
 }
 
 /**
+ * GET /api/admin/wallet-provision
+ * 
+ * Health check for wallet provisioning service
+ */
+export async function GET(request: NextRequest) {
+  try {
+    return NextResponse.json({
+      success: true,
+      data: {
+        service: 'wallet-provision',
+        status: 'operational',
+        supportedWallets: ['apple', 'google', 'pwa'],
+        timestamp: new Date().toISOString()
+      },
+      message: 'Wallet provisioning service is operational'
+    } as ApiResponse<any>)
+  } catch (error) {
+    return NextResponse.json(
+      { success: false, error: 'Service unavailable' } as ApiResponse<never>,
+      { status: 503 }
+    )
+  }
+}
+
+/**
  * POST /api/admin/wallet-provision
  * 
  * Provisions a loyalty card to multiple wallet platforms

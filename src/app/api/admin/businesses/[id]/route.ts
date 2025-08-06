@@ -117,10 +117,17 @@ export async function PUT(
       name,
       description,
       contact_email,
+      location,
+      website_url,
       status,
       is_flagged,
       admin_notes,
-      card_requested
+      card_requested,
+      logo_url,
+      latitude,
+      longitude,
+      place_id,
+      formatted_address
     } = body
 
     console.log('🔍 Admin API: Updating business:', businessId, { name, contact_email, status })
@@ -182,10 +189,17 @@ export async function PUT(
       name,
       description: description || '',
       contact_email,
+      location: location || '',
+      website_url: website_url || '',
       status: status || 'active',
       is_flagged: is_flagged || false,
       admin_notes: admin_notes || '',
       card_requested: card_requested || false,
+      logo_url: logo_url || null,
+      latitude: latitude || null,
+      longitude: longitude || null,
+      place_id: place_id || '',
+      formatted_address: formatted_address || '',
       updated_at: new Date().toISOString()
     }
 

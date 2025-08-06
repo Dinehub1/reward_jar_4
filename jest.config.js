@@ -34,12 +34,7 @@ const config = {
   coverageReporters: ['text', 'lcov', 'html'],
   verbose: true,
   preset: 'ts-jest/presets/default-esm',
-  extensionsToTreatAsEsm: ['.ts', '.tsx'],
-  globals: {
-    'ts-jest': {
-      useESM: true
-    }
-  }
+  extensionsToTreatAsEsm: ['.ts', '.tsx']
 }
 
 module.exports = config 

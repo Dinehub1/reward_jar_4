@@ -66,6 +66,7 @@ interface Business {
   name: string
   contact_email: string
   description?: string
+  logo_url?: string
 }
 
 interface StampConfig {
@@ -81,6 +82,7 @@ interface CardFormData {
   cardName: string
   businessId: string
   businessName: string
+  businessLogoUrl?: string
   reward: string
   rewardDescription: string // NEW: Required field for detailed reward info
   stampsRequired: number
@@ -429,9 +431,22 @@ const LivePreview = React.memo(({
               </button>
             )}
             
-            {/* Header */}
-            <div className="text-sm opacity-80 mb-1">{cardData.businessName || 'Business Name'}</div>
-            <div className="text-lg font-semibold mb-4">{cardData.cardName || 'Card Name'}</div>
+            {/* Header with Logo */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex-1">
+                <div className="text-sm opacity-80 mb-1">{cardData.businessName || 'Business Name'}</div>
+                <div className="text-lg font-semibold">{cardData.cardName || 'Card Name'}</div>
+              </div>
+              {cardData.businessLogoUrl && (
+                <div className="w-12 h-12 rounded-lg overflow-hidden bg-white/10 flex items-center justify-center">
+                  <img 
+                    src={cardData.businessLogoUrl} 
+                    alt="Business Logo" 
+                    className="w-10 h-10 object-contain"
+                  />
+                </div>
+              )}
+            </div>
             
             {/* Stamp Grid */}
             <div className="mb-4">
@@ -514,11 +529,22 @@ const LivePreview = React.memo(({
             background: `linear-gradient(135deg, ${cardData.cardColor || '#8B4513'}, ${cardData.cardColor || '#8B4513'}dd)`,
             borderRadius: '16px 16px 0 0'
           }}>
-            {/* Apple-style header */}
+            {/* Apple-style header with Logo */}
             <div className="flex justify-between items-start text-white mb-6">
-              <div>
-                <div className="text-xs opacity-75 uppercase tracking-wide font-medium">{cardData.businessName || 'Business Name'}</div>
-                <div className="text-lg font-semibold mt-1 tracking-tight">{cardData.cardName || 'Card Name'}</div>
+              <div className="flex items-center gap-3 flex-1">
+                {cardData.businessLogoUrl && (
+                  <div className="w-10 h-10 rounded-lg overflow-hidden bg-white/10 flex items-center justify-center">
+                    <img 
+                      src={cardData.businessLogoUrl} 
+                      alt="Business Logo" 
+                      className="w-8 h-8 object-contain"
+                    />
+                  </div>
+                )}
+                <div>
+                  <div className="text-xs opacity-75 uppercase tracking-wide font-medium">{cardData.businessName || 'Business Name'}</div>
+                  <div className="text-lg font-semibold mt-1 tracking-tight">{cardData.cardName || 'Card Name'}</div>
+                </div>
               </div>
               {onToggleBack && (
                 <button 
@@ -618,9 +644,20 @@ const LivePreview = React.memo(({
             borderRadius: '12px 12px 0 0'
           }}>
             <div className="flex items-center justify-between mb-6">
-              <div>
-                <div className="text-xs text-white/75 uppercase tracking-wide font-medium">{cardData.businessName || 'Business Name'}</div>
-                <div className="text-lg font-semibold text-white mt-1 tracking-tight">{cardData.cardName || 'Card Name'}</div>
+              <div className="flex items-center gap-3 flex-1">
+                {cardData.businessLogoUrl && (
+                  <div className="w-10 h-10 rounded-lg overflow-hidden bg-white/10 flex items-center justify-center">
+                    <img 
+                      src={cardData.businessLogoUrl} 
+                      alt="Business Logo" 
+                      className="w-8 h-8 object-contain"
+                    />
+                  </div>
+                )}
+                <div>
+                  <div className="text-xs text-white/75 uppercase tracking-wide font-medium">{cardData.businessName || 'Business Name'}</div>
+                  <div className="text-lg font-semibold text-white mt-1 tracking-tight">{cardData.cardName || 'Card Name'}</div>
+                </div>
               </div>
               <div className="text-2xl">{cardData.iconEmoji}</div>
             </div>
@@ -743,6 +780,7 @@ function CardCreationPageContent() {
     cardName: '',
     businessId: searchParams?.get('businessId') || '',
     businessName: '',
+    businessLogoUrl: '',
     reward: '',
     rewardDescription: '', // NEW: Required reward description field
     stampsRequired: 10,
@@ -794,7 +832,8 @@ function CardCreationPageContent() {
             setCardData(prev => ({
               ...prev,
               businessId: business.id,
-              businessName: business.name
+              businessName: business.name,
+              businessLogoUrl: business.logo_url || ''
             }))
           }
         }
@@ -988,7 +1027,8 @@ function CardCreationPageContent() {
               setCardData(prev => ({
                 ...prev,
                 businessId: value,
-                    businessName: business?.name || ''
+                businessName: business?.name || '',
+                businessLogoUrl: business?.logo_url || ''
               }))
             }}
           >
@@ -998,7 +1038,19 @@ function CardCreationPageContent() {
             <SelectContent>
                   {businesses.map((business) => (
                 <SelectItem key={business.id} value={business.id}>
-                  {business.name}
+                  <div className="flex items-center gap-2">
+                    {business.logo_url && (
+                      <div className="w-4 h-4 rounded overflow-hidden bg-gray-100 flex items-center justify-center">
+                        <img 
+                          src={business.logo_url} 
+                          alt="" 
+                          className="w-3 h-3 object-contain"
+                        />
+                      </div>
+                    )}
+                    <span>{business.name}</span>
+                    {business.logo_url && <span className="text-xs text-gray-500">📷</span>}
+                  </div>
                 </SelectItem>
               ))}
             </SelectContent>
