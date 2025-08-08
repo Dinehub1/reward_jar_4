@@ -258,6 +258,16 @@ const devTools: DevTool[] = [
     icon: <Wrench className="h-5 w-5" />,
     category: 'monitoring',
     status: 'active'
+  },
+  {
+    id: 'wallet-chain-diagnostics',
+    title: 'Wallet Chain Diagnostics',
+    description: 'Comprehensive wallet chain debugging and maintenance tools',
+    path: '/admin/dev-tools/wallet-chain',
+    icon: <Activity className="h-5 w-5" />,
+    category: 'monitoring',
+    status: 'active',
+    lastUpdated: 'Just created'
   }
 ]
 
