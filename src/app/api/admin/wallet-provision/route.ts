@@ -1,270 +1,329 @@
+/**
+ * Unified Wallet Provisioning API for RewardJar 4.0
+ * 
+ * Handles wallet generation requests with queue processing and verification
+ */
+
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin-client'
+import { createServerClient } from '@/lib/supabase/server-only'
+import { walletGenerationService, isWalletGenerationEnabled } from '@/lib/wallet/wallet-generation-service'
 import type { ApiResponse } from '@/lib/supabase/types'
 
-interface WalletProvisionRequest {
-  cardId: string
-  cardName: string
-}
-
-interface WalletStatus {
-  type: 'apple' | 'google' | 'pwa'
-  status: 'pending' | 'provisioned' | 'failed' | 'not_supported'
-  lastUpdated: string
-  error?: string
-}
-
-/**
- * GET /api/admin/wallet-provision
- * 
- * Health check for wallet provisioning service
- */
-export async function GET(request: NextRequest) {
-  try {
-    return NextResponse.json({
-      success: true,
-      data: {
-        service: 'wallet-provision',
-        status: 'operational',
-        supportedWallets: ['apple', 'google', 'pwa'],
-        timestamp: new Date().toISOString()
-      },
-      message: 'Wallet provisioning service is operational'
-    } as ApiResponse<any>)
-  } catch (error) {
-    return NextResponse.json(
-      { success: false, error: 'Service unavailable' } as ApiResponse<never>,
-      { status: 503 }
-    )
+// Feature flag check
+function checkFeatureFlag(): { enabled: boolean; reason?: string } {
+  if (process.env.DISABLE_WALLET_PROVISIONING === 'true') {
+    return { enabled: false, reason: 'Wallet provisioning is temporarily disabled' }
   }
+  
+  if (!isWalletGenerationEnabled()) {
+    return { enabled: false, reason: 'Wallet generation service is disabled' }
+  }
+  
+  return { enabled: true }
 }
 
 /**
- * POST /api/admin/wallet-provision
- * 
- * Provisions a loyalty card to multiple wallet platforms
- * Requires admin authentication (role_id = 1)
+ * POST - Generate wallet passes for a card
  */
 export async function POST(request: NextRequest) {
+  const startTime = Date.now()
+  console.log('🎫 WALLET PROVISION: Starting wallet generation request...')
+  
   try {
-    const body = await request.json() as WalletProvisionRequest
-    const { cardId, cardName } = body
-
-    console.log('🔍 Wallet Provision API: Provisioning card:', { cardId, cardName })
-
-    // Verify admin access
-    const supabase = createAdminClient()
+    // Feature flag check
+    const featureCheck = checkFeatureFlag()
+    if (!featureCheck.enabled) {
+      return NextResponse.json({
+        success: false,
+        error: featureCheck.reason,
+        featureFlag: 'wallet_provisioning_disabled'
+      } as ApiResponse<never>, { status: 503 })
+    }
+    
+    // Authentication check
+    const supabase = await createServerClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     
     if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required' } as ApiResponse<never>,
-        { status: 401 }
-      )
+      console.log('❌ WALLET PROVISION: Authentication failed:', authError?.message)
+      return NextResponse.json({
+        success: false,
+        error: 'Authentication required'
+      } as ApiResponse<never>, { status: 401 })
     }
 
-    // Get user role
-    const { data: userData, error: userError } = await supabase
+    // Admin role verification
+    const adminClient = createAdminClient()
+    const { data: userData, error: userError } = await adminClient
       .from('users')
       .select('role_id')
       .eq('id', user.id)
       .single()
 
     if (userError || userData?.role_id !== 1) {
-      return NextResponse.json(
-        { success: false, error: 'Admin access required' } as ApiResponse<never>,
-        { status: 403 }
-      )
+      console.log('❌ WALLET PROVISION: Access denied, user role:', userData?.role_id)
+      return NextResponse.json({
+        success: false,
+        error: 'Admin access required'
+      } as ApiResponse<never>, { status: 403 })
     }
 
-    // Get card details
-    const { data: cardData, error: cardError } = await supabase
-      .from('stamp_cards')
-      .select(`
-        *,
-        businesses (
-          id,
-          name,
-          contact_email
-        )
-      `)
-      .eq('id', cardId)
+    // Parse request body
+    const body = await request.json()
+    const { 
+      cardId, 
+      customerId, 
+      types = ['apple', 'google', 'pwa'], 
+      priority = 'normal',
+      metadata = {}
+    } = body
+
+    // Validate request
+    if (!cardId) {
+      return NextResponse.json({
+        success: false,
+        error: 'Card ID is required'
+      } as ApiResponse<never>, { status: 400 })
+    }
+
+    if (!Array.isArray(types) || types.length === 0) {
+      return NextResponse.json({
+        success: false,
+        error: 'At least one wallet type must be specified'
+      } as ApiResponse<never>, { status: 400 })
+    }
+
+    const validTypes = ['apple', 'google', 'pwa']
+    const invalidTypes = types.filter(type => !validTypes.includes(type))
+    if (invalidTypes.length > 0) {
+      return NextResponse.json({
+        success: false,
+        error: `Invalid wallet types: ${invalidTypes.join(', ')}`
+      } as ApiResponse<never>, { status: 400 })
+    }
+
+    // Verify card exists
+    const cardExists = await verifyCardExists(cardId)
+    if (!cardExists.exists) {
+      return NextResponse.json({
+        success: false,
+        error: cardExists.error || 'Card not found'
+      } as ApiResponse<never>, { status: 404 })
+    }
+
+    // Enqueue wallet generation
+    console.log(`📝 WALLET PROVISION: Enqueueing generation for card ${cardId}`)
+    const requestId = await walletGenerationService.enqueueGeneration({
+      cardId,
+      customerId,
+      types,
+      priority,
+      metadata: {
+        ...metadata,
+        requestedBy: user.id,
+        userAgent: request.headers.get('user-agent'),
+        timestamp: new Date().toISOString()
+      }
+    })
+
+    // Return immediate response with request ID
+    const response = {
+      success: true,
+      data: {
+        requestId,
+        cardId,
+        customerId,
+        types,
+        priority,
+        status: 'queued',
+        estimatedProcessingTime: '30-60 seconds',
+        statusUrl: `/api/admin/wallet-provision/status/${requestId}`
+      },
+      timestamp: new Date().toISOString(),
+      processingTime: Date.now() - startTime
+    }
+
+    console.log(`✅ WALLET PROVISION: Request ${requestId} queued successfully`)
+    
+    return NextResponse.json(response, {
+      headers: {
+        'X-Request-ID': requestId,
+        'X-Processing-Time': `${Date.now() - startTime}ms`
+      }
+    })
+
+  } catch (error) {
+    console.error('💥 WALLET PROVISION: Critical error:', error)
+    
+    return NextResponse.json({
+      success: false,
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    } as ApiResponse<never>, { status: 500 })
+  }
+}
+
+/**
+ * GET - Get queue status and statistics
+ */
+export async function GET(request: NextRequest) {
+  try {
+    // Feature flag check
+    const featureCheck = checkFeatureFlag()
+    if (!featureCheck.enabled) {
+      return NextResponse.json({
+        success: false,
+        error: featureCheck.reason,
+        featureFlag: 'wallet_provisioning_disabled'
+      } as ApiResponse<never>, { status: 503 })
+    }
+
+    // Authentication check (same as POST)
+    const supabase = await createServerClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
+      return NextResponse.json({
+        success: false,
+        error: 'Authentication required'
+      } as ApiResponse<never>, { status: 401 })
+    }
+
+    // Get queue status
+    const queueStatus = walletGenerationService.getQueueStatus()
+    
+    // Calculate statistics
+    const stats = {
+      pending: queueStatus.pending.length,
+      processing: queueStatus.processing.length,
+      completed: queueStatus.completed.length,
+      failed: queueStatus.failed.length,
+      totalProcessed: queueStatus.completed.length + queueStatus.failed.length,
+      successRate: queueStatus.completed.length + queueStatus.failed.length > 0 
+        ? (queueStatus.completed.length / (queueStatus.completed.length + queueStatus.failed.length) * 100).toFixed(1)
+        : '0',
+      averageProcessingTime: queueStatus.completed.length > 0
+        ? Math.round(queueStatus.completed.reduce((sum, r) => sum + r.processingTime, 0) / queueStatus.completed.length)
+        : 0
+    }
+
+    const response = {
+      success: true,
+      data: {
+        queue: queueStatus,
+        statistics: stats,
+        serviceStatus: {
+          enabled: isWalletGenerationEnabled(),
+          featureFlags: {
+            walletProvisioning: process.env.DISABLE_WALLET_PROVISIONING !== 'true',
+            appleWallet: !!process.env.APPLE_PASS_TYPE_ID,
+            googleWallet: !!process.env.GOOGLE_SERVICE_ACCOUNT_JSON
+          }
+        }
+      },
+      timestamp: new Date().toISOString()
+    }
+
+    return NextResponse.json(response)
+
+  } catch (error) {
+    console.error('❌ WALLET PROVISION: Error getting queue status:', error)
+    
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to get queue status',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    } as ApiResponse<never>, { status: 500 })
+  }
+}
+
+/**
+ * DELETE - Clear queue history (completed and failed)
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    // Authentication check (admin only)
+    const supabase = await createServerClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
+      return NextResponse.json({
+        success: false,
+        error: 'Authentication required'
+      } as ApiResponse<never>, { status: 401 })
+    }
+
+    // Admin role verification
+    const adminClient = createAdminClient()
+    const { data: userData, error: userError } = await adminClient
+      .from('users')
+      .select('role_id')
+      .eq('id', user.id)
       .single()
 
-    if (cardError || !cardData) {
-      return NextResponse.json(
-        { success: false, error: 'Card not found' } as ApiResponse<never>,
-        { status: 404 }
-      )
+    if (userError || userData?.role_id !== 1) {
+      return NextResponse.json({
+        success: false,
+        error: 'Admin access required'
+      } as ApiResponse<never>, { status: 403 })
     }
 
-    const statuses: WalletStatus[] = []
-    const timestamp = new Date().toISOString()
-
-    // Apple Wallet Provisioning
-    try {
-      const appleResult = await provisionAppleWallet(cardData)
-      statuses.push({
-        type: 'apple',
-        status: appleResult.success ? 'provisioned' : 'failed',
-        lastUpdated: timestamp,
-        error: appleResult.error
-      })
-    } catch (error) {
-      statuses.push({
-        type: 'apple',
-        status: 'failed',
-        lastUpdated: timestamp,
-        error: 'Apple Wallet provisioning failed'
-      })
-    }
-
-    // Google Wallet Provisioning
-    try {
-      const googleResult = await provisionGoogleWallet(cardData)
-      statuses.push({
-        type: 'google',
-        status: googleResult.success ? 'provisioned' : 'failed',
-        lastUpdated: timestamp,
-        error: googleResult.error
-      })
-    } catch (error) {
-      statuses.push({
-        type: 'google',
-        status: 'failed',
-        lastUpdated: timestamp,
-        error: 'Google Wallet provisioning failed'
-      })
-    }
-
-    // PWA Wallet (always succeeds as fallback)
-    try {
-      const pwaResult = await provisionPWAWallet(cardData)
-      statuses.push({
-        type: 'pwa',
-        status: 'provisioned',
-        lastUpdated: timestamp
-      })
-    } catch (error) {
-      statuses.push({
-        type: 'pwa',
-        status: 'failed',
-        lastUpdated: timestamp,
-        error: 'PWA provisioning failed'
-      })
-    }
-
-    // Store provisioning status in database
-    try {
-      await supabase
-        .from('wallet_provisioning_status')
-        .upsert({
-          card_id: cardId,
-          apple_status: statuses.find(s => s.type === 'apple')?.status || 'failed',
-          google_status: statuses.find(s => s.type === 'google')?.status || 'failed',
-          pwa_status: statuses.find(s => s.type === 'pwa')?.status || 'failed',
-          last_updated: timestamp,
-          metadata: {
-            card_name: cardName,
-            provisioning_admin: user.id,
-            statuses
-          }
-        })
-    } catch (statusError) {
-      console.warn('⚠️ Failed to store provisioning status:', statusError)
-    }
-
-    console.log('✅ Wallet provisioning completed:', statuses)
+    // Clear queue history
+    walletGenerationService.clearHistory()
 
     return NextResponse.json({
       success: true,
-      data: { statuses },
-      message: 'Wallet provisioning completed'
-    } as ApiResponse<{ statuses: WalletStatus[] }>)
+      message: 'Queue history cleared',
+      timestamp: new Date().toISOString()
+    })
 
   } catch (error) {
-    console.error('❌ Wallet Provision API Error:', error)
-    return NextResponse.json(
-      { success: false, error: 'Internal server error' } as ApiResponse<never>,
-      { status: 500 }
-    )
+    console.error('❌ WALLET PROVISION: Error clearing queue:', error)
+    
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to clear queue history'
+    } as ApiResponse<never>, { status: 500 })
   }
 }
 
-// Apple Wallet provisioning logic
-async function provisionAppleWallet(cardData: any): Promise<{ success: boolean; error?: string }> {
+/**
+ * Verify that a card exists in the database
+ */
+async function verifyCardExists(cardId: string): Promise<{ exists: boolean; type?: string; error?: string }> {
   try {
-    // Mock Apple Wallet provisioning
-    // In production, this would:
-    // 1. Generate PKPass file with proper Pass Type ID
-    // 2. Sign with Apple certificates
-    // 3. Upload to Apple Wallet servers
-    // 4. Return pass URL or status
+    const adminClient = createAdminClient()
     
-    console.log('📱 Provisioning Apple Wallet for:', cardData.name)
+    // Check stamp cards
+    const { data: stampCard, error: stampError } = await adminClient
+      .from('stamp_cards')
+      .select('id, status')
+      .eq('id', cardId)
+      .single()
     
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    // Mock success (90% success rate)
-    const success = Math.random() > 0.1
-    
-    return {
-      success,
-      error: success ? undefined : 'Apple Wallet service unavailable'
+    if (!stampError && stampCard) {
+      return { exists: true, type: 'stamp' }
     }
+    
+    // Check membership cards
+    const { data: membershipCard, error: memberError } = await adminClient
+      .from('membership_cards')
+      .select('id, status')
+      .eq('id', cardId)
+      .single()
+    
+    if (!memberError && membershipCard) {
+      return { exists: true, type: 'membership' }
+    }
+    
+    return { exists: false, error: 'Card not found in database' }
+    
   } catch (error) {
-    return {
-      success: false,
-      error: 'Apple Wallet provisioning failed'
-    }
-  }
-}
-
-// Google Wallet provisioning logic
-async function provisionGoogleWallet(cardData: any): Promise<{ success: boolean; error?: string }> {
-  try {
-    // Mock Google Wallet provisioning
-    // In production, this would:
-    // 1. Create loyalty class if not exists
-    // 2. Generate JWT with card details
-    // 3. Sign with Google credentials
-    // 4. Return wallet URL or status
-    
-    console.log('📱 Provisioning Google Wallet for:', cardData.name)
-    
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 800))
-    
-    // Mock success (85% success rate)
-    const success = Math.random() > 0.15
-    
-    return {
-      success,
-      error: success ? undefined : 'Google Wallet service temporarily unavailable'
-    }
-  } catch (error) {
-    return {
-      success: false,
-      error: 'Google Wallet provisioning failed'
-    }
-  }
-}
-
-// PWA Wallet provisioning (fallback)
-async function provisionPWAWallet(cardData: any): Promise<{ success: boolean; error?: string }> {
-  try {
-    // PWA wallet is always available as universal fallback
-    console.log('🌐 Provisioning PWA Wallet for:', cardData.name)
-    
-    // Simulate minimal delay
-    await new Promise(resolve => setTimeout(resolve, 200))
-    
-    return { success: true }
-  } catch (error) {
-    return {
-      success: false,
-      error: 'PWA wallet setup failed'
+    return { 
+      exists: false, 
+      error: error instanceof Error ? error.message : 'Database error' 
     }
   }
 }

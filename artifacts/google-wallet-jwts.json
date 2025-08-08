@@ -1,0 +1,20 @@
+{
+  "stampCard": {
+    "jwt": "MOCK_JWT_FOR_TESTING",
+    "saveUrl": "https://pay.google.com/gp/v/save/MOCK_JWT_FOR_TESTING",
+    "payload": {
+      "loyaltyClasses": ["mock_class"],
+      "loyaltyObjects": ["mock_object"]
+    }
+  },
+  "membershipCard": {
+    "jwt": "MOCK_JWT_FOR_TESTING",
+    "saveUrl": "https://pay.google.com/gp/v/save/MOCK_JWT_FOR_TESTING", 
+    "payload": {
+      "genericClasses": ["mock_class"],
+      "genericObjects": ["mock_object"]
+    }
+  },
+  "generatedAt": "MOCK_TIMESTAMP",
+  "note": "Mock data - set GOOGLE_SERVICE_ACCOUNT_JSON for real JWT generation"
+}
