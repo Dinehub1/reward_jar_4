@@ -1,0 +1,64 @@
+Found endpoints referenced in codebase:
+
+Checking existence of potentially unused endpoints...
+=== panel-data ===
+NOT FOUND
+=== dashboard-stats ===
+NOT FOUND
+=== all-data ===
+NOT FOUND
+=== businesses-simple ===
+NOT FOUND
+=== customers-simple ===
+NOT FOUND
+=== debug-data ===
+total 0
+drwxr-xr-x@  2 dev  staff    64 Aug  5 18:34 .
+drwxr-xr-x@ 35 dev  staff  1120 Aug  8 14:19 ..
+=== test-admin-client ===
+total 0
+drwxr-xr-x@  2 dev  staff    64 Aug  5 18:34 .
+drwxr-xr-x@ 35 dev  staff  1120 Aug  8 14:19 ..
+=== simple-test ===
+total 0
+drwxr-xr-x@  2 dev  staff    64 Aug  5 18:34 .
+drwxr-xr-x@ 35 dev  staff  1120 Aug  8 14:19 ..
+=== cards-simple ===
+total 16
+drwxr-xr-x@  3 dev  staff    96 Jul 29 18:59 .
+drwxr-xr-x@ 35 dev  staff  1120 Aug  8 14:19 ..
+-rw-r--r--@  1 dev  staff  5971 Aug  4 19:18 route.ts
+=== cards-data ===
+total 16
+drwxr-xr-x@  3 dev  staff    96 Jul 29 18:54 .
+drwxr-xr-x@ 35 dev  staff  1120 Aug  8 14:19 ..
+-rw-r--r--@  1 dev  staff  5361 Aug  5 20:39 route.ts
+
+Runtime usage analysis:
+
+
+ANALYSIS SUMMARY:
+================
+
+ACTUALLY EXIST AND NEED REMOVAL:
+- /api/admin/cards-simple (UNUSED - no runtime references found)
+- /api/admin/cards-data (UNUSED - no runtime references found)
+
+DIRECTORIES EXIST BUT EMPTY:
+- /api/admin/debug-data (empty directory)
+- /api/admin/test-admin-client (empty directory) 
+- /api/admin/simple-test (empty directory)
+
+STILL IN USE (DO NOT REMOVE):
+- /api/admin/businesses-simple (used in health-check API and tests)
+
+ALREADY REMOVED:
+- /api/admin/panel-data
+- /api/admin/dashboard-stats
+- /api/admin/all-data
+- /api/admin/customers-simple
+
+RECOMMENDATION:
+- Remove cards-simple and cards-data directories
+- Remove empty debug directories
+- Keep businesses-simple (still used by health checks)

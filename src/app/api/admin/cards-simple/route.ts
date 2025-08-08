@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin-client'
 
+// DEPRECATED ENDPOINT GUARD - Remove after PR approval
+if (process.env.DISABLE_LEGACY_ADMIN_ENDPOINTS === 'true') {
+  export async function GET() {
+    return NextResponse.json({ 
+      success: false, 
+      error: 'Deprecated endpoint - use /api/admin/cards instead' 
+    }, { status: 410 })
+  }
+}
+
 // Retry function for database operations
 async function retryOperation<T>(
   operation: () => Promise<T>,
