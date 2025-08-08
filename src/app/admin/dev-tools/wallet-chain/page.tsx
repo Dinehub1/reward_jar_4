@@ -1,9 +1,11 @@
 'use client'
 
 import React from 'react'
+import Link from 'next/link'
 import { AdminLayoutClient } from '@/components/layouts/AdminLayoutClient'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { 
   Activity, 
@@ -14,7 +16,8 @@ import {
   Wallet,
   Database,
   Settings,
-  AlertTriangle
+  AlertTriangle,
+  ArrowLeft
 } from 'lucide-react'
 import { WalletChainHealthDashboard } from '@/components/admin/wallet-chain/WalletChainHealthDashboard'
 import { CardDataValidator } from '@/components/admin/wallet-chain/CardDataValidator'
@@ -29,11 +32,19 @@ export default function WalletChainToolsPage() {
         {/* Header */}
         <div className="border-b pb-4">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">Wallet Chain Diagnostics</h1>
-              <p className="text-muted-foreground">
-                Comprehensive tools for debugging and maintaining the unified card → wallet → PWA chain
-              </p>
+            <div className="flex items-center gap-4">
+              <Link href="/admin/dev-tools">
+                <Button variant="ghost" size="sm" className="gap-2">
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to Dev Tools
+                </Button>
+              </Link>
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight">Wallet Chain Diagnostics</h1>
+                <p className="text-muted-foreground">
+                  Comprehensive tools for debugging and maintaining the unified card → wallet → PWA chain
+                </p>
+              </div>
             </div>
             <Badge variant="outline" className="text-sm">
               Developer Tools

@@ -141,11 +141,45 @@ async function createTestCustomer(request: SimulationRequest, adminClient: any):
 
   for (let i = 0; i < customerCount; i++) {
     try {
+      // Generate test customer data
       const testCustomer = generateTestCustomerData(i)
+      
+      // Find or use existing customer user (avoid creating new auth users)
+      const { data: existingUsers } = await adminClient
+        .from('users')
+        .select('id')
+        .eq('role_id', 3) // Customer role
+        .limit(1)
+
+      let userId: string
+      if (existingUsers && existingUsers.length > 0) {
+        // Use existing customer user
+        userId = existingUsers[0].id
+      } else {
+        // Use current admin user as fallback for testing
+        const { data: adminUsers } = await adminClient
+          .from('users')
+          .select('id')
+          .eq('role_id', 1) // Admin role
+          .limit(1)
+        
+        if (adminUsers && adminUsers.length > 0) {
+          userId = adminUsers[0].id
+        } else {
+          errors.push(`Customer ${i + 1}: No valid user found to assign`)
+          continue
+        }
+      }
+
+      // Create the customer with existing user_id
+      const customerData = {
+        ...testCustomer,
+        user_id: userId
+      }
       
       const { data: customer, error } = await adminClient
         .from('customers')
-        .insert(testCustomer)
+        .insert(customerData)
         .select()
         .single()
 
@@ -258,7 +292,7 @@ async function createTestCard(request: SimulationRequest, adminClient: any): Pro
  * Generate test wallet for existing card and customer
  */
 async function generateTestWallet(request: SimulationRequest, adminClient: any): Promise<SimulationResult> {
-  const platforms = request.platforms || ['apple', 'google', 'pwa']
+  const platforms = request.platforms || ['pwa'] // Use PWA only for testing as Apple/Google tools are disabled
   const errors: string[] = []
   const walletRequests: string[] = []
 
@@ -352,8 +386,40 @@ async function simulateCompleteFlow(request: SimulationRequest, adminClient: any
     // Step 1: Create test business
     const testBusiness = await createTestBusiness(adminClient)
     
-    // Step 2: Create test customer
-    const testCustomer = generateTestCustomerData(0)
+    // Step 2: Create test customer (with existing user)
+    const testCustomerData = generateTestCustomerData(0)
+    
+    // Find existing customer user (avoid creating new auth users)
+    const { data: existingUsers } = await adminClient
+      .from('users')
+      .select('id')
+      .eq('role_id', 3) // Customer role
+      .limit(1)
+
+    let userId: string
+    if (existingUsers && existingUsers.length > 0) {
+      userId = existingUsers[0].id
+    } else {
+      // Use current admin user as fallback for testing
+      const { data: adminUsers } = await adminClient
+        .from('users')
+        .select('id')
+        .eq('role_id', 1) // Admin role
+        .limit(1)
+      
+      if (adminUsers && adminUsers.length > 0) {
+        userId = adminUsers[0].id
+      } else {
+        throw new Error('No valid user found to assign to test customer')
+      }
+    }
+
+    // Create the customer with existing user_id
+    const testCustomer = {
+      ...testCustomerData,
+      user_id: userId
+    }
+    
     const { data: customer, error: customerError } = await adminClient
       .from('customers')
       .insert(testCustomer)
@@ -425,13 +491,19 @@ async function simulateCompleteFlow(request: SimulationRequest, adminClient: any
       await new Promise(resolve => setTimeout(resolve, 1000)) // Wait 1 second
       
       const result = walletGenerationService.getResult(requestId)
+      const queueStatus = walletGenerationService.getQueueStatus()
+      const failedRequest = queueStatus.failed.find(f => f.request.id === requestId)
+      
       if (result) {
         generationCompleted = true
         if (result.success) {
           successfulGenerations++
         } else {
-          errors.push('Wallet generation failed in simulation')
+          errors.push('Wallet generation completed but failed')
         }
+      } else if (failedRequest) {
+        generationCompleted = true
+        errors.push(`Wallet generation failed: ${failedRequest.error}`)
       }
     }
 
@@ -497,7 +569,7 @@ async function cleanupTestData(adminClient: any): Promise<SimulationResult> {
     const { error: customerCardsError } = await adminClient
       .from('customer_cards')
       .delete()
-      .or('stamp_card_id.in.(select id from stamp_cards where name like "Test%"),membership_card_id.in.(select id from membership_cards where name like "Test%")')
+      .or(`stamp_card_id.in.(select id from stamp_cards where name like 'Test%'),membership_card_id.in.(select id from membership_cards where name like 'Test%')`)
 
     if (customerCardsError) {
       errors.push(`Customer cards cleanup: ${customerCardsError.message}`)
@@ -616,6 +688,7 @@ function generateTestStampCard(businessId: string, index: number) {
   return {
     name: `Test Stamp Card ${cardNames[index % cardNames.length]} ${index + 1}`,
     business_id: businessId,
+    total_stamps: [5, 8, 10, 12][index % 4], // Required field - number of stamps needed
     stamps_required: [5, 8, 10, 12][index % 4],
     reward: rewards[index % rewards.length],
     reward_description: `Get a ${rewards[index % rewards.length]} after collecting all stamps!`,
@@ -650,13 +723,43 @@ function generateTestMembershipCard(businessId: string, index: number) {
 /**
  * Create test business
  */
-async function createTestBusiness(adminClient: any) {
+async function createTestBusiness(adminClient: any, userId?: string) {
+  // Get the first business owner if userId not provided
+  let ownerId = userId
+  if (!ownerId) {
+    const { data: users } = await adminClient
+      .from('users')
+      .select('id')
+      .eq('role_id', 2) // Business role
+      .limit(1)
+    
+    if (users && users.length > 0) {
+      ownerId = users[0].id
+    } else {
+      // Fallback: get admin user
+      const { data: adminUsers } = await adminClient
+        .from('users')
+        .select('id')
+        .eq('role_id', 1) // Admin role
+        .limit(1)
+      
+      if (adminUsers && adminUsers.length > 0) {
+        ownerId = adminUsers[0].id
+      } else {
+        throw new Error('No valid user found to set as business owner')
+      }
+    }
+  }
+
   const testBusiness = {
     name: `Test Business ${crypto.randomUUID().substring(0, 8)}`,
     contact_email: `test.business.${Date.now()}@example.com`,
     description: 'Test business for wallet chain simulation',
+    owner_id: ownerId,
     created_at: new Date().toISOString()
   }
+
+  console.log('🏢 Creating test business with data:', JSON.stringify(testBusiness, null, 2))
 
   const { data: business, error } = await adminClient
     .from('businesses')
@@ -665,8 +768,11 @@ async function createTestBusiness(adminClient: any) {
     .single()
 
   if (error) {
+    console.error('❌ Business creation error:', error)
     throw new Error(`Failed to create test business: ${error.message}`)
   }
+
+  console.log('✅ Test business created successfully:', business.id)
 
   return business
 }

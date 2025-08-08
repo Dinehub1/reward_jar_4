@@ -8,6 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "lint:admin": "eslint --max-warnings=0 \"src/app/admin/**/*.{ts,tsx}\" \"src/components/admin/**/*.{ts,tsx}\" \"src/components/layouts/**/*.{ts,tsx}\" \"src/lib/**/*.{ts,tsx}\"",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:admin": "jest --testPathPattern=admin-card-creation.test.ts",

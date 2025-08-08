@@ -1,5 +1,14 @@
 'use client'
 
+/**
+ * 🧪 LEGACY WALLET PREVIEW CONTAINER
+ * 
+ * ⚠️  DEPRECATED: This component is kept for development/testing only.
+ * ⚠️  For PRODUCTION use, always use CardLivePreview from @/components/unified/CardLivePreview
+ * 
+ * Status: Legacy system - Use CardLivePreview for all new implementations
+ */
+
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Smartphone, Monitor, RotateCcw, Camera, Sun, Moon, Ruler } from 'lucide-react'

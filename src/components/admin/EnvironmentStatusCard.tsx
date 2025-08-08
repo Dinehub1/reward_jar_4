@@ -36,7 +36,9 @@ export function EnvironmentStatusCard() {
       
       setEnvStatus({
         ...clientStatus,
-        hasServiceRoleKey: serverStatus?.hasServiceRoleKey ?? null
+        hasServiceRoleKey: serverStatus?.hasServiceRoleKey ?? null,
+        // Use server-side wallet detection instead of client-side
+        walletAvailability: serverStatus?.walletAvailability ?? clientStatus.walletAvailability
       })
     } catch (error) {
       console.error('Failed to check environment status:', error)

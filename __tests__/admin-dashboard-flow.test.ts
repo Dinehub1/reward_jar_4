@@ -130,7 +130,7 @@ describe('Admin Dashboard Flow', () => {
           json: () => Promise.resolve(mockStatsResponse)
         })
       }
-      if (url.includes('/api/admin/businesses-simple')) {
+      if (url.includes('/api/admin/businesses-simple') || url.includes('/api/admin/businesses')) {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve(mockBusinessesResponse)
@@ -200,7 +200,7 @@ describe('Admin Dashboard Flow', () => {
       json: () => Promise.resolve(mockResponse)
     })
 
-    const response = await fetch('/api/admin/businesses-simple')
+    const response = await fetch('/api/admin/businesses')
     const data = await response.json()
 
     expect(response.ok).toBe(true)
@@ -262,7 +262,7 @@ describe('Admin Dashboard Flow', () => {
 
     // Make multiple concurrent requests to test for memory leaks
     for (let i = 0; i < 10; i++) {
-      promises.push(fetch('/api/admin/businesses-simple'))
+      promises.push(fetch('/api/admin/businesses'))
     }
 
     const responses = await Promise.all(promises)

@@ -1,5 +1,15 @@
 'use client'
 
+/**
+ * 🧪 DEVELOPMENT-ONLY TEST COMPONENT
+ * 
+ * ⚠️  This component uses LEGACY preview systems for testing purposes only.
+ * ⚠️  For PRODUCTION use, always use CardLivePreview from @/components/unified/CardLivePreview
+ * 
+ * Purpose: Testing and development validation of wallet preview components
+ * Status: Development/QA use only - NOT for production features
+ */
+
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { WalletPreviewContainer } from './WalletPreviewContainer'

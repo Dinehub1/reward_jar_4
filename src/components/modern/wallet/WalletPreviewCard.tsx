@@ -1,5 +1,14 @@
 'use client'
 
+/**
+ * 🧪 LEGACY WALLET PREVIEW CARD
+ * 
+ * ⚠️  DEPRECATED: This component is kept for development/testing only.
+ * ⚠️  For PRODUCTION use, always use CardLivePreview from @/components/unified/CardLivePreview
+ * 
+ * Status: Legacy system - Use CardLivePreview for all new implementations
+ */
+
 import React from 'react'
 import { motion } from 'framer-motion'
 import { designTokens } from '@/lib/design-tokens'

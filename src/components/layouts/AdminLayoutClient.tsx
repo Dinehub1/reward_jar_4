@@ -4,7 +4,7 @@ import { ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { useAdminAuth } from '@/lib/hooks/use-admin-auth'
+import { useAdminAuthContext } from '@/lib/context/AdminAuthContext'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { ModernSidebar } from '@/components/modern/layout/ModernSidebar'
 import { designTokens } from '@/lib/design-tokens'
@@ -111,9 +111,9 @@ function AccessDeniedState() {
   )
 }
 
-// Main Admin Layout Component
-export function AdminLayoutClient({ children, requireAuth = true }: AdminLayoutClientProps) {
-  const { isAdmin, isLoading, user, error, signOut } = useAdminAuth(requireAuth)
+// Internal component that uses the context
+function AdminLayoutInternal({ children, requireAuth = true }: AdminLayoutClientProps) {
+  const { isAdmin, isLoading, user, error, signOut } = useAdminAuthContext()
   const router = useRouter()
 
   // Debug logging for troubleshooting
@@ -166,6 +166,15 @@ export function AdminLayoutClient({ children, requireAuth = true }: AdminLayoutC
         </div>
       </div>
     </motion.div>
+  )
+}
+
+// Main Admin Layout Component (Context provided by admin/layout.tsx)
+export function AdminLayoutClient({ children, requireAuth = true }: AdminLayoutClientProps) {
+  return (
+    <AdminLayoutInternal requireAuth={requireAuth}>
+      {children}
+    </AdminLayoutInternal>
   )
 }
 

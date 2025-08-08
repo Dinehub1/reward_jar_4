@@ -1,5 +1,15 @@
 'use client'
 
+/**
+ * 🧪 DEVELOPMENT-ONLY DEMO COMPONENT
+ * 
+ * ⚠️  This component uses LEGACY WalletPreviewCard for testing purposes only.
+ * ⚠️  For PRODUCTION use, always use CardLivePreview from @/components/unified/CardLivePreview
+ * 
+ * Purpose: Development testing and validation of stamp card functionality
+ * Status: Development/QA use only - NOT for production features
+ */
+
 import React, { useState } from 'react'
 import { WalletPreviewCard } from './WalletPreviewCard'
 import type { StampCard } from './WalletPreviewCard'

@@ -115,7 +115,7 @@ export function transformStampCardData(
     },
     
     card: {
-      name: stampCard.card_name,
+      name: stampCard.card_name || stampCard.name, // Fallback to name if card_name is not set
       description: stampCard.reward_description || 'Loyalty Card',
       backgroundColor: 'rgb(139, 92, 246)', // Purple theme
       foregroundColor: 'rgb(255, 255, 255)',

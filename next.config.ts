@@ -26,6 +26,16 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async rewrites() {
+    if (process.env.NODE_ENV === 'production') {
+      return [
+        { source: '/admin/test-:path*', destination: '/404' },
+        { source: '/admin/debug', destination: '/404' },
+        { source: '/admin/debug-:path*', destination: '/404' },
+      ];
+    }
+    return [];
+  },
   async headers() {
     return [
       {

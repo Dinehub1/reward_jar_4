@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ModernButton } from '@/components/modern/ui/ModernButton'
 import { Badge } from '@/components/ui/badge'
 import { AdminLayoutClient } from '@/components/layouts/AdminLayoutClient'
-import { useAdminStats, useAdminBusinesses } from '@/lib/hooks/use-admin-data'
+import { useAdminStats } from '@/lib/hooks/use-admin-data'
 import { useAdminRealtime, useAdminNotifications } from '@/lib/hooks/use-admin-realtime'
 import { adminNotifications, useAdminEvents } from '@/lib/admin-events'
 import { ModernCardSkeleton, ModernTableSkeleton } from '@/components/modern/ui/ModernSkeleton'
@@ -372,7 +372,7 @@ export default function AdminDashboard() {
   const [refreshError, setRefreshError] = useState<string | null>(null)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
   
-  // Use unified API for consistent data
+  // Use unified API for consistent data - SINGLE SOURCE OF TRUTH
   const { data: unifiedResponse, error: unifiedError, isLoading: unifiedLoading, mutate: refetchUnified } = useAdminStats()
 
   // Real-time subscriptions for automatic updates
@@ -396,12 +396,9 @@ export default function AdminDashboard() {
     )
   }, [])
 
-  // Extract data from unified API response
+  // Extract data from unified API response - SINGLE DATA SOURCE
   const statsData = unifiedResponse?.data?.stats
-  
-  // Get businesses data from separate hook
-  const { data: businessesResponse } = useAdminBusinesses()
-  const businessesData = businessesResponse?.data || []
+  const businessesData = unifiedResponse?.data?.businesses || []
 
   const loading = unifiedLoading
   const error = unifiedError

@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
       customerId,
       types,
       priority,
-      metadata: {
+          metadata: {
         ...metadata,
         requestedBy: user.id,
         userAgent: request.headers.get('user-agent'),
@@ -155,7 +155,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('💥 WALLET PROVISION: Critical error:', error)
-    
+
     return NextResponse.json({
       success: false,
       error: 'Internal server error',
@@ -321,7 +321,7 @@ async function verifyCardExists(cardId: string): Promise<{ exists: boolean; type
     return { exists: false, error: 'Card not found in database' }
     
   } catch (error) {
-    return { 
+    return {
       exists: false, 
       error: error instanceof Error ? error.message : 'Database error' 
     }

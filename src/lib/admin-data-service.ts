@@ -89,32 +89,23 @@ async function fetchAdminData(): Promise<AdminData> {
   console.log('🔍 ADMIN DATA SERVICE - Fetching fresh data from API...')
   
   try {
-    // Use relative URLs for server-side requests
-    const baseUrl = typeof window === 'undefined' ? 'http://localhost:3000' : ''
+    // Use relative URLs for both client and server-side requests
+    const baseUrl = ''
     
-    // ✅ MIGRATED: Use single dashboard-unified endpoint for consistency
-    const [statsRes, businessesRes] = await Promise.all([
-      fetch(`${baseUrl}/api/admin/dashboard-unified`, { 
-        cache: 'no-store',
-        headers: { 'Cache-Control': 'no-cache' }
-      }),
-      fetch(`${baseUrl}/api/admin/dashboard-unified`, { 
-        cache: 'no-store',
-        headers: { 'Cache-Control': 'no-cache' }
-      })
-    ]);
+    // ✅ FIXED: Single API call instead of duplicate calls
+    const response = await fetch(`${baseUrl}/api/admin/dashboard-unified`, { 
+      cache: 'no-store',
+      headers: { 'Cache-Control': 'no-cache' }
+    });
     
-    if (!statsRes.ok || !businessesRes.ok) {
-      throw new Error(`API request failed: Stats ${statsRes.status}, All-Data ${businessesRes.status}`)
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status}`)
     }
     
-    const [statsData, allData] = await Promise.all([
-      statsRes.json(),
-      businessesRes.json()
-    ]);
+    const data = await response.json();
     
     // Process customer data to match expected interface
-    const processedCustomers = (allData.data?.customers || []).map((customer: any) => ({
+    const processedCustomers = (data.data?.customers || []).map((customer: any) => ({
       ...customer,
       customer_cards: customer.customer_cards || [],
       _count: {
@@ -130,7 +121,7 @@ async function fetchAdminData(): Promise<AdminData> {
     }))
     
     const result: AdminData = {
-      stats: statsData.metrics || {
+      stats: data.data?.metrics || {
         totalBusinesses: 0,
         totalCustomers: 0,
         totalCards: 0,
@@ -139,7 +130,7 @@ async function fetchAdminData(): Promise<AdminData> {
         flaggedBusinesses: 0,
         recentActivity: 0
       },
-      businesses: allData.data?.businesses || [],
+      businesses: data.data?.businesses || [],
       customers: processedCustomers
     }
     

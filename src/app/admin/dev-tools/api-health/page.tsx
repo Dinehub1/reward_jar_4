@@ -72,12 +72,12 @@ const apiEndpoints: ApiEndpoint[] = [
     description: 'Admin authentication status'
   },
   {
-    id: 'admin-dashboard-stats',
-    name: 'Dashboard Stats',
-    url: '/api/admin/dashboard-stats',
+    id: 'admin-dashboard-unified',
+    name: 'Dashboard Unified',
+    url: '/api/admin/dashboard-unified',
     method: 'GET',
     category: 'admin',
-    description: 'Admin dashboard statistics'
+    description: 'Unified admin dashboard data (replaces dashboard-stats)'
   },
   {
     id: 'admin-businesses',

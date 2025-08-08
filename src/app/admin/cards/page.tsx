@@ -551,21 +551,22 @@ export default function AdminCardsPage() {
 
   return (
     <AdminLayoutClient>
-      <div className="p-6">
-        <div className="max-w-7xl mx-auto space-y-6">
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Card Management</h1>
-              <p className="text-gray-600 dark:text-gray-400">Create and manage loyalty and membership cards</p>
-            </div>
-            <Button onClick={() => router.push('/admin/cards/new')}>
-              <Plus className="mr-2 h-4 w-4" /> Create New Card
-            </Button>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Card Management</h1>
+            <p className="text-muted-foreground">
+              Create and manage loyalty and membership cards
+            </p>
           </div>
+          <Button onClick={() => router.push('/admin/cards/new')}>
+            <Plus className="mr-2 h-4 w-4" /> Create New Card
+          </Button>
+        </div>
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center">
@@ -901,7 +902,6 @@ export default function AdminCardsPage() {
               )}
             </CardContent>
           </Card>
-        </div>
       </div>
     </AdminLayoutClient>
   )

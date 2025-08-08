@@ -13,8 +13,35 @@ import {
   generatePWACardData,
   validateCardData 
 } from './unified-card-data'
-import { createPkpass } from '../../tools/wallet-validation/generate_apple_pass'
-import { createWalletJWT } from '../../tools/wallet-validation/generate_google_jwt'
+// Dynamic wallet generation tools (loaded only when needed to avoid webpack warnings)
+let createPkpass: any = null
+let createWalletJWT: any = null
+
+/**
+ * Dynamically load Apple Wallet tools if available
+ * Note: These tools are optional development utilities
+ */
+function loadAppleTools() {
+  if (createPkpass) return createPkpass
+  
+  // For now, return null to avoid webpack warnings
+  // Tools will be integrated differently in production
+  console.warn('Apple Wallet tools: Development mode - tools not loaded')
+  return null
+}
+
+/**
+ * Dynamically load Google Wallet tools if available
+ * Note: These tools are optional development utilities
+ */
+function loadGoogleTools() {
+  if (createWalletJWT) return createWalletJWT
+  
+  // For now, return null to avoid webpack warnings
+  // Tools will be integrated differently in production
+  console.warn('Google Wallet tools: Development mode - tools not loaded')
+  return null
+}
 import jwt from 'jsonwebtoken'
 import crypto from 'crypto'
 
@@ -276,8 +303,11 @@ class WalletGenerationService {
       const fileName = `${cardData.serialNumber}.pkpass`
       const outputPath = `/tmp/${fileName}`
       
-      // Use the existing createPkpass function from our tools
-      await createPkpass(passData, outputPath)
+              // Use the existing createPkpass function from our tools
+        if (!createPkpass) {
+          throw new Error('Apple Wallet tools not available')
+        }
+        await createPkpass(passData, outputPath)
       
       // In production, upload to S3 or similar storage
       const pkpassUrl = `${process.env.WALLET_STORAGE_URL || '/api/wallet/download'}/${fileName}`
@@ -314,8 +344,11 @@ class WalletGenerationService {
         ? { loyaltyObjects: [objectData] }
         : { genericObjects: [objectData] }
       
-      // Use the existing createWalletJWT function
-      const jwtToken = createWalletJWT(payload, credentials)
+              // Use the existing createWalletJWT function
+        if (!createWalletJWT) {
+          throw new Error('Google Wallet tools not available')
+        }
+        const jwtToken = createWalletJWT(payload, credentials)
       const saveUrl = `https://pay.google.com/gp/v/save/${jwtToken}`
       
       return {

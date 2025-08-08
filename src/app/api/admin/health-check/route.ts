@@ -133,13 +133,13 @@ export async function GET(request: NextRequest) {
       results.issues.push(`Dashboard stats API failed: ${statsError instanceof Error ? statsError.message : 'Unknown error'}`)
     }
 
-    // Test businesses simple endpoint
+    // Test businesses endpoint
     try {
-      const businessesResponse = await fetch(`${baseUrl}/api/admin/businesses-simple`)
+      const businessesResponse = await fetch(`${baseUrl}/api/admin/businesses`)
       results.api_endpoints.businesses_simple = businessesResponse.ok ? 'success' : `failed (${businessesResponse.status})`
     } catch (businessesError) {
       results.api_endpoints.businesses_simple = 'error'
-      results.issues.push(`Businesses simple API failed: ${businessesError instanceof Error ? businessesError.message : 'Unknown error'}`)
+      results.issues.push(`Businesses API failed: ${businessesError instanceof Error ? businessesError.message : 'Unknown error'}`)
     }
 
   } catch (apiError) {

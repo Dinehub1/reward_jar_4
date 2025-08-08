@@ -23,13 +23,12 @@ export const APPLE_CERT_BASE64 = process.env.APPLE_CERT_BASE64
 export const APPLE_KEY_BASE64 = process.env.APPLE_KEY_BASE64
 export const APPLE_WWDR_BASE64 = process.env.APPLE_WWDR_BASE64
 export const APPLE_CERT_PASSWORD = process.env.APPLE_CERT_PASSWORD
-export const APPLE_TEAM_IDENTIFIER = process.env.APPLE_TEAM_IDENTIFIER!
-export const APPLE_PASS_TYPE_IDENTIFIER = process.env.APPLE_PASS_TYPE_IDENTIFIER!
+export const APPLE_TEAM_ID = process.env.APPLE_TEAM_ID!
+export const APPLE_PASS_TYPE_ID = process.env.APPLE_PASS_TYPE_ID!
 
-// Google Wallet Variables
-export const GOOGLE_SERVICE_ACCOUNT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
-export const GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY
-export const GOOGLE_CLASS_ID = process.env.GOOGLE_CLASS_ID
+// Google Wallet Variables  
+export const GOOGLE_SERVICE_ACCOUNT_JSON = process.env.GOOGLE_SERVICE_ACCOUNT_JSON
+export const GOOGLE_WALLET_ISSUER_ID = process.env.GOOGLE_WALLET_ISSUER_ID
 
 // Security & Analytics Variables (Optional)
 export const API_KEY = process.env.API_KEY
@@ -45,8 +44,8 @@ export function validateEnvironmentVariables() {
   const required = {
     NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    APPLE_TEAM_IDENTIFIER,
-    APPLE_PASS_TYPE_IDENTIFIER,
+    APPLE_TEAM_ID,
+    APPLE_PASS_TYPE_ID,
   }
 
   const missing = Object.entries(required).filter(([_, value]) => !value)
@@ -69,8 +68,8 @@ export function validateAdminEnvironmentVariables() {
     NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY,
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
-    APPLE_TEAM_IDENTIFIER,
-    APPLE_PASS_TYPE_IDENTIFIER,
+    APPLE_TEAM_ID,
+    APPLE_PASS_TYPE_ID,
   }
 
   const missing = Object.entries(required).filter(([_, value]) => !value)
@@ -90,17 +89,16 @@ export function isAppleWalletConfigured(): boolean {
     APPLE_KEY_BASE64 &&
     APPLE_WWDR_BASE64 &&
     APPLE_CERT_PASSWORD &&
-    APPLE_TEAM_IDENTIFIER &&
-    APPLE_PASS_TYPE_IDENTIFIER
+    APPLE_TEAM_ID &&
+    APPLE_PASS_TYPE_ID
   )
 }
 
 // Check if Google Wallet is fully configured
 export function isGoogleWalletConfigured(): boolean {
   return !!(
-    GOOGLE_SERVICE_ACCOUNT_EMAIL &&
-    GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY &&
-    GOOGLE_CLASS_ID
+    GOOGLE_SERVICE_ACCOUNT_JSON &&
+    GOOGLE_WALLET_ISSUER_ID
   )
 }
 

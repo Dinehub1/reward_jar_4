@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { isServiceRoleKeyConfigured } from '@/lib/env'
+import { isServiceRoleKeyConfigured, isAppleWalletConfigured, isGoogleWalletConfigured } from '@/lib/env'
 
 /**
  * Simple environment check endpoint for admin UI
@@ -10,6 +10,10 @@ export async function GET() {
     const hasServiceRoleKey = isServiceRoleKeyConfigured()
     const hasSupabaseUrl = !!process.env.NEXT_PUBLIC_SUPABASE_URL
     const hasAnonKey = !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    
+    // Check wallet configurations on server-side where all env vars are available
+    const hasAppleWallet = isAppleWalletConfigured()
+    const hasGoogleWallet = isGoogleWalletConfigured()
     
     const criticalMissing = [
       !hasSupabaseUrl && 'NEXT_PUBLIC_SUPABASE_URL',
@@ -22,6 +26,11 @@ export async function GET() {
       hasSupabaseUrl,
       hasAnonKey,
       hasServiceRoleKey,
+      walletAvailability: {
+        apple: hasAppleWallet,
+        google: hasGoogleWallet,
+        pwa: true // PWA is always available
+      },
       criticalMissing,
       timestamp: new Date().toISOString()
     })

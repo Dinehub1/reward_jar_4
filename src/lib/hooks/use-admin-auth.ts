@@ -37,9 +37,11 @@ export function useAdminAuth(requireAuth: boolean = true): AdminAuthState & Admi
   const router = useRouter()
   const supabase = createClient()
   
-  // Prevent multiple simultaneous auth checks
+  // Prevent multiple simultaneous auth checks - RESET on each instance
   const authCheckInProgress = useRef(false)
   const authResolved = useRef(false)
+  
+  console.log('🔧 AUTH HOOK - New instance created:', { requireAuth, authResolved: authResolved.current })
 
   const checkAuth = async () => {
     console.log('🔍 AUTH HOOK - checkAuth called:', { 
@@ -50,7 +52,10 @@ export function useAdminAuth(requireAuth: boolean = true): AdminAuthState & Admi
     
     // If auth is already resolved or in progress, don't check again
     if (authResolved.current || authCheckInProgress.current) {
-      console.log('🔍 AUTH HOOK - Skipping auth check (already resolved or in progress)')
+      console.log('🔍 AUTH HOOK - Skipping auth check (already resolved or in progress)', {
+        authResolved: authResolved.current,
+        authCheckInProgress: authCheckInProgress.current
+      })
       return
     }
     
@@ -158,7 +163,7 @@ export function useAdminAuth(requireAuth: boolean = true): AdminAuthState & Admi
       }
       
       console.log('✅ AUTH HOOK - Setting final auth state:', newState)
-      // Setting final auth state
+      console.log('🎯 AUTH SUCCESS - User authenticated as admin, resolving auth state')
       setState(newState)
       authResolved.current = true
 
@@ -205,7 +210,8 @@ export function useAdminAuth(requireAuth: boolean = true): AdminAuthState & Admi
     const performAuthCheck = async () => {
       console.log('🔍 AUTH HOOK - performAuthCheck called:', { 
         authResolved: authResolved.current,
-        isMounted 
+        isMounted,
+        requireAuth
       })
       
       // Only perform auth check once per component lifecycle
@@ -215,7 +221,9 @@ export function useAdminAuth(requireAuth: boolean = true): AdminAuthState & Admi
       }
       
       try {
+        console.log('🔍 AUTH HOOK - About to call checkAuth()...')
         await checkAuth()
+        console.log('🔍 AUTH HOOK - checkAuth() completed')
       } catch (error) {
         console.error('🚨 AUTH HOOK - performAuthCheck error:', error)
       }
@@ -262,7 +270,7 @@ export function useAdminAuth(requireAuth: boolean = true): AdminAuthState & Admi
       if (timeoutId) clearTimeout(timeoutId)
       subscription.unsubscribe()
     }
-  }, []) // Empty dependency array - run only once
+  }, [requireAuth]) // Add dependency to prevent unnecessary re-runs
 
   return {
     ...state,

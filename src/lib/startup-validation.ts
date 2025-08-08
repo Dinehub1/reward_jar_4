@@ -128,6 +128,34 @@ export function validateWalletEnvironment(): void {
 }
 
 /**
+ * Fail-fast env validation gate for production boot
+ * Throws an Error with actionable message if critical vars are missing
+ */
+export function validateEnvVarsOrThrow() {
+  const isProd = process.env.NODE_ENV === 'production'
+  const required = [
+    'NEXT_PUBLIC_SUPABASE_URL',
+    'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+  ]
+  const missing = required.filter((k) => !process.env[k])
+  if (missing.length > 0) {
+    throw new Error(
+      `Missing required environment variables: ${missing.join(', ')}. ` +
+      `Please set them in your production environment.`
+    )
+  }
+  if (isProd && process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error(
+      'Service role key must never be exposed with NEXT_PUBLIC_. Remove NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY.'
+    )
+  }
+  // Optional but recommended flags
+  if (isProd && process.env.DISABLE_LEGACY_ADMIN_ENDPOINTS !== 'true') {
+    console.warn('DISABLE_LEGACY_ADMIN_ENDPOINTS is not set to true in production.')
+  }
+}
+
+/**
  * Health check function that returns environment status
  * Used by health check endpoints
  */
