@@ -160,24 +160,39 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     
-    // Canonical card creation schema (matches form data)
+    // Enhanced card creation schema supporting both stamp and membership cards
     const { 
+      // Common fields for both card types
+      card_type = 'stamp_card', // 'stamp_card' or 'membership_card'
       card_name,
       business_id, 
-      reward, 
-      reward_description, // NEW: Detailed reward description
-      stamps_required,
       card_color,
       icon_emoji,
       barcode_type,
       card_expiry_days,
+      card_description,
+      
+      // Stamp card specific fields
+      reward, 
+      reward_description,
+      stamps_required,
       reward_expiry_days,
       stamp_config,
-      card_description,
       how_to_earn_stamp,
       reward_details,
       earned_stamp_message,
       earned_reward_message,
+      
+      // Membership card specific fields  
+      membership_type = 'gym',
+      total_sessions,
+      cost,
+      duration_days,
+      membership_config,
+      how_to_use_card,
+      membership_details,
+      session_used_message,
+      membership_expired_message,
       
       // Legacy support for older forms
       cardName,
@@ -189,9 +204,7 @@ export async function POST(request: NextRequest) {
       cardExpiryDays,
       rewardExpiryDays,
       stampConfig,
-      card_type,
       name, 
-      reward_description: legacy_reward_description, // Rename to avoid conflict
       status,
       values,
       stamp_condition,
@@ -199,9 +212,11 @@ export async function POST(request: NextRequest) {
     } = body
 
     console.log('🔍 Admin API: Creating card:', { 
-      cardName: cardName || name, 
-      businessId: businessId || business_id, 
-      stampsRequired: stampsRequired || values?.total_stamps 
+      cardType: card_type,
+      cardName: card_name || cardName || name, 
+      businessId: business_id || businessId, 
+      isStampCard: card_type === 'stamp_card',
+      isMembershipCard: card_type === 'membership_card'
     })
 
     // Use server client to authenticate the user
@@ -233,28 +248,49 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Canonical card creation (matches database schema)
+    // Common fields for both card types
     const finalCardName = card_name || cardName || name
     const finalBusinessId = business_id || businessId
-    const finalStampsRequired = stamps_required || stampsRequired || values?.total_stamps
-    
-    if (finalCardName && finalBusinessId && reward !== undefined && finalStampsRequired) {
-      const newCardPayload = {
+    const finalCardColor = card_color || cardColor || '#8B4513'
+    const finalIconEmoji = icon_emoji || iconEmoji || '⭐'
+    const finalBarcodeType = barcode_type || barcodeType || 'QR_CODE'
+    const finalCardExpiryDays = card_expiry_days || cardExpiryDays || 60
+
+    // Validate common required fields
+    if (!finalCardName || !finalBusinessId) {
+      return NextResponse.json(
+        { success: false, error: 'Card name and business ID are required' } as ApiResponse<never>,
+        { status: 400 }
+      )
+    }
+
+    // Handle stamp card creation
+    if (card_type === 'stamp_card') {
+      const finalStampsRequired = stamps_required || stampsRequired || values?.total_stamps
+      
+      if (!reward || !finalStampsRequired) {
+        return NextResponse.json(
+          { success: false, error: 'Reward and stamps required are mandatory for stamp cards' } as ApiResponse<never>,
+          { status: 400 }
+        )
+      }
+
+      const stampCardPayload = {
         business_id: finalBusinessId,
-        // ✅ FIX: Populate BOTH old and new name fields to satisfy database constraints
-        name: finalCardName, // Required by database constraint
+        // Populate BOTH old and new name fields for compatibility
+        name: finalCardName, // Legacy field required by database
         card_name: finalCardName, // New canonical field
-        // ✅ FIX: Populate BOTH old and new stamp fields
-        total_stamps: finalStampsRequired, // Legacy field required by database
+        // Populate BOTH old and new stamp fields
+        total_stamps: finalStampsRequired, // Legacy field
         stamps_required: finalStampsRequired, // New canonical field
-        // ✅ FIX: Populate BOTH old and new expiry fields  
-        expiry_days: card_expiry_days || cardExpiryDays || 60, // Legacy field
-        card_expiry_days: card_expiry_days || cardExpiryDays || 60, // New canonical field
+        // Populate BOTH old and new expiry fields  
+        expiry_days: finalCardExpiryDays, // Legacy field
+        card_expiry_days: finalCardExpiryDays, // New canonical field
         reward: reward,
-        reward_description: reward_description || '', // Include reward description
-        card_color: card_color || cardColor || '#8B4513',
-        icon_emoji: icon_emoji || iconEmoji || '☕',
-        barcode_type: barcode_type || barcodeType || 'QR_CODE',
+        reward_description: reward_description || '',
+        card_color: finalCardColor,
+        icon_emoji: finalIconEmoji,
+        barcode_type: finalBarcodeType,
         reward_expiry_days: reward_expiry_days || rewardExpiryDays || 15,
         stamp_config: stamp_config || stampConfig || {
           manualStampOnly: true,
@@ -273,132 +309,96 @@ export async function POST(request: NextRequest) {
 
       const { data: savedCard, error } = await adminClient
         .from('stamp_cards')
-        .insert([newCardPayload])
+        .insert([stampCardPayload])
         .select()
         .single()
 
       if (error) {
-        console.error('❌ Admin API: Error saving card:', error)
+        console.error('💥 ADMIN CARDS API - Stamp card creation error:', error)
         return NextResponse.json(
-          { success: false, error: 'Failed to save card: ' + error.message } as ApiResponse<never>,
+          { success: false, error: 'Failed to create stamp card', details: error.message } as ApiResponse<never>,
           { status: 500 }
         )
       }
 
-      console.log('✅ Admin API: Card saved successfully:', savedCard)
-
-      // Add to wallet update queue for provisioning
-      try {
-        await adminClient
-          .from('wallet_update_queue')
-          .insert([{
-            customer_card_id: null, // Will be updated when customers join
-            update_type: 'card_creation',
-            metadata: {
-              stamp_card_id: savedCard.id,
-              business_id: finalBusinessId,
-              card_name: finalCardName,
-              created_by: 'admin'
-            },
-            processed: false,
-            failed: false
-          }])
-          
-        console.log('✅ Admin API: Added to wallet update queue')
-      } catch (queueError) {
-        console.warn('⚠️ Admin API: Failed to add to wallet queue (non-critical):', queueError)
-      }
-
+      console.log('✅ ADMIN CARDS API - Stamp card created successfully:', savedCard.id)
       return NextResponse.json({
         success: true,
-        data: savedCard,
+        data: { ...savedCard, card_type: 'stamp_card' },
         message: 'Stamp card created successfully'
-      } as ApiResponse<typeof savedCard>)
-    }
+      } as ApiResponse<any>)
 
-    // Legacy support - prepare card payload based on type
-    const cardPayload = {
-      business_id: business_id || businessId,
-      name: name || cardName,
-      reward_description: legacy_reward_description || reward,
-      status: status || 'active',
-      ...(card_type === 'stamp' ? {
-        total_stamps: values?.total_stamps || stampsRequired,
-        stamp_condition: stamp_condition || 'per_visit',
-        min_bill_amount: stamp_condition === 'min_bill_amount' ? min_bill_amount : null,
-        card_color: cardColor || '#8B4513',
-        icon_emoji: iconEmoji || '☕',
-        expiry_days: cardExpiryDays || 60,
-        reward_expiry_days: rewardExpiryDays || 15,
-        stamp_config: stampConfig || {
-          manualStampOnly: true,
-          minSpendAmount: min_bill_amount || 0,
-          billProofRequired: false,
-          maxStampsPerDay: 1,
-          duplicateVisitBuffer: '12h'
-        }
-      } : {
-        total_sessions: values?.total_sessions,
-        cost: values?.cost,
-        duration_days: values?.duration_days,
-        membership_type: values?.tier?.toLowerCase() || 'bronze'
-      })
-    }
+    } 
+    // Handle membership card creation
+    else if (card_type === 'membership_card') {
+      if (!total_sessions || !cost || !duration_days) {
+        return NextResponse.json(
+          { success: false, error: 'Total sessions, cost, and duration are mandatory for membership cards' } as ApiResponse<never>,
+          { status: 400 }
+        )
+      }
 
-    const tableName = card_type === 'stamp' ? 'stamp_cards' : 'membership_cards'
-    
-    console.log(`💾 Admin API: Saving ${card_type} card to ${tableName}:`, cardPayload)
-    
-    const { data: savedCard, error } = await adminClient
-      .from(tableName)
-      .insert([cardPayload])
-      .select()
-      .single()
+      const membershipCardPayload = {
+        business_id: finalBusinessId,
+        name: finalCardName,
+        membership_type: membership_type || 'gym',
+        total_sessions: total_sessions,
+        cost: cost,
+        duration_days: duration_days || 30,
+        card_color: finalCardColor,
+        icon_emoji: finalIconEmoji,
+        barcode_type: finalBarcodeType,
+        card_expiry_days: finalCardExpiryDays,
+        membership_config: membership_config || {
+          autoSessionTracking: true,
+          accessControl: true,
+          allowGuestAccess: false,
+          sessionBuffer: '1h',
+          membershipTier: 'standard'
+        },
+        card_description: card_description || 'Access premium services with your membership',
+        how_to_use_card: how_to_use_card || 'Show this card for access and session tracking',
+        membership_details: membership_details || 'Membership includes access to all services',
+        session_used_message: session_used_message || 'Session recorded! {#} sessions remaining',
+        membership_expired_message: membership_expired_message || 'Your membership has expired. Please renew to continue',
+        status: 'active'
+      }
+
+      const { data: savedCard, error } = await adminClient
+        .from('membership_cards')
+        .insert([membershipCardPayload])
+        .select()
+        .single()
 
       if (error) {
-      console.error('❌ Admin API: Error saving card:', error)
+        console.error('💥 ADMIN CARDS API - Membership card creation error:', error)
         return NextResponse.json(
-        { success: false, error: 'Failed to save card' } as ApiResponse<never>,
+          { success: false, error: 'Failed to create membership card', details: error.message } as ApiResponse<never>,
           { status: 500 }
         )
       }
 
-    console.log('✅ Admin API: Card saved successfully:', savedCard)
-
-    // Add to wallet update queue for initial setup
-    try {
-      await adminClient
-        .from('wallet_update_queue')
-        .insert([{
-          customer_card_id: savedCard.id, // This will be null initially, updated when customers join
-          update_type: 'card_update',
-          metadata: {
-            card_type,
-            business_id,
-            card_name: name,
-            created_by: 'admin'
-          },
-          processed: false,
-          failed: false
-        }])
-        
-      console.log('✅ Admin API: Added to wallet update queue')
-    } catch (queueError) {
-      console.warn('⚠️ Admin API: Failed to add to wallet queue (non-critical):', queueError)
-      // Don't fail the card creation for queue issues
-    }
-
+      console.log('✅ ADMIN CARDS API - Membership card created successfully:', savedCard.id)
       return NextResponse.json({
         success: true,
-      data: savedCard,
-      message: `${card_type} card created successfully`
-    } as ApiResponse<typeof savedCard>)
+        data: { ...savedCard, card_type: 'membership_card' },
+        message: 'Membership card created successfully'
+      } as ApiResponse<any>)
+
+    } else {
+      return NextResponse.json(
+        { success: false, error: 'Invalid card type. Must be "stamp_card" or "membership_card"' } as ApiResponse<never>,
+        { status: 400 }
+      )
+    }
 
   } catch (error) {
-    console.error('❌ Admin API: Error in card creation:', error)
+    console.error('💥 ADMIN CARDS API - POST error:', error)
     return NextResponse.json(
-      { success: false, error: 'Internal server error' } as ApiResponse<never>,
+      { success: false, error: 'Failed to create card' } as ApiResponse<never>,
       { status: 500 }
     )
   }
-} 
+}
+
+ 

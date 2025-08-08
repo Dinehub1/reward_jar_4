@@ -4,6 +4,7 @@ import React from 'react'
 import { motion } from 'framer-motion'
 import { designTokens } from '@/lib/design-tokens'
 import { QRCodeDisplay, generateStampGrid, BackPageContent } from './WalletPassFrame'
+import { WALLET_DIMENSIONS } from '@/lib/wallet-dimensions'
 import type { Database } from '@/lib/supabase/types'
 
 // Unified StampCard type from database
@@ -163,21 +164,24 @@ const AppleWalletPreview: React.FC<WalletPreviewProps> = ({
       {/* Debug overlay */}
       {debugOverlay && (
         <div className="absolute -top-6 left-0 text-xs text-gray-500 font-mono">
-          Apple Wallet • 340×220px • {showBackPage ? 'Back' : 'Front'}
+          Apple Wallet • 375×563px (2:3) • {showBackPage ? 'Back' : 'Front'}
         </div>
       )}
       
-      {/* iPhone-style container */}
+      {/* iPhone-style container with proper Apple Wallet dimensions */}
       <div 
         className="relative mx-auto bg-black rounded-[2rem] p-2 shadow-2xl"
-        style={{ width: '320px', height: '500px' }}
+        style={{ 
+          width: `${WALLET_DIMENSIONS.apple.card.width}px`, 
+          height: `${WALLET_DIMENSIONS.apple.card.height}px`
+        }}
       >
         <div className="relative w-full h-full overflow-hidden rounded-[1.5rem] bg-gray-900">
-          {/* Pass container with 3D flip */}
+          {/* Apple Wallet Pass with correct layout */}
           <div 
             className="absolute top-8 left-4 right-4 transition-transform duration-700"
             style={{
-              height: '220px',
+              height: '208px', // Proper Apple Wallet pass height
               transformStyle: 'preserve-3d',
               transform: showBackPage ? 'rotateY(180deg)' : 'rotateY(0deg)'
             }}
@@ -210,70 +214,91 @@ const AppleWalletPreview: React.FC<WalletPreviewProps> = ({
                 }}
               />
               
-              <div className="h-full px-6 py-4 text-white relative flex flex-col">
+              {/* Apple Wallet Pass Layout - Matches actual iOS design */}
+              <div className="h-full text-white relative">
                 {/* Info Button */}
                 {!screenshotMode && onToggleBack && (
                   <button 
                     onClick={() => onToggleBack(true)}
-                    className="absolute top-4 right-4 w-6 h-6 rounded-full border border-white/30 flex items-center justify-center text-xs hover:bg-white/10 transition-colors"
+                    className="absolute top-3 right-3 w-5 h-5 rounded-full border border-white/40 flex items-center justify-center text-xs hover:bg-white/10 transition-colors"
+                    style={{ fontSize: '10px' }}
                   >
                     i
                   </button>
                 )}
-                
-                {/* Logo/Business Name */}
-                <div className="flex items-center space-x-2 mb-2">
-                  {cardData.businessLogoUrl ? (
-                    <img 
-                      src={cardData.businessLogoUrl} 
-                      alt={cardData.businessName}
-                      className="w-6 h-6 rounded-full"
-                    />
-                  ) : (
-                    <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs">
-                      {cardData.businessName?.[0]?.toUpperCase()}
+
+                {/* Header Section - Logo and Business Name */}
+                <div className="px-4 py-3 border-b border-white/20">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      {cardData.businessLogoUrl ? (
+                        <img 
+                          src={cardData.businessLogoUrl} 
+                          alt={cardData.businessName}
+                          className="w-8 h-8 rounded-lg object-cover"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center text-sm font-medium">
+                          {cardData.iconEmoji}
+                        </div>
+                      )}
+                      <div>
+                        <div className="text-sm font-medium opacity-90">
+                          {cardData.businessName}
+                        </div>
+                        <div className="text-xs opacity-70">
+                          Loyalty Card
+                        </div>
+                      </div>
                     </div>
-                  )}
-                  <div className="text-sm opacity-90 font-medium">
-                    {cardData.businessName}
                   </div>
                 </div>
-                
-                {/* Card Name */}
-                <div className="text-xl font-semibold mb-3">
-                  {cardData.cardName}
-                </div>
-                
-                {/* Stamp Progress */}
-                <div className="flex items-center space-x-3 mb-3">
-                  <div className="text-3xl font-bold">
-                    {demoFilledStamps} / {cardData.stampsRequired}
+
+                {/* Main Content Section */}
+                <div className="px-4 py-3 flex-1">
+                  {/* Card Title */}
+                  <div className="text-lg font-semibold mb-2">
+                    {cardData.cardName}
                   </div>
-                  <div className="text-2xl">{cardData.iconEmoji}</div>
+                  
+                  {/* Progress Bar and Stamps */}
+                  <div className="mb-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-2xl font-bold">
+                        {demoFilledStamps} / {cardData.stampsRequired}
+                      </span>
+                      <span className="text-lg">{cardData.iconEmoji}</span>
+                    </div>
+                    
+                    {/* Progress Bar */}
+                    <div className="w-full bg-white/20 rounded-full h-2">
+                      <div 
+                        className="bg-white rounded-full h-2 transition-all duration-300"
+                        style={{ 
+                          width: `${(demoFilledStamps / cardData.stampsRequired) * 100}%` 
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Reward Description */}
+                  <div className="text-sm opacity-90 mb-3">
+                    {cardData.reward}
+                  </div>
                 </div>
-                
-                {/* Reward */}
-                <div className="text-sm opacity-90 mb-2">
-                  {cardData.reward}
-                </div>
-                
-                {/* Instructions */}
-                <div className="text-xs opacity-70 mb-4 flex-1">
-                  Show this card to earn stamps
-                </div>
-                
-                {/* QR Code */}
-                <div className="flex justify-center">
-                  <QRCodeDisplay 
-                    value={qrCodeData} 
-                    size={48} 
-                    walletType="apple"
-                  />
-                </div>
-                
-                {/* Branding */}
-                <div className="text-xs opacity-50 text-center mt-2">
-                  Powered by RewardJar
+
+                {/* Bottom Section - QR Code */}
+                <div className="px-4 py-3 border-t border-white/20">
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs opacity-70">
+                      Show to redeem
+                    </div>
+                    <QRCodeDisplay 
+                      value={qrCodeData} 
+                      size={40} 
+                      walletType="apple"
+                    />
+                  </div>
                 </div>
               </div>
             </div>

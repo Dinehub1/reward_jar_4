@@ -2,11 +2,12 @@
 
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Smartphone, Monitor, RotateCcw, Camera, Sun, Moon } from 'lucide-react'
+import { Smartphone, Monitor, RotateCcw, Camera, Sun, Moon, Ruler } from 'lucide-react'
 import { WalletPreviewCard } from './WalletPreviewCard'
 import type { StampCard } from './WalletPreviewCard'
 import { designTokens } from '@/lib/design-tokens'
 import type { WalletCardData } from './WalletPassFrame'
+import { WALLET_DIMENSIONS, calculatePreviewDimensions } from '@/lib/wallet-dimensions'
 
 export interface WalletPreviewContainerProps {
   cardData: WalletCardData
@@ -27,6 +28,7 @@ export const WalletPreviewContainer: React.FC<WalletPreviewContainerProps> = ({
   const [showBackPage, setShowBackPage] = useState(false)
   const [screenshotMode, setScreenshotMode] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(false)
+  const [showDimensions, setShowDimensions] = useState(false)
 
   const deviceOptions = [
     { id: 'apple' as const, label: 'iPhone', icon: Smartphone },
@@ -141,6 +143,22 @@ export const WalletPreviewContainer: React.FC<WalletPreviewContainerProps> = ({
               <span className="text-sm">Flip Card</span>
             </motion.button>
 
+            {/* Dimensions Info */}
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowDimensions(!showDimensions)}
+              className={`px-3 py-2 rounded-lg flex items-center space-x-2 transition-colors ${
+                showDimensions
+                  ? 'bg-green-500 text-white'
+                  : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+              title="Show Wallet Dimensions"
+            >
+              <Ruler className="w-4 h-4" />
+              <span className="text-sm">Dimensions</span>
+            </motion.button>
+
             {/* Screenshot Mode */}
             <motion.button
               whileHover={{ scale: 1.05 }}
@@ -158,10 +176,118 @@ export const WalletPreviewContainer: React.FC<WalletPreviewContainerProps> = ({
           </div>
         </div>
       )}
+
+      {/* Dimensions Info Panel */}
+      {showDimensions && !screenshotMode && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 rounded-2xl p-6 border border-green-200 dark:border-green-800"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Current Platform Info */}
+            <div className="space-y-3">
+              <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <Ruler className="w-4 h-4 text-green-600" />
+                {activeView === 'apple' ? 'Apple Wallet' : activeView === 'google' ? 'Google Wallet' : 'PWA Wallet'} Specs
+              </h3>
+              
+              {(() => {
+                const currentDimensions = WALLET_DIMENSIONS[activeView as keyof typeof WALLET_DIMENSIONS]
+                return (
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 dark:text-gray-300">Card Size:</span>
+                      <span className="font-mono text-gray-900 dark:text-white">
+                        {currentDimensions.card.width}×{currentDimensions.card.height}px
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 dark:text-gray-300">Aspect Ratio:</span>
+                      <span className="font-mono text-gray-900 dark:text-white">
+                        {currentDimensions.card.aspectRatio}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 dark:text-gray-300">Logo Size:</span>
+                      <span className="font-mono text-gray-900 dark:text-white">
+                        {currentDimensions.logo.width}×{currentDimensions.logo.height}px
+                      </span>
+                    </div>
+                    {'strip' in currentDimensions && currentDimensions.strip && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 dark:text-gray-300">Strip Size:</span>
+                        <span className="font-mono text-gray-900 dark:text-white">
+                          {currentDimensions.strip.width}×{currentDimensions.strip.height}px
+                        </span>
+                      </div>
+                    )}
+                    {'hero' in currentDimensions && currentDimensions.hero && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 dark:text-gray-300">Hero Size:</span>
+                        <span className="font-mono text-gray-900 dark:text-white">
+                          {currentDimensions.hero.width}×{currentDimensions.hero.height}px
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
+            </div>
+
+            {/* Compliance Status */}
+            <div className="space-y-3">
+              <h3 className="font-semibold text-gray-900 dark:text-white">Compliance Status</h3>
+              <div className="space-y-2">
+                {Object.entries(WALLET_DIMENSIONS).map(([platform, dims]) => (
+                  <div key={platform} className="flex items-center justify-between text-sm">
+                    <span className="capitalize text-gray-600 dark:text-gray-300">
+                      {platform === 'apple' ? 'Apple Wallet' : platform === 'google' ? 'Google Wallet' : 'PWA'}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span className="text-green-600 dark:text-green-400 font-medium">Compatible</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Design Guidelines */}
+            <div className="space-y-3">
+              <h3 className="font-semibold text-gray-900 dark:text-white">Design Guidelines</h3>
+              <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
+                {activeView === 'apple' && (
+                  <>
+                    <div>• Use high contrast logos</div>
+                    <div>• Maintain 2:3 aspect ratio</div>
+                    <div>• Optimize for Retina displays</div>
+                  </>
+                )}
+                {activeView === 'google' && (
+                  <>
+                    <div>• Square logos work best</div>
+                    <div>• Follow Material Design</div>
+                    <div>• Use adequate padding</div>
+                  </>
+                )}
+                {activeView === 'web' && (
+                  <>
+                    <div>• Progressive enhancement</div>
+                    <div>• Responsive design</div>
+                    <div>• Fast loading images</div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
       
       {/* Preview Container */}
       <div 
-        className="flex justify-center rounded-2xl p-6 overflow-hidden transition-all duration-500"
+        className="flex justify-center rounded-2xl p-8 overflow-hidden transition-all duration-500"
         style={{
           background: isDarkMode 
             ? 'linear-gradient(135deg, #1f2937 0%, #111827 100%)'
@@ -169,7 +295,7 @@ export const WalletPreviewContainer: React.FC<WalletPreviewContainerProps> = ({
           boxShadow: isDarkMode 
             ? 'inset 0 2px 10px rgba(0, 0, 0, 0.3)'
             : 'inset 0 2px 10px rgba(0, 0, 0, 0.08)',
-          minHeight: '400px'
+          minHeight: '600px' // Increased to accommodate proper 2:3 aspect ratio
         }}
       >
         <AnimatePresence mode="wait">

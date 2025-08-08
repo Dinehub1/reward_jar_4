@@ -36,9 +36,9 @@ export {
 export { AndroidFrame } from './preview/AndroidFrame'
 export { WebFrame } from './preview/WebFrame'
 
-// Wallet Components (Unified Pass Views)
-export { WalletPreviewCard } from './wallet/WalletPreviewCard'
-export { WalletPreviewContainer } from './wallet/WalletPreviewContainer'
+// Wallet Components (Legacy - Use CardLivePreview for new implementations)
+// export { WalletPreviewCard } from './wallet/WalletPreviewCard'
+// export { WalletPreviewContainer } from './wallet/WalletPreviewContainer'
 export type { WalletCardData } from './wallet/WalletPassFrame'
 
 // Re-export for convenience
@@ -51,4 +51,4 @@ export * from './preview/WebFrame'
 export * from './wallet/AppleWalletView'
 export * from './wallet/GoogleWalletView'
 export * from './wallet/WebPassView'
-export * from './wallet/WalletPreviewContainer'
+// export * from './wallet/WalletPreviewContainer'
