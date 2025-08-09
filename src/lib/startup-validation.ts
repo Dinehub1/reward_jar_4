@@ -5,7 +5,7 @@
  * to ensure all required variables are present before the application starts.
  */
 
-import { validateEnvVarsOrThrow, getEnvReport } from '@/lib/env-validation'
+import { validateEnvVarsOrThrow as validateEnvVarsOrThrowExternal, getEnvReport } from '@/lib/env-validation'
 
 /**
  * Validates environment variables at server startup
@@ -14,7 +14,7 @@ import { validateEnvVarsOrThrow, getEnvReport } from '@/lib/env-validation'
 export function validateServerEnvironment(): void {
   try {
     // Validate all environment variables
-    validateEnvVarsOrThrow()
+    validateEnvVarsOrThrowExternal()
     
     // Log success in development
     if (process.env.NODE_ENV === 'development') {
@@ -152,6 +152,16 @@ export function validateEnvVarsOrThrow() {
   // Optional but recommended flags
   if (isProd && process.env.DISABLE_LEGACY_ADMIN_ENDPOINTS !== 'true') {
     console.warn('DISABLE_LEGACY_ADMIN_ENDPOINTS is not set to true in production.')
+  }
+
+  // Google Wallet readiness (optional, but warn if enabled and missing pieces)
+  const googleEnabled = process.env.DISABLE_GOOGLE_WALLET !== 'true'
+  if (googleEnabled) {
+    const need = ['GOOGLE_SERVICE_ACCOUNT_JSON', 'GOOGLE_WALLET_ISSUER_ID']
+    const missingGoogle = need.filter((k) => !process.env[k])
+    if (missingGoogle.length > 0) {
+      console.warn(`Google Wallet enabled but missing: ${missingGoogle.join(', ')}`)
+    }
   }
 }
 

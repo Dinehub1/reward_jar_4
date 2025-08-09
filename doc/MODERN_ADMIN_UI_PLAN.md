@@ -420,6 +420,11 @@ The implemented wallet preview system represents the most advanced card preview 
 - **Browser Extensions**: Chrome/Firefox extensions for quick admin access
 - **API Integrations**: Zapier, Webhooks, and third-party service connections
 
+#### Security & Ops Hardening (In Progress)
+- **Admin Rate Limiting**: Implemented prod-only limiter on `/api/admin/**` with CSRF for mutations
+- **CI Gate**: ESLint (fail on warnings) + TypeScript typecheck before wallet validation jobs
+- **Env Gate**: Fail-fast `validateEnvVarsOrThrow()` for production startup
+
 ---
 
 ## 📋 MAINTENANCE & UPDATES

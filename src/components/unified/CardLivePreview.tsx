@@ -101,7 +101,7 @@ export const CardLivePreview: React.FC<CardLivePreviewProps> = ({
     if (!cardData.businessLogoUrl) {
       warnings.push('Business logo missing - recommended for better branding')
     }
-    if (cardData.cardName.length > 20) {
+    if ((cardData.cardName?.length || 0) > 20) {
       warnings.push('Card name too long - may be truncated on mobile')
     }
     if (isStampCard && (cardData.stampsRequired || 0) > 20) {

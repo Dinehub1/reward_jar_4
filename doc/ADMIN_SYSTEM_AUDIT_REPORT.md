@@ -146,6 +146,14 @@
    - **Bundle**: Optimized JavaScript bundles with proper code splitting
    - **Result**: Zero breaking changes, production-ready build
 
+6. **✅ Security & Ops Hardening (Phase P1 – Initial)**
+   - **Rate Limiting**: Production-only middleware added for all `/api/admin/**` routes with X-RateLimit headers (reads: 300/10min, mutations: 60/10min)
+   - **CSRF Protection**: CSRF cookie + `x-csrf-token` required for mutation requests under `/api/admin/**`
+   - **Env Validation Gate**: `validateEnvVarsOrThrow()` added to fail fast on missing/unsafe envs in production
+   - **CI Hardening**: Admin-scope ESLint runs with `--max-warnings=0` and TypeScript `--noEmit` typecheck; wallet jobs depend on lint/typecheck
+   - **Dev/Test Guard**: Production rewrites block `/admin/test-*` and `/admin/debug*` pages
+   - **Result**: Stronger abuse resistance, safer deployments, enforceable coding standards
+
 #### **📊 CLEANUP IMPACT METRICS**
 
 **Code Quality Improvements:**

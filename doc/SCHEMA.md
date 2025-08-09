@@ -314,6 +314,56 @@ This document provides a comprehensive overview of the RewardJar 4.0 database sc
 
 ---
 
+### 13. `wallet_devices` – Registered Devices (Apple/Google Web Service)
+
+**Purpose**: Store device identifiers and push tokens for wallet push notifications.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | `uuid` | **PRIMARY KEY**, DEFAULT gen_random_uuid() | Device record ID |
+| `device_library_identifier` | `text` | **UNIQUE**, NOT NULL | Apple device library identifier |
+| `push_token` | `text` | NOT NULL | Device push token |
+| `platform` | `text` | DEFAULT 'ios', CHECK (platform IN ('ios','android','web')) | Platform |
+| `created_at` | `timestamptz` | DEFAULT now() | Created |
+| `updated_at` | `timestamptz` | DEFAULT now() | Updated |
+
+---
+
+### 14. `wallet_passes` – Pass Registry
+
+**Purpose**: Track pass type/serial and update tag for change feeds.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | `uuid` | **PRIMARY KEY**, DEFAULT gen_random_uuid() | Pass record ID |
+| `pass_type_id` | `text` | NOT NULL | Apple/Google pass class/type ID |
+| `serial_number` | `text` | NOT NULL | Pass serial |
+| `update_tag` | `bigint` | DEFAULT 1, NOT NULL | Monotonic version for changes |
+| `card_type` | `text` | CHECK (card_type IN ('stamp','membership')) | Internal type |
+| `card_id` | `uuid` | NULL | Linked card template |
+| `created_at` | `timestamptz` | DEFAULT now() | Created |
+| `updated_at` | `timestamptz` | DEFAULT now() | Updated |
+
+Indexes:
+- `idx_wallet_passes_update_tag (update_tag)`
+- `idx_wallet_passes_type_serial (pass_type_id, serial_number)`
+
+---
+
+### 15. `wallet_registrations` – Device↔Pass Links
+
+**Purpose**: Many-to-many relation between devices and passes for push updates.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `device_id` | `uuid` | **FK** → `wallet_devices.id`, NOT NULL | Device |
+| `pass_id` | `uuid` | **FK** → `wallet_passes.id`, NOT NULL | Pass |
+| `created_at` | `timestamptz` | DEFAULT now() | Linked at |
+
+Primary Key: (`device_id`, `pass_id`)
+
+---
+
 ## 🛠️ Admin & Support
 
 ### 13. `admin_support_logs` - Admin Action Audit
@@ -336,7 +386,7 @@ This document provides a comprehensive overview of the RewardJar 4.0 database sc
 
 ## 🧪 Performance & Testing
 
-### 14. `test_results` - Performance Test Data
+### 16. `test_results` - Performance Test Data
 
 **Purpose**: Store wallet generation performance metrics and test results.
 

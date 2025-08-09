@@ -249,16 +249,19 @@ export const PREVIEW_BREAKPOINTS = {
 }
 
 // Utility functions for theme application
-export const getCardGradient = (color: string, cardType: 'stamp' | 'membership' = 'stamp') => {
+export const getCardGradient = (color: string | undefined, cardType: 'stamp' | 'membership' = 'stamp') => {
   const gradients = CARD_COLORS.gradients
-  const fallback = CARD_DESIGN_THEME.cardTypes[cardType].defaultGradient
+  // Guard against unexpected cardType values
+  const safeType: 'stamp' | 'membership' = cardType === 'membership' ? 'membership' : 'stamp'
+  const fallback = CARD_DESIGN_THEME.cardTypes[safeType].defaultGradient
+  const safeColor = typeof color === 'string' && color.length > 0 ? color : CARD_COLORS.primary.purple
   
   // Find matching gradient or use solid color
   const gradientKey = Object.keys(gradients).find(key => 
-    gradients[key as keyof typeof gradients][0].toLowerCase() === color.toLowerCase()
+    (gradients[key as keyof typeof gradients]?.[0] || '').toLowerCase() === safeColor.toLowerCase()
   ) as keyof typeof gradients
   
-  return gradientKey ? gradients[gradientKey] : [color, color]
+  return gradientKey ? gradients[gradientKey] : (Array.isArray(fallback) ? fallback : [safeColor, safeColor])
 }
 
 export const getResponsiveScale = (screenWidth: number) => {

@@ -11,7 +11,8 @@ import { AdminLayoutClient } from '@/components/layouts/AdminLayoutClient'
 // Import the enhanced LivePreview component from card creation
 import React, { useState as usePreviewState, useEffect as usePreviewEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import QRCode from 'qrcode'
+// Use shared QR component instead of page-local QR generation
+import { QRCodeDisplay } from '@/components/modern/wallet/WalletPassFrame'
 import { 
   Plus, 
   Search, 
@@ -25,83 +26,16 @@ import {
   Star,
   Clock,
   Building,
-  QrCode,
   Apple,
   Chrome,
   Globe
 } from 'lucide-react'
 
-// Enhanced QR Code Display Component (from card creation)
-const QRCodeDisplay = React.memo(({ 
-  value, 
-  size = 120, 
-  walletType = 'default' 
-}: { 
-  value: string, 
-  size?: number,
-  walletType?: 'apple' | 'google' | 'pwa' | 'default'
-}) => {
-  const [qrCodeUrl, setQrCodeUrl] = usePreviewState<string>('')
-  
-  // Dynamic sizing based on wallet type for optimal user experience
-  const getOptimalSize = () => {
-    switch (walletType) {
-      case 'apple': return Math.min(size, 60) // Compact for Apple's design
-      case 'google': return Math.min(size, 50) // Smaller for Google's header
-      case 'pwa': return Math.max(size, 80) // Larger for better PWA visibility
-      default: return size
-    }
-  }
+// Removed page-local QRCodeDisplay in favor of shared component
 
-  const optimalSize = getOptimalSize()
-  
-  usePreviewEffect(() => {
-    const generateQR = async () => {
-      try {
-        const qrcode = await import('qrcode')
-        const url = await qrcode.toDataURL(value, {
-          width: optimalSize * 2, // Higher resolution for crisp display
-          margin: walletType === 'google' ? 0 : 1, // Minimal margin for Google
-          color: { dark: '#000000', light: '#FFFFFF' },
-          errorCorrectionLevel: 'M' // Medium error correction for better scanning
-        })
-        setQrCodeUrl(url)
-      } catch (error) {
-        console.error('Failed to generate QR code:', error)
-      }
-    }
-    
-    if (value) generateQR()
-  }, [value, optimalSize, walletType])
+import CardLivePreview, { type CardLivePreviewData } from '@/components/unified/CardLivePreview'
+import { toPreviewDataFromDb } from '@/lib/card-mappers'
 
-  if (qrCodeUrl) {
-    return (
-      <img 
-        src={qrCodeUrl} 
-        alt="QR Code" 
-        width={optimalSize} 
-        height={optimalSize} 
-        className={`transition-all duration-200 ${
-          walletType === 'google' ? 'rounded-sm' : 'rounded'
-        }`}
-        style={{ imageRendering: 'crisp-edges' }} // Ensure crisp QR code rendering
-      />
-    )
-  }
-
-  return (
-    <div 
-      className={`bg-white flex items-center justify-center border-2 border-dashed border-gray-300 animate-pulse ${
-        walletType === 'google' ? 'rounded-sm' : 'rounded'
-      }`}
-      style={{ width: optimalSize, height: optimalSize }}
-    >
-      <QrCode className="w-6 h-6 text-gray-400" />
-    </div>
-  )
-})
-
-// Enhanced LivePreview Component (from card creation)
 const EnhancedLivePreview = React.memo(({ 
   cardData, 
   activeView = 'apple',
@@ -111,239 +45,15 @@ const EnhancedLivePreview = React.memo(({
   activeView?: 'apple' | 'google' | 'pwa'
   showBackPage?: boolean
 }) => {
-  const qrCodeData = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.rewardjar.xyz'}/join/${cardData.id}`
-  
-  // Calculate demo progress (show about 40% completion for preview)
-  const totalStamps = cardData.stamps_required || cardData.total_stamps || 10
-  const demoFilledStamps = Math.max(1, Math.floor(totalStamps * 0.4))
-  
-  // Generate stamp grid for visual representation
-  const generateStampGrid = (total: number, filled: number = demoFilledStamps, walletType: 'apple' | 'google' | 'pwa' = 'apple') => {
-    const stamps = []
-    const maxCols = 5
-    
-    for (let i = 0; i < total; i++) {
-      const isFilled = i < filled
-      
-      stamps.push(
-        <div
-          key={i}
-          className={`relative w-8 h-8 rounded border-2 flex items-center justify-center text-xs font-bold transition-all duration-500 ${
-            isFilled 
-              ? 'bg-white bg-opacity-30 border-white text-white scale-105' 
-              : 'border-white border-opacity-40 text-white text-opacity-60'
-          }`}
-        >
-          <span className={isFilled ? 'animate-bounce-in' : ''}>{cardData.icon_emoji || '☕'}</span>
-        </div>
-      )
-    }
-    
-    return stamps
-  }
-  
-  const AppleWalletView = () => (
-    <div className="w-64 h-[420px] bg-black rounded-[2rem] p-2 shadow-xl">
-      <div className="relative w-full h-full bg-gray-900 rounded-[1.5rem] overflow-hidden">
-        {!showBackPage ? (
-          // Front Page
-          <div className="h-full p-4 text-white relative" style={{ 
-            background: `linear-gradient(135deg, ${cardData.card_color || '#8B4513'}, ${cardData.card_color || '#8B4513'}dd)` 
-          }}>
-            {/* Header */}
-            <div className="text-sm opacity-80 mb-1">{cardData.businesses?.name || cardData.business_name || 'Business Name'}</div>
-            <div className="text-lg font-semibold mb-4">{cardData.card_name || cardData.name || 'Card Name'}</div>
-            
-            {/* Stamp Grid */}
-            <div className="mb-4">
-              <div className="grid grid-cols-5 gap-1 justify-center">
-                {generateStampGrid(totalStamps, demoFilledStamps, 'apple')}
-              </div>
-            </div>
-            
-            {/* Reward Progress */}
-            <div className="mb-4 text-center">
-              <div className="text-2xl font-bold text-white mb-2">
-                {demoFilledStamps} / {totalStamps}
-              </div>
-              <div className="text-sm opacity-80">{cardData.reward || cardData.reward_description || 'Reward'}</div>
-            </div>
-            
-            {/* QR Code */}
-            <div className="absolute bottom-4 left-4 right-4 text-center">
-              <div className="bg-white p-2 rounded inline-block">
-                <QRCodeDisplay value={qrCodeData} size={60} walletType="apple" />
-              </div>
-              <div className="text-xs opacity-60 mt-2">Tap ••• for details</div>
-            </div>
-          </div>
-        ) : (
-          // Back Page
-          <div className="h-full p-4 text-white bg-gray-800">
-            <div className="text-center mb-6">
-              <div className="text-lg font-semibold mb-2">Card Information</div>
-            </div>
-            
-            <div className="space-y-4 text-sm">
-              <div>
-                <div className="text-gray-300 mb-1">Description</div>
-                <div>{cardData.card_description || 'Collect stamps to get rewards'}</div>
-              </div>
-              
-              <div>
-                <div className="text-gray-300 mb-1">How to Earn</div>
-                <div>{cardData.how_to_earn_stamp || 'Buy anything to get a stamp'}</div>
-              </div>
-              
-              <div>
-                <div className="text-gray-300 mb-1">Reward Details</div>
-                <div>{cardData.reward_details || cardData.reward_description || 'Reward details'}</div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+  const preview: CardLivePreviewData = toPreviewDataFromDb(cardData)
+  return (
+    <CardLivePreview 
+      cardData={preview}
+      defaultPlatform={activeView}
+      showControls={false}
+      sticky={false}
+    />
   )
-
-  const GoogleWalletView = () => (
-    <div className="w-80 bg-white rounded-2xl shadow-lg overflow-hidden">
-      <div className="p-4" style={{ backgroundColor: cardData.card_color || '#8B4513' }}>
-        <div className="flex justify-between items-start text-white mb-4">
-          <div>
-            <div className="text-sm opacity-90">{cardData.businesses?.name || cardData.business_name || 'Business Name'}</div>
-            <div className="text-xl font-semibold mt-1">{cardData.card_name || cardData.name || 'Card Name'}</div>
-          </div>
-          <div className="bg-white p-1 rounded">
-            <QRCodeDisplay value={qrCodeData} size={40} walletType="google" />
-          </div>
-        </div>
-        
-        {/* Stamp Grid */}
-        <div className="mb-4">
-          <div className="grid grid-cols-5 gap-1">
-            {generateStampGrid(totalStamps, demoFilledStamps, 'google')}
-          </div>
-        </div>
-        
-        {/* Reward Progress */}
-        <div className="text-center text-white">
-          <div className="text-xl font-bold mb-2">
-            {demoFilledStamps} / {totalStamps}
-          </div>
-          <div className="text-sm opacity-90">{cardData.reward || cardData.reward_description || 'Reward'}</div>
-        </div>
-      </div>
-      
-      {showBackPage && (
-        <div className="p-4 bg-gray-50 border-t">
-          <div className="space-y-3 text-sm">
-            <div>
-              <div className="font-medium text-gray-700 mb-1">Card Description</div>
-              <div className="text-gray-600">{cardData.card_description || 'Collect stamps to get rewards'}</div>
-            </div>
-            
-            <div>
-              <div className="font-medium text-gray-700 mb-1">How to Earn Stamps</div>
-              <div className="text-gray-600">{cardData.how_to_earn_stamp || 'Buy anything to get a stamp'}</div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-
-  const PWACardView = () => (
-    <div className="w-72 bg-white rounded-xl shadow-lg overflow-hidden border">
-      <div className="p-6" style={{ backgroundColor: `${cardData.card_color || '#8B4513'}20` }}>
-        <div className="flex items-center justify-between mb-4">
-          <div className="text-lg font-semibold text-gray-900">{cardData.businesses?.name || cardData.business_name || 'Business Name'}</div>
-          <div className="text-2xl">{cardData.icon_emoji || '☕'}</div>
-        </div>
-        
-        <div className="mb-4">
-          <div className="text-xl font-bold text-gray-900 mb-3">{cardData.card_name || cardData.name || 'Card Name'}</div>
-          
-          {/* Enhanced Stamp Grid for PWA with Progress Visualization */}
-          <div className="mb-4">
-            <div className="grid grid-cols-5 gap-1 mb-3">
-              {generateStampGrid(totalStamps, demoFilledStamps, 'pwa').map((stamp, index) => (
-                <div
-                  key={index}
-                  className={`w-8 h-8 rounded border-2 flex items-center justify-center text-xs font-bold transition-all duration-300 ${
-                    index < demoFilledStamps 
-                      ? 'border-2 text-white transform scale-105' 
-                      : 'border-gray-300 text-gray-400 hover:border-gray-400'
-                  }`}
-                  style={{ 
-                    backgroundColor: index < demoFilledStamps ? cardData.card_color || '#8B4513' : 'transparent',
-                    borderColor: index < demoFilledStamps ? cardData.card_color || '#8B4513' : '#d1d5db',
-                    animationDelay: `${index * 100}ms`
-                  }}
-                >
-                  {cardData.icon_emoji || '☕'}
-                </div>
-              ))}
-            </div>
-            
-            {/* Progress Bar */}
-            <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
-              <div 
-                className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-1000 ease-out"
-                style={{ width: `${Math.round((demoFilledStamps / totalStamps) * 100)}%` }}
-              ></div>
-            </div>
-            <div className="text-xs text-gray-500 text-center">
-              {Math.round((demoFilledStamps / totalStamps) * 100)}% Complete
-            </div>
-          </div>
-          
-          {/* Reward Progress */}
-          <div className="text-center mb-4">
-            <div className="text-xl font-bold" style={{ color: cardData.card_color || '#8B4513' }}>
-              {demoFilledStamps} / {totalStamps}
-            </div>
-            <div className="text-sm text-gray-600">{cardData.reward || cardData.reward_description || 'Reward'}</div>
-          </div>
-        </div>
-      </div>
-      
-      <div className="p-4 bg-gray-50 border-t flex justify-center">
-        <QRCodeDisplay value={qrCodeData} size={80} walletType="pwa" />
-      </div>
-      
-      {showBackPage && (
-        <div className="p-6">
-          <div className="space-y-4 text-sm">
-            <div>
-              <div className="font-semibold text-gray-700 mb-2">Card Information</div>
-              <div className="text-gray-600">{cardData.card_description || 'Collect stamps to get rewards'}</div>
-            </div>
-            
-            <div>
-              <div className="font-semibold text-gray-700 mb-2">How to Earn Stamps</div>
-              <div className="text-gray-600">{cardData.how_to_earn_stamp || 'Buy anything to get a stamp'}</div>
-            </div>
-            
-            <div>
-              <div className="font-semibold text-gray-700 mb-2">Reward Details</div>
-              <div className="text-gray-600">{cardData.reward_details || cardData.reward_description || 'Reward details'}</div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-
-  // Render the appropriate wallet view
-  switch (activeView) {
-    case 'google':
-      return <GoogleWalletView />
-    case 'pwa':
-      return <PWACardView />
-    default:
-      return <AppleWalletView />
-  }
 })
 
 interface StampCard {

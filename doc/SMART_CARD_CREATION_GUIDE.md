@@ -126,6 +126,92 @@ Full 5-step process for power users:
 
 ---
 
+### 🧰 Advanced Mode – Full Edit Options
+
+Advanced exposes the complete field set for precise control. All options map directly to the admin cards API without changing the contract.
+
+- **Card Details**
+  - Card name
+  - Business selector (with logo preview)
+  - Reward title
+  - Reward description
+  - Stamps required (1–20)
+  - Card expiry (days)
+  - Reward expiry (days)
+
+- **Design**
+  - Card color (hex, palette presets)
+  - Icon emoji (picker)
+  - Stamp icon: uses the same `iconEmoji` as the stamp indicator in preview
+  - Barcode type: `QR_CODE` | `PDF417`
+  - Card style: `gradient` | `image` | `solid`
+  - Background image URL (optional)
+
+- **Stamp Rules**
+  - Manual stamp only: `boolean`
+  - Minimum spend amount: `number` (₹)
+  - Bill proof required: `boolean`
+  - Max stamps per day: `number`
+  - Duplicate visit buffer: `"12h" | "1d" | "none"`
+
+- **Information (customer-facing)**
+  - Card description
+  - How to earn stamp
+  - Reward details
+  - Earned stamp message
+  - Earned reward message
+
+- **Preview & Save**
+  - Live preview targets: Apple, Google, PWA
+  - Front/back toggle with real-time updates
+  - Single-click save creates the card using the admin API
+
+API payload used by Advanced save:
+
+```startLine:333:endLine:351:src/app/admin/cards/new/advanced-page.tsx
+      const payload = {
+        card_name: cardData.cardName,
+        business_id: cardData.businessId,
+        reward: cardData.reward,
+        reward_description: cardData.rewardDescription,
+        stamps_required: cardData.stampsRequired,
+        card_color: cardData.cardColor,
+        icon_emoji: cardData.iconEmoji,
+        barcode_type: cardData.barcodeType,
+        card_expiry_days: cardData.cardExpiryDays,
+        reward_expiry_days: cardData.rewardExpiryDays,
+        stamp_config: cardData.stampConfig,
+        card_description: cardData.cardDescription,
+        how_to_earn_stamp: cardData.howToEarnStamp,
+        reward_details: cardData.rewardDetails,
+        earned_stamp_message: cardData.earnedStampMessage,
+        earned_reward_message: cardData.earnedRewardMessage
+      }
+```
+
+Notes:
+- `barcode_type` supports `QR_CODE` and `PDF417`. Current wallet generators render QR in production; PDF417 is reserved for future expansion.
+- All fields respect validation shown in the Advanced UI (e.g., stamps 1–20, non‑negative min spend).
+- Stamp grid currently displays completion with checkmarks; custom per-stamp emoji rendering is planned. The `iconEmoji` appears in the header/avatar slot and in the progress row.
+
+Icon usage in preview:
+
+```startLine:239:endLine:246:src/components/unified/CardLivePreview.tsx
+                  <span style={{ fontSize: theme.typography.cardTitle.fontSize }}>
+                    {cardData.iconEmoji}
+                  </span>
+```
+
+References:
+- `src/app/admin/cards/new/advanced-page.tsx` — Advanced UI fields and save payload
+- `src/components/unified/CardLivePreview.tsx` — `iconEmoji` rendering and stamp grid
+- `src/lib/cardDesignTheme.ts` — theme, gradients, and stamp grid behavior
+- `src/lib/smart-templates.ts` — default design settings and `barcodeType` options
+- `src/app/api/admin/cards/route.ts` — admin cards API accepting the payload
+- `doc/SCHEMA.md` — database fields for `stamp_cards` and `membership_cards`
+
+---
+
 ## 🔧 Implementation Details
 
 ### Progressive Disclosure Pattern
@@ -188,7 +274,7 @@ Quick Start includes live wallet preview:
 
 ## 🔒 Security & Validation
 
-### Authentication Patterns
+### Authentication Patterns & Ops
 
 All new components follow existing security standards:
 
@@ -203,6 +289,10 @@ if (userError || userData?.role_id !== 1) {
 
 // Client-side auth hooks
 const { user, isLoading, signOut } = useAdminAuth()
+// Admin API protections (production)
+// - Rate limiting on /api/admin/** (reads & mutations)
+// - CSRF required for mutation requests via x-csrf-token header
+// - Dev/test routes blocked in production
 ```
 
 ### Input Validation
@@ -261,6 +351,12 @@ test.describe('Quick Start Card Creation', () => {
 - [ ] Validation prevents invalid submissions
 - [ ] Error handling shows user-friendly messages
 - [ ] Success flow redirects appropriately
+
+Advanced-specific:
+- [ ] Design: color, emoji, style, background image, and barcode type can be set
+- [ ] Stamp rules: manual-only, min spend, bill proof, max per day, duplicate buffer validate correctly
+- [ ] Expiry days (card/reward) save and reflect in preview/API payload
+- [ ] Front/back preview toggle works across Apple/Google/PWA
 
 ---
 

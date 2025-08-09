@@ -1,12 +1,11 @@
 'use client'
 
-import React, { useState, useEffect, useCallback, Suspense } from 'react'
+import React, { useState, useEffect, useCallback, Suspense, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { ModernButton } from '@/components/modern/ui/ModernButton'
+import { ModernButton, LoadingButton } from '@/components/modern/ui/ModernButton'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
-import { Separator } from '@/components/ui/separator'
 import { PageTransition } from '@/components/modern/layout/PageTransition'
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 import CardLivePreview, { type CardLivePreviewData } from '@/components/unified/CardLivePreview'
@@ -31,6 +30,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion'
 import { designTokens } from '@/lib/design-tokens'
 import { getStampCardTemplates, getMembershipCardTemplates, generateCardContent } from '@/lib/smart-templates'
+import { toPreviewDataFromForm, buildCreationPayloadFromForm } from '@/lib/card-mappers'
 import { CARD_COLORS } from '@/lib/cardDesignTheme'
 // Simple notification function (replace with your preferred toast library)
 const toast = {
@@ -94,6 +94,22 @@ interface UnifiedCardFormData {
   membershipDetails: string
   sessionUsedMessage: string
   membershipExpiredMessage: string
+  
+  // Advanced design/options
+  barcodeType?: 'QR_CODE' | 'PDF417'
+  cardStyle?: 'gradient' | 'image' | 'solid'
+  backgroundImageUrl?: string
+  cardExpiryDays?: number
+  rewardExpiryDays?: number
+  
+  // Stamp rules
+  stampConfig?: {
+    manualStampOnly: boolean
+    minSpendAmount: number
+    billProofRequired: boolean
+    maxStampsPerDay: number
+    duplicateVisitBuffer: '12h' | '1d' | 'none'
+  }
 }
 
 // Card type configurations
@@ -135,6 +151,15 @@ export default function UnifiedCardCreationPage({ businesses }: UnifiedCardCreat
   const [isAdvancedMode, setIsAdvancedMode] = useState(false)
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null)
   const [isCreating, setIsCreating] = useState(false)
+  const [previewWarnings, setPreviewWarnings] = useState<string[]>([])
+  const handleDimensionWarning = useCallback((warnings: string[]) => {
+    setPreviewWarnings((prev) => {
+      if (prev.length === warnings.length && prev.every((w, i) => w === warnings[i])) {
+        return prev
+      }
+      return warnings
+    })
+  }, [])
   
   // Form data with default values
   const [formData, setFormData] = useState<UnifiedCardFormData>({
@@ -165,54 +190,34 @@ export default function UnifiedCardCreationPage({ businesses }: UnifiedCardCreat
     membershipDetails: '',
     sessionUsedMessage: '',
     membershipExpiredMessage: ''
+    ,
+    // Advanced defaults
+    barcodeType: 'QR_CODE',
+    cardStyle: 'gradient',
+    backgroundImageUrl: '',
+    cardExpiryDays: 60,
+    rewardExpiryDays: 15,
+    stampConfig: {
+      manualStampOnly: true,
+      minSpendAmount: 0,
+      billProofRequired: false,
+      maxStampsPerDay: 1,
+      duplicateVisitBuffer: 'none'
+    }
   })
 
   // Business data
-  const { data: businessesData, error: businessError } = useAdminBusinesses()
-  const allBusinesses = businessesData || businesses || []
+  const { data: businessesResponse, error: businessError } = useAdminBusinesses()
+  const allBusinesses: Business[] = (businessesResponse?.data as unknown as Business[]) || businesses || []
 
   // Get templates based on card type
   const availableTemplates = selectedCardType === 'stamp_card' 
     ? getStampCardTemplates() 
     : getMembershipCardTemplates()
 
-  // Convert form data to preview data
-  const getPreviewData = useCallback((): CardLivePreviewData => {
-    const selectedBusiness = allBusinesses.find(b => b.id === formData.businessId)
-    
-    return {
-      cardType: formData.cardType,
-      businessId: formData.businessId,
-      businessName: formData.businessName || selectedBusiness?.name || 'Your Business',
-      businessLogoUrl: formData.businessLogoUrl || selectedBusiness?.logo_url,
-      cardName: formData.cardName || 'Your Card',
-      cardColor: formData.cardColor,
-      iconEmoji: formData.iconEmoji,
-      cardDescription: formData.cardDescription,
-      
-      // Stamp card data
-      ...(formData.cardType === 'stamp_card' && {
-        stampsRequired: formData.stampsRequired,
-        reward: formData.reward,
-        rewardDescription: formData.rewardDescription,
-        howToEarnStamp: formData.howToEarnStamp,
-        rewardDetails: formData.rewardDetails,
-        earnedStampMessage: formData.earnedStampMessage,
-        earnedRewardMessage: formData.earnedRewardMessage
-      }),
-      
-      // Membership card data
-      ...(formData.cardType === 'membership_card' && {
-        totalSessions: formData.totalSessions,
-        membershipType: formData.membershipType,
-        cost: formData.cost,
-        durationDays: formData.durationDays,
-        howToUseCard: formData.howToUseCard,
-        membershipDetails: formData.membershipDetails,
-        sessionUsedMessage: formData.sessionUsedMessage,
-        membershipExpiredMessage: formData.membershipExpiredMessage
-      })
-    }
+  // Memoized preview data to avoid new object each render
+  const previewData: CardLivePreviewData = useMemo(() => {
+    return toPreviewDataFromForm(formData, allBusinesses)
   }, [formData, allBusinesses])
 
   // Handle card type selection
@@ -233,8 +238,6 @@ export default function UnifiedCardCreationPage({ businesses }: UnifiedCardCreat
     setFormData(prev => ({
       ...prev,
       cardName: `${businessName} ${template.name} Card`,
-      cardColor: template.designSettings.cardColor,
-      iconEmoji: template.designSettings.iconEmoji,
       ...generatedContent
     }))
   }
@@ -257,6 +260,21 @@ export default function UnifiedCardCreationPage({ businesses }: UnifiedCardCreat
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
+  // Update nested stamp config safely
+  const updateStampConfig = <K extends keyof NonNullable<UnifiedCardFormData['stampConfig']>>(field: K, value: NonNullable<UnifiedCardFormData['stampConfig']>[K]) => {
+    setFormData(prev => ({
+      ...prev,
+      stampConfig: {
+        manualStampOnly: prev.stampConfig?.manualStampOnly ?? true,
+        minSpendAmount: prev.stampConfig?.minSpendAmount ?? 0,
+        billProofRequired: prev.stampConfig?.billProofRequired ?? false,
+        maxStampsPerDay: prev.stampConfig?.maxStampsPerDay ?? 1,
+        duplicateVisitBuffer: prev.stampConfig?.duplicateVisitBuffer ?? 'none',
+        [field]: value
+      }
+    }))
+  }
+
   // Save card
   const handleSaveCard = async () => {
     if (!formData.businessId || !formData.cardName) {
@@ -266,35 +284,7 @@ export default function UnifiedCardCreationPage({ businesses }: UnifiedCardCreat
 
     setIsCreating(true)
     try {
-      const payload = {
-        card_type: formData.cardType,
-        business_id: formData.businessId,
-        card_name: formData.cardName,
-        card_color: formData.cardColor,
-        icon_emoji: formData.iconEmoji,
-        card_description: formData.cardDescription,
-        
-        ...(formData.cardType === 'stamp_card' && {
-          stamps_required: formData.stampsRequired,
-          reward: formData.reward,
-          reward_description: formData.rewardDescription,
-          how_to_earn_stamp: formData.howToEarnStamp,
-          reward_details: formData.rewardDetails,
-          earned_stamp_message: formData.earnedStampMessage,
-          earned_reward_message: formData.earnedRewardMessage
-        }),
-        
-        ...(formData.cardType === 'membership_card' && {
-          total_sessions: formData.totalSessions,
-          membership_type: formData.membershipType,
-          cost: formData.cost,
-          duration_days: formData.durationDays,
-          how_to_use_card: formData.howToUseCard,
-          membership_details: formData.membershipDetails,
-          session_used_message: formData.sessionUsedMessage,
-          membership_expired_message: formData.membershipExpiredMessage
-        })
-      }
+      const payload = buildCreationPayloadFromForm(formData)
 
       const response = await fetch('/api/admin/cards', {
         method: 'POST',
@@ -622,50 +612,222 @@ export default function UnifiedCardCreationPage({ businesses }: UnifiedCardCreat
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
-                      className="space-y-4 border-t pt-4"
+                      className="space-y-6 border-t pt-4"
                     >
                       <h4 className="font-medium text-gray-900">Advanced Settings</h4>
+
+                      {/* Design */}
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-900 mb-2">Card Style</label>
+                          <div className="flex gap-2">
+                            {(['gradient','image','solid'] as const).map(style => (
+                              <button
+                                key={style}
+                                onClick={() => updateFormField('cardStyle', style)}
+                                className={`px-3 py-2 rounded-lg border text-sm ${formData.cardStyle===style ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}`}
+                              >{style}</button>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-900 mb-2">Barcode Type</label>
+                          <div className="flex gap-2">
+                            {(['QR_CODE','PDF417'] as const).map(type => (
+                              <button
+                                key={type}
+                                onClick={() => updateFormField('barcodeType', type)}
+                                className={`px-3 py-2 rounded-lg border text-sm ${formData.barcodeType===type ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}`}
+                              >{type}</button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {formData.cardStyle === 'image' && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-900 mb-2">Background Image URL</label>
+                          <input
+                            type="url"
+                            value={formData.backgroundImageUrl}
+                            onChange={(e)=>updateFormField('backgroundImageUrl', e.target.value)}
+                            placeholder="https://example.com/background.jpg"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          />
+                        </div>
+                      )}
+
+                      {/* Expiry */}
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-900 mb-2">Card Expiry (days)</label>
+                          <input
+                            type="number"
+                            min={1}
+                            value={formData.cardExpiryDays}
+                            onChange={(e)=>updateFormField('cardExpiryDays', parseInt(e.target.value)||60)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-900 mb-2">Reward Expiry (days)</label>
+                          <input
+                            type="number"
+                            min={1}
+                            value={formData.rewardExpiryDays}
+                            onChange={(e)=>updateFormField('rewardExpiryDays', parseInt(e.target.value)||15)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Information */}
+                      <div className="space-y-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-900 mb-2">
-                          Card Description
-                        </label>
+                          <label className="block text-sm font-medium text-gray-900 mb-2">Card Description</label>
                         <textarea
+                            rows={3}
                           value={formData.cardDescription}
-                          onChange={(e) => updateFormField('cardDescription', e.target.value)}
+                            onChange={(e)=>updateFormField('cardDescription', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          />
+                        </div>
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-900 mb-2">How to Earn Stamp</label>
+                            <textarea
+                              rows={3}
+                              value={formData.howToEarnStamp}
+                              onChange={(e)=>updateFormField('howToEarnStamp', e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-900 mb-2">Reward Details</label>
+                            <textarea
                           rows={3}
+                              value={formData.rewardDetails}
+                              onChange={(e)=>updateFormField('rewardDetails', e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            />
+                          </div>
+                        </div>
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-900 mb-2">Stamp Earned Message</label>
+                            <input
+                              type="text"
+                              value={formData.earnedStampMessage}
+                              onChange={(e)=>updateFormField('earnedStampMessage', e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-900 mb-2">Reward Earned Message</label>
+                            <input
+                              type="text"
+                              value={formData.earnedRewardMessage}
+                              onChange={(e)=>updateFormField('earnedRewardMessage', e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         />
+                          </div>
+                        </div>
                       </div>
-                      {/* Add more advanced fields here */}
+
+                      {/* Stamp Rules */}
+                      {selectedCardType === 'stamp_card' && (
+                        <div className="space-y-4">
+                          <h5 className="font-medium text-gray-900">Stamp Rules</h5>
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="text-sm font-medium">Manual Stamp Only</div>
+                              <div className="text-xs text-gray-500">Staff must manually add stamps</div>
+                            </div>
+                            <Switch
+                              checked={!!formData.stampConfig?.manualStampOnly}
+                              onCheckedChange={(v)=>updateStampConfig('manualStampOnly', v)}
+                            />
+                          </div>
+                          <div className="grid md:grid-cols-3 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-900 mb-2">Min Spend (₹)</label>
+                              <input
+                                type="number"
+                                min={0}
+                                value={formData.stampConfig?.minSpendAmount ?? 0}
+                                onChange={(e)=>updateStampConfig('minSpendAmount', parseInt(e.target.value)||0)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-900 mb-2">Max Stamps/Day</label>
+                              <input
+                                type="number"
+                                min={1}
+                                value={formData.stampConfig?.maxStampsPerDay ?? 1}
+                                onChange={(e)=>updateStampConfig('maxStampsPerDay', parseInt(e.target.value)||1)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-900 mb-2">Duplicate Buffer</label>
+                              <select
+                                value={formData.stampConfig?.duplicateVisitBuffer ?? 'none'}
+                                onChange={(e)=>updateStampConfig('duplicateVisitBuffer', e.target.value as any)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              >
+                                <option value="none">None</option>
+                                <option value="12h">12 hours</option>
+                                <option value="1d">1 day</option>
+                              </select>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="text-sm font-medium">Bill Proof Required</div>
+                              <div className="text-xs text-gray-500">Require bill number for stamps</div>
+                            </div>
+                            <Switch
+                              checked={!!formData.stampConfig?.billProofRequired}
+                              onCheckedChange={(v)=>updateStampConfig('billProofRequired', v)}
+                            />
+                          </div>
+                        </div>
+                      )}
                     </motion.div>
                   )}
                 </CardContent>
               </Card>
 
               {/* Save Button */}
-              <ModernButton
+              <LoadingButton
                 onClick={handleSaveCard}
                 disabled={isCreating || !formData.businessId || !formData.cardName}
                 className="w-full"
                 loading={isCreating}
+                loadingText="Creating..."
               >
                 <Save className="w-4 h-4 mr-2" />
                 Create Card
-              </ModernButton>
+              </LoadingButton>
             </div>
 
             {/* Right Panel - Live Preview */}
             <div>
               <ErrorBoundary>
+                {previewWarnings.length > 0 && (
+                  <div className="mb-3 rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-900">
+                    <div className="font-semibold mb-1">Optimization Suggestions</div>
+                    <ul className="list-disc ml-5 space-y-1">
+                      {previewWarnings.map((w)=> (<li key={w}>{w}</li>))}
+                    </ul>
+                  </div>
+                )}
                 <CardLivePreview
-                  cardData={getPreviewData()}
+                  cardData={previewData}
                   sticky={true}
                   defaultPlatform="apple"
-                  onDimensionWarning={(warnings) => {
-                    if (warnings.length > 0) {
-                      console.log('Dimension warnings:', warnings)
-                    }
-                  }}
+                  onDimensionWarning={handleDimensionWarning}
                 />
               </ErrorBoundary>
             </div>

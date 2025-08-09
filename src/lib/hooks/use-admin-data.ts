@@ -20,11 +20,15 @@ import type {
 } from '@/lib/supabase/types'
 
 // ✅ ENHANCED: Standardized SWR Configuration with admin notifications
+// In development, disable polling/focus revalidation to avoid UI flicker while building forms
+const IS_DEV = process.env.NODE_ENV === 'development'
+const DISABLE_POLLING = IS_DEV || process.env.NEXT_PUBLIC_DISABLE_ADMIN_POLLING === 'true'
+
 const ADMIN_SWR_CONFIG = {
-  refreshInterval: 30000, // 30 seconds - consistent across all hooks
-  revalidateOnFocus: true, // Always revalidate on focus for fresh data
-  revalidateOnReconnect: true, // Revalidate when connection restored
-  dedupingInterval: 10000, // 10 seconds deduping to prevent excessive requests
+  refreshInterval: DISABLE_POLLING ? 0 : 30000, // 30s in prod, off in dev
+  revalidateOnFocus: !DISABLE_POLLING, // no focus revalidation in dev
+  revalidateOnReconnect: !DISABLE_POLLING,
+  dedupingInterval: DISABLE_POLLING ? 60000 : 10000,
   errorRetryCount: 3,
   errorRetryInterval: 5000,
   onError: (error: Error, key: string) => {
@@ -43,7 +47,7 @@ const ADMIN_SWR_CONFIG = {
 
 // ✅ ENHANCED: Generic fetcher with retry logic and admin notifications
 const fetcher = async (url: string) => {
-  console.log(`🔍 SWR Fetching: ${url}`)
+  if (IS_DEV) console.log(`🔍 SWR Fetching: ${url}`)
   
   // Add timeout for slow endpoints
   const controller = new AbortController()
@@ -81,7 +85,7 @@ const fetcher = async (url: string) => {
     }
     
     const data = await response.json()
-    console.log(`✅ SWR Data fetched from ${url}:`, data.success ? 'Success' : 'Failed')
+    if (IS_DEV) console.log(`✅ SWR Data fetched from ${url}:`, data.success ? 'Success' : 'Failed')
     return data
     
   } catch (error) {

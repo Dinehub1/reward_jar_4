@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Slider } from '@/components/ui/slider'
 import { Badge } from '@/components/ui/badge'
 import CardLivePreview, { type CardLivePreviewData } from '@/components/unified/CardLivePreview'
+import { buildCreationPayloadFromForm } from '@/lib/card-mappers'
 import { 
   Zap, 
   ArrowRight, 
@@ -218,24 +219,25 @@ export function QuickStartCardWizard({
         quickData.reward
       )
 
-      const payload = {
-        card_name: quickData.cardName,
-        business_id: quickData.businessId,
+      const payload = buildCreationPayloadFromForm({
+        cardType: 'stamp_card',
+        businessId: quickData.businessId,
+        cardName: quickData.cardName,
+        cardColor: generatedContent.cardColor,
+        iconEmoji: generatedContent.iconEmoji,
+        barcodeType: 'QR_CODE',
+        cardExpiryDays: 60,
+        rewardExpiryDays: 15,
+        stampsRequired: quickData.stampsRequired,
         reward: quickData.reward,
-        reward_description: quickData.reward,
-        stamps_required: quickData.stampsRequired,
-        card_color: generatedContent.cardColor,
-        icon_emoji: generatedContent.iconEmoji,
-        barcode_type: 'QR_CODE',
-        card_expiry_days: 60,
-        reward_expiry_days: 15,
-        stamp_config: generatedContent.stampConfig,
-        card_description: generatedContent.cardDescription,
-        how_to_earn_stamp: generatedContent.howToEarnStamp,
-        reward_details: generatedContent.rewardDetails,
-        earned_stamp_message: generatedContent.earnedStampMessage,
-        earned_reward_message: generatedContent.earnedRewardMessage
-      }
+        rewardDescription: quickData.reward,
+        stampConfig: generatedContent.stampConfig,
+        cardDescription: generatedContent.cardDescription,
+        howToEarnStamp: generatedContent.howToEarnStamp,
+        rewardDetails: generatedContent.rewardDetails,
+        earnedStampMessage: generatedContent.earnedStampMessage,
+        earnedRewardMessage: generatedContent.earnedRewardMessage
+      })
 
       const response = await fetch('/api/admin/cards', {
         method: 'POST',

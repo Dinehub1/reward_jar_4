@@ -25,20 +25,12 @@ import {
   Check,
   AlertCircle,
   QrCode,
-  BarChart3,
-  Apple,
-  Chrome,
-  Globe,
-  Monitor,
-  RotateCcw,
-  Play
+  BarChart3
 } from 'lucide-react'
-import { IPhone15Frame } from '@/components/modern/preview/iPhone15Frame'
-import { AndroidFrame } from '@/components/modern/preview/AndroidFrame'
-import { WebFrame } from '@/components/modern/preview/WebFrame'
 import { designTokens, modernStyles } from '@/lib/design-tokens'
 import { motion, AnimatePresence } from 'framer-motion'
 import CardLivePreview, { type CardLivePreviewData } from '@/components/unified/CardLivePreview'
+import { buildCreationPayloadFromForm, toPreviewDataFromForm } from '@/lib/card-mappers'
 
 // Types
 interface Business {
@@ -155,24 +147,7 @@ const LivePreview = React.memo(({
   showBackPage?: boolean
   onToggleBack?: (show: boolean) => void
 }) => {
-  // Convert cardData to CardLivePreviewData format
-  const previewData: CardLivePreviewData = {
-    cardType: 'stamp',
-    businessId: cardData.businessId,
-    businessName: cardData.businessName,
-    businessLogoUrl: cardData.businessLogoUrl,
-    cardName: cardData.cardName,
-    cardColor: cardData.cardColor,
-    iconEmoji: cardData.iconEmoji,
-    cardDescription: cardData.cardDescription,
-    stampsRequired: cardData.stampsRequired,
-    reward: cardData.reward,
-    rewardDescription: cardData.rewardDescription,
-    howToEarnStamp: cardData.howToEarnStamp,
-    rewardDetails: cardData.rewardDetails,
-    earnedStampMessage: cardData.earnedStampMessage,
-    earnedRewardMessage: cardData.earnedRewardMessage
-  }
+  const previewData: CardLivePreviewData = toPreviewDataFromForm(cardData)
 
   return (
     <CardLivePreview
@@ -203,8 +178,7 @@ export default function AdvancedCardCreation({
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState<ValidationError[]>([])
-  const [activePreview, setActivePreview] = useState<'apple' | 'google' | 'pwa'>('apple')
-  const [showBackPage, setShowBackPage] = useState(false)
+  // Preview handled by CardLivePreview controls
   
   const [cardData, setCardData] = useState<CardFormData>({
     // Step 1: Card Details
@@ -331,24 +305,7 @@ export default function AdvancedCardCreation({
     setErrors([])
     
     try {
-      const payload = {
-        card_name: cardData.cardName,
-        business_id: cardData.businessId,
-        reward: cardData.reward,
-        reward_description: cardData.rewardDescription,
-        stamps_required: cardData.stampsRequired,
-        card_color: cardData.cardColor,
-        icon_emoji: cardData.iconEmoji,
-        barcode_type: cardData.barcodeType,
-        card_expiry_days: cardData.cardExpiryDays,
-        reward_expiry_days: cardData.rewardExpiryDays,
-        stamp_config: cardData.stampConfig,
-        card_description: cardData.cardDescription,
-        how_to_earn_stamp: cardData.howToEarnStamp,
-        reward_details: cardData.rewardDetails,
-        earned_stamp_message: cardData.earnedStampMessage,
-        earned_reward_message: cardData.earnedRewardMessage
-      }
+      const payload = buildCreationPayloadFromForm(cardData)
 
       const response = await fetch('/api/admin/cards', {
         method: 'POST',
@@ -836,42 +793,11 @@ export default function AdvancedCardCreation({
               <p className="text-gray-600">Check the preview and save your card</p>
             </div>
 
-            {/* Platform Preview Tabs */}
-            <div className="flex justify-center space-x-1 bg-gray-100 rounded-lg p-1">
-              <button 
-                onClick={() => setActivePreview('apple')}
-                className={`px-4 py-2 rounded-md transition-all flex items-center gap-2 ${
-                  activePreview === 'apple' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-600'
-                }`}
-              >
-                <Apple className="w-4 h-4" />
-                Apple Wallet
-              </button>
-              <button 
-                onClick={() => setActivePreview('google')}
-                className={`px-4 py-2 rounded-md transition-all flex items-center gap-2 ${
-                  activePreview === 'google' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-600'
-                }`}
-              >
-                <Chrome className="w-4 h-4" />
-                Google Wallet
-              </button>
-              <button 
-                onClick={() => setActivePreview('pwa')}
-                className={`px-4 py-2 rounded-md transition-all flex items-center gap-2 ${
-                  activePreview === 'pwa' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-600'
-                }`}
-              >
-                <Globe className="w-4 h-4" />
-                PWA Card
-              </button>
-            </div>
-
             {/* Live Preview */}
             <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-8 rounded-xl shadow-inner">
               <div className="flex justify-center">
                 <div className="w-80 h-96">
-                  <LivePreview cardData={cardData} activeView={activePreview} />
+                  <LivePreview cardData={cardData} activeView="apple" />
                 </div>
               </div>
             </div>
@@ -1105,246 +1031,7 @@ export default function AdvancedCardCreation({
           </Card>
         </motion.div>
 
-        {/* Preview Section */}
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.4, ease: designTokens.animation.easing.out, delay: 0.1 }}
-        >
-          <Card className={`${modernStyles.card.elevated} border-0 shadow-xl`}>
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-3 text-xl">
-                <motion.div
-                  whileHover={{ rotate: 5 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <Eye className="w-5 h-5 text-blue-500" />
-                </motion.div>
-                <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  Live Device Preview
-                </span>
-              </CardTitle>
-              <p className="text-sm text-gray-500 mt-1">
-                See exactly how your card will appear on real devices
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-6 lg:space-y-8">
-              {/* Device Selector */}
-              <div className="flex justify-center">
-                <div 
-                  className="bg-white rounded-2xl p-1.5 border border-gray-200 w-full max-w-md"
-                  style={{ boxShadow: designTokens.shadows.lg }}
-                >
-                  <div className="grid grid-cols-3 gap-1">
-                    {[
-                      { id: 'apple', label: 'iPhone', icon: Apple, color: 'from-blue-500 to-blue-600' },
-                      { id: 'google', label: 'Android', icon: Chrome, color: 'from-green-500 to-green-600' },
-                      { id: 'pwa', label: 'Web', icon: Monitor, color: 'from-purple-500 to-purple-600' }
-                    ].map((device) => (
-                      <motion.button
-                        key={device.id}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => setActivePreview(device.id as 'apple' | 'google' | 'pwa')}
-                        className={`
-                          px-3 py-2.5 rounded-xl flex flex-col sm:flex-row items-center justify-center 
-                          gap-1 sm:gap-2 transition-all duration-200 font-medium text-xs sm:text-sm
-                          ${activePreview === device.id 
-                            ? `bg-gradient-to-r ${device.color} text-white shadow-md` 
-                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800'
-                          }
-                        `}
-                      >
-                        <device.icon className="w-4 h-4 flex-shrink-0" />
-                        <span className="text-center">{device.label}</span>
-                      </motion.button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Front/Back Toggle */}
-              <div className="flex justify-center">
-                <div className="bg-gray-100 rounded-xl p-1">
-                  {[
-                    { id: false, label: 'Front Side', icon: Eye },
-                    { id: true, label: 'Back Side', icon: RotateCcw }
-                  ].map((option) => (
-                    <motion.button
-                      key={option.label}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => setShowBackPage(option.id)}
-                      className={`
-                        px-4 py-2 rounded-lg flex items-center space-x-2 transition-all duration-200 text-sm font-medium
-                        ${showBackPage === option.id 
-                          ? 'bg-white shadow-sm text-gray-900' 
-                          : 'text-gray-600 hover:text-gray-800'
-                        }
-                      `}
-                    >
-                      <option.icon className="w-4 h-4" />
-                      <span>{option.label}</span>
-                    </motion.button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Device Preview */}
-              <div 
-                className="flex justify-center items-center rounded-2xl p-4 sm:p-6 overflow-hidden"
-                style={{
-                  background: 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)',
-                  boxShadow: 'inset 0 2px 10px rgba(0, 0, 0, 0.08)',
-                  minHeight: '500px',
-                  height: 'auto'
-                }}
-              >
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={activePreview}
-                    initial={{ opacity: 0, scale: 0.9, rotateY: -15 }}
-                    animate={{ opacity: 1, scale: 1, rotateY: 0 }}
-                    exit={{ opacity: 0, scale: 0.9, rotateY: 15 }}
-                    transition={{ 
-                      duration: 0.5, 
-                      ease: designTokens.animation.easing.out 
-                    }}
-                    className="transform hover:scale-[1.02] transition-transform duration-300"
-                  >
-                    {activePreview === 'apple' && (
-                      <IPhone15Frame variant="pro" className="shadow-2xl">
-                        <motion.div
-                          key={`iphone-${showBackPage}`}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.3, delay: 0.2 }}
-                          className="w-full h-full"
-                        >
-                          <LivePreview 
-                            cardData={cardData} 
-                            activeView={activePreview}
-                            showBackPage={showBackPage}
-                            onToggleBack={setShowBackPage}
-                          />
-                        </motion.div>
-                      </IPhone15Frame>
-                    )}
-                    
-                    {activePreview === 'google' && (
-                      <AndroidFrame variant="pixel" className="shadow-2xl">
-                        <motion.div
-                          key={`android-${showBackPage}`}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.3, delay: 0.2 }}
-                          className="w-full h-full"
-                        >
-                          <LivePreview 
-                            cardData={cardData} 
-                            activeView={activePreview}
-                            showBackPage={showBackPage}
-                            onToggleBack={setShowBackPage}
-                          />
-                        </motion.div>
-                      </AndroidFrame>
-                    )}
-                    
-                    {activePreview === 'pwa' && (
-                      <WebFrame 
-                        browser="chrome"
-                        url="https://rewardjar.xyz/card/preview"
-                        className="shadow-2xl"
-                      >
-                        <motion.div
-                          key={`web-${showBackPage}`}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.3, delay: 0.2 }}
-                          className="w-full h-full flex items-center justify-center bg-gray-50"
-                        >
-                          <div className="w-full max-w-md mx-auto p-4">
-                            <LivePreview 
-                              cardData={cardData} 
-                              activeView={activePreview}
-                              showBackPage={showBackPage}
-                              onToggleBack={setShowBackPage}
-                            />
-                          </div>
-                        </motion.div>
-                      </WebFrame>
-                    )}
-                  </motion.div>
-                </AnimatePresence>
-              </div>
-
-              {/* Interactive Controls */}
-              <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setShowBackPage(!showBackPage)}
-                  className={`
-                    ${modernStyles.button.secondary} 
-                    flex items-center justify-center gap-2 w-full sm:w-auto
-                    transition-all duration-${designTokens.animation.duration.fast}
-                  `}
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  <span>Flip Card</span>
-                </motion.button>
-                
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className={`
-                    px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl 
-                    flex items-center justify-center gap-2 font-medium w-full sm:w-auto
-                    transition-all duration-${designTokens.animation.duration.fast}
-                  `}
-                >
-                  <Play className="w-4 h-4" />
-                  <span>Interactive Mode</span>
-                </motion.button>
-              </div>
-
-              {/* Configuration Summary */}
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3, duration: 0.4 }}
-                className="space-y-4"
-              >
-                <div 
-                  className="p-4 rounded-xl border border-blue-200"
-                  style={{
-                    background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)'
-                  }}
-                >
-                  <h4 className="font-semibold text-blue-900 flex items-center gap-2">
-                    <Smartphone className="w-4 h-4" />
-                    Preview: {activePreview.charAt(0).toUpperCase() + activePreview.slice(1)} Wallet
-                  </h4>
-                  <div className="text-sm text-blue-700 mt-1">
-                    {activePreview === 'apple' && '🍎 iPhone 15 Pro with Dynamic Island, realistic bezels, and iOS animations'}
-                    {activePreview === 'google' && '🤖 Google Pixel with punch-hole camera, Material Design, and Android gestures'}
-                    {activePreview === 'pwa' && '🌐 Chrome browser with realistic tabs, address bar, and responsive web design'}
-                  </div>
-                </div>
-                
-                <div className="flex items-center justify-between text-sm text-gray-600 bg-gray-50 rounded-lg p-3">
-                  <span className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                    Real-time sync enabled
-                  </span>
-                  <span className="text-xs bg-white px-2 py-1 rounded-full">
-                    99% device accuracy
-                  </span>
-                </div>
-              </motion.div>
-            </CardContent>
-          </Card>
-        </motion.div>
+        {/* (Simplified) Live Preview handled above */}
       </div>
     </div>
   )
