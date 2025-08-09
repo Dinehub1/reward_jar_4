@@ -12,6 +12,8 @@
 
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
+import { WalletPreviewCard } from './WalletPreviewCard'
+import { WalletPreviewContainer } from './WalletPreviewContainer'
 // Dev-only legacy components. Keep file as is for sandbox demos.
 // No production imports changed here.
 import type { StampCard } from './WalletPreviewCard'

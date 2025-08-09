@@ -110,29 +110,29 @@ This plan summarizes concrete, high‑impact improvements across routes, data fl
     - Card preview mapping parity between `card-mappers.ts` and DB rows
     - Absence of broken exports (import smoke tests for `src/components/modern/index.ts`)
 
-### Actionable Checklist
+### Actionable Checklist (Status)
 
 - **Routes**
-  - [ ] Create `src/app/api/admin/dashboard/route.ts` that merges logic from `dashboard-unified` and replaces metrics/summary/debug via `?section=`
+  - [x] Create `src/app/api/admin/dashboard/route.ts` that merges logic from `dashboard-unified` and replaces metrics/summary/debug via `?section=`
   - [ ] Add deprecation warnings and a `DISABLE_LEGACY_ADMIN_ENDPOINTS` kill switch
   - [ ] Normalize all responses to `{ success, data, error, meta }`
 
 - **Wallet**
-  - [ ] Move any remaining platform-specific assembly/signing code into `wallet-generation-service.ts`
-  - [ ] Ensure `google` and `apple` routes return consistent JSON; serve optional HTML via a dedicated save page
-  - [ ] Add `/api/wallet/status/[customerCardId]` powered by `wallet-verification.ts`
+  - [x] Move platform-specific assembly/signing into `wallet-generation-service.ts` helpers
+  - [x] Ensure `google` and `apple` routes return consistent JSON
+  - [x] Add `/api/wallet/status/[customerCardId]`
 
 - **UI/UX**
-  - [ ] Replace local QR code in `src/app/admin/cards/page.tsx` with shared `QRCodeDisplay`
+  - [x] Replace local QR code in `src/app/admin/cards/page.tsx` with shared `QRCodeDisplay`
   - [ ] Migrate any usage of `WalletPreviewCard`/`WalletPreviewContainer` to `CardLivePreview`
   - [ ] Split `src/app/admin/debug/page.tsx` into dynamic subroutes or dynamic tabs
 
 - **Duplication/Broken Exports**
-  - [ ] Remove dead exports in `src/components/modern/index.ts` (AppleWalletView/GoogleWalletView/WebPassView)
+  - [x] Remove dead exports in `src/components/modern/index.ts` (AppleWalletView/GoogleWalletView/WebPassView)
   - [ ] Keep legacy wallet preview components dev-only or remove after migration
 
 - **DX**
-  - [ ] Add a short `docs/ROUTES.md` describing canonical endpoints and sections
+  - [x] Add a short `docs/ROUTES.md` describing canonical endpoints and sections
   - [ ] Add unit tests for API envelope shape and mapper parity
 
 ### Notes on Compliance with Repo Rules
