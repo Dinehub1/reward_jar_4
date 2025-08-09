@@ -93,25 +93,16 @@ async function fetchAdminData(): Promise<AdminData> {
     const baseUrl = typeof window === 'undefined' ? 'http://localhost:3000' : ''
     
     // ✅ MIGRATED: Use single dashboard-unified endpoint for consistency
-    const [statsRes, businessesRes] = await Promise.all([
-      fetch(`${baseUrl}/api/admin/dashboard-unified`, { 
-        cache: 'no-store',
-        headers: { 'Cache-Control': 'no-cache' }
-      }),
-      fetch(`${baseUrl}/api/admin/dashboard-unified`, { 
-        cache: 'no-store',
-        headers: { 'Cache-Control': 'no-cache' }
-      })
-    ]);
-    
-    if (!statsRes.ok || !businessesRes.ok) {
-      throw new Error(`API request failed: Stats ${statsRes.status}, All-Data ${businessesRes.status}`)
-    }
-    
+    // Use shared fetch util
+    const { fetchJsonWithTimeout } = await import('@/lib/admin-fetch')
     const [statsData, allData] = await Promise.all([
-      statsRes.json(),
-      businessesRes.json()
-    ]);
+      fetchJsonWithTimeout<any>(`${baseUrl}/api/admin/dashboard-unified`, {
+        timeoutMs: 15000
+      }),
+      fetchJsonWithTimeout<any>(`${baseUrl}/api/admin/dashboard-unified`, {
+        timeoutMs: 15000
+      })
+    ])
     
     // Process customer data to match expected interface
     const processedCustomers = (allData.data?.customers || []).map((customer: any) => ({

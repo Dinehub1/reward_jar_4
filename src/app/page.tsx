@@ -31,12 +31,11 @@ export default function HomePage() {
       <section className="py-16 lg:py-24 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto text-center">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-            Launch a Digital Loyalty Program
-            <span className="block text-blue-600 mt-2">in Minutes</span>
+            Launch your loyalty program
+            <span className="block text-blue-600 mt-2">in 24–48 hours</span>
           </h1>
           <p className="text-lg md:text-xl text-gray-600 mb-10 max-w-3xl mx-auto leading-relaxed">
-            Submit your business details and logo. Our team designs professional digital cards 
-            for Apple Wallet, Google Wallet, and web. You focus on customers, we handle the tech.
+            Professional Apple Wallet, Google Wallet, and web cards designed for your brand — no setup required.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Link href="/onboarding/business">
@@ -44,17 +43,30 @@ export default function HomePage() {
                 Get Started →
               </Button>
             </Link>
-            <Link href="/auth/login">
+            <Link href="/templates">
               <Button size="lg" variant="outline" className="text-lg px-8 py-4 h-14 min-w-[160px] border-gray-300 text-gray-700 hover:bg-gray-50">
-                Business Login
+                See Templates
               </Button>
             </Link>
           </div>
           <p className="text-sm text-gray-500 mt-4">
-            No setup required • Professional design included • Live in 24-48 hours
+            No credit card required • Professional design included • Live in 24–48 hours
           </p>
         </div>
       </section>
+
+      {/* Social Proof Strip */}
+      <div className="bg-white/70 dark:bg-slate-900/60 border-y border-gray-100 dark:border-slate-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+          <div className="text-sm text-gray-600 dark:text-gray-300">Trusted by businesses across coffee, salon, retail, and fitness</div>
+          <div className="hidden md:flex items-center gap-6 opacity-80">
+            <div className="h-6 w-20 bg-gray-200 dark:bg-slate-700 rounded" />
+            <div className="h-6 w-20 bg-gray-200 dark:bg-slate-700 rounded" />
+            <div className="h-6 w-20 bg-gray-200 dark:bg-slate-700 rounded" />
+            <div className="h-6 w-20 bg-gray-200 dark:bg-slate-700 rounded" />
+          </div>
+        </div>
+      </div>
 
       {/* Features Grid */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white">

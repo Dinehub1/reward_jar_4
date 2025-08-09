@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { motion, HTMLMotionProps } from 'framer-motion'
-import { Slot } from "@radix-ui/react-slot"
+import { Slot, type SlotProps } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
@@ -46,7 +46,7 @@ export interface ModernButtonProps
 
 const ModernButton = React.forwardRef<HTMLButtonElement, ModernButtonProps>(
   ({ className, variant, size, asChild = false, children, ...props }, ref) => {
-    const Comp = asChild ? Slot : motion.button
+    const Comp: any = asChild ? Slot : motion.button
 
     return (
       <Comp
@@ -63,7 +63,7 @@ const ModernButton = React.forwardRef<HTMLButtonElement, ModernButtonProps>(
         initial={{ opacity: 0, y: 4 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, ease: [0.4, 0.0, 0.2, 1] }}
-        {...props}
+        {...props as any}
       >
         {/* Background pulse effect on hover */}
         <motion.div
@@ -89,7 +89,7 @@ const ModernButton = React.forwardRef<HTMLButtonElement, ModernButtonProps>(
         
         {/* Content */}
         <span className="relative z-10 flex items-center gap-2">
-          {children}
+          {children as React.ReactNode}
         </span>
       </Comp>
     )

@@ -1,9 +1,10 @@
 'use client'
 
 import React, { useState, useRef } from 'react'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { Upload, X, Image, AlertCircle } from 'lucide-react'
+import { Upload, X, Image as ImageIcon, AlertCircle } from 'lucide-react'
 
 interface LogoUploadProps {
   value?: File | null
@@ -98,7 +99,7 @@ export function LogoUpload({
   return (
     <div className={`space-y-2 ${className}`}>
       <Label className="flex items-center gap-2">
-        <Image className="w-4 h-4" />
+        <ImageIcon className="w-4 h-4" />
         Business Logo
       </Label>
       
@@ -127,9 +128,11 @@ export function LogoUpload({
 
         {preview ? (
           <div className="relative">
-            <img
+            <Image
               src={preview}
               alt="Logo preview"
+              width={512}
+              height={512}
               className="w-full h-32 object-contain rounded-lg bg-white"
             />
             <Button

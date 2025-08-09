@@ -143,12 +143,12 @@ export default function TestLoginPage() {
           }
         }
       }))
-    } catch (error) {
+    } catch (error: unknown) {
       setTestResults(prev => ({
         ...prev,
         [test.id]: {
           status: 'failed',
-          error: error.message
+          error: error instanceof Error ? error.message : 'Unknown error'
         }
       }))
     } finally {
@@ -191,11 +191,11 @@ export default function TestLoginPage() {
           data: result
         }
       }))
-    } catch (error) {
+    } catch (error: unknown) {
       setCustomTest(prev => ({
         ...prev,
         status: 'failed',
-        result: { error: error.message }
+        result: { error: error instanceof Error ? error.message : 'Unknown error' }
       }))
     }
   }

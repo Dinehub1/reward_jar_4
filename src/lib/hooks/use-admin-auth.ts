@@ -200,7 +200,7 @@ export function useAdminAuth(requireAuth: boolean = true): AdminAuthState & Admi
 
   useEffect(() => {
     let isMounted = true
-    let timeoutId: NodeJS.Timeout
+const timeoutId: NodeJS.Timeout | null = null
     
     const performAuthCheck = async () => {
       console.log('🔍 AUTH HOOK - performAuthCheck called:', { 
@@ -227,7 +227,7 @@ export function useAdminAuth(requireAuth: boolean = true): AdminAuthState & Admi
     console.log('🔍 AUTH HOOK - useEffect triggered, starting performAuthCheck')
     
     // Use immediate execution with a small delay to ensure the component is mounted
-    timeoutId = setTimeout(() => {
+    const localTimeoutId = setTimeout(() => {
       if (isMounted) {
         performAuthCheck()
       }
@@ -259,7 +259,7 @@ export function useAdminAuth(requireAuth: boolean = true): AdminAuthState & Admi
 
     return () => {
       isMounted = false
-      if (timeoutId) clearTimeout(timeoutId)
+      if (localTimeoutId) clearTimeout(localTimeoutId)
       subscription.unsubscribe()
     }
   }, []) // Empty dependency array - run only once

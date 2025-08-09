@@ -108,14 +108,14 @@ class GoogleMapsLoader {
       console.log('🔄 Loading Google Maps API with key:', apiKey.substring(0, 10) + '...')
 
       // Create unique callback name to avoid conflicts
-      const callbackName = `initGoogleMaps_${Date.now()}`
+      const callbackName = 'initGoogleMaps'
       
       // Global callback for Google Maps initialization
-      window[callbackName] = () => {
+      ;(window as any)[callbackName] = () => {
         console.log('📞 Google Maps callback triggered')
         
         // Clean up the callback
-        delete window[callbackName]
+        delete (window as any)[callbackName]
         
         // Add a small delay to ensure all APIs are fully loaded
         setTimeout(() => {
@@ -140,17 +140,17 @@ class GoogleMapsLoader {
         console.log('📜 Google Maps script loaded successfully')
       }
 
-      script.onerror = (event) => {
+      script.onerror = (event: Event | string) => {
         console.error('❌ Google Maps script error:', event)
         this.handleError('Failed to load Google Maps JavaScript API. Check your internet connection.')
         // Clean up callback on error
-        if (window[callbackName]) {
-          delete window[callbackName]
+        if ((window as any)[callbackName]) {
+          delete (window as any)[callbackName]
         }
       }
 
       // Handle API key errors
-      window.gm_authFailure = () => {
+      (window as any).gm_authFailure = () => {
         console.error('❌ Google Maps authentication failure')
         this.handleError('Google Maps API authentication failed. Please check your API key, enable billing, and ensure the Places API is enabled in Google Cloud Console.')
       }
@@ -161,8 +161,8 @@ class GoogleMapsLoader {
           console.error('⏰ Google Maps loading timeout')
           this.handleError('Google Maps API loading timeout. Please check your API key and internet connection.')
           // Clean up callback on timeout
-          if (window[callbackName]) {
-            delete window[callbackName]
+          if ((window as any)[callbackName]) {
+            delete (window as any)[callbackName]
           }
         }
       }, 15000) // 15 second timeout
@@ -259,11 +259,11 @@ class GoogleMapsLoader {
     console.log('🧹 Force cleaning up Google Maps resources')
 
     // Remove all existing Google Maps scripts
-    const existingScripts = document.querySelectorAll('script[src*="maps.googleapis.com"]')
+    const existingScripts = document.querySelectorAll<HTMLScriptElement>('script[src*="maps.googleapis.com"]')
     if (existingScripts.length > 0) {
       console.log(`🗑️ Removing ${existingScripts.length} existing Google Maps script(s)`)
       existingScripts.forEach(script => {
-        console.log('🗑️ Removing script:', script.src)
+        console.log('🗑️ Removing script:', script.src || '[unknown src]')
         script.remove()
       })
     }
@@ -281,17 +281,17 @@ class GoogleMapsLoader {
     }
 
     // Clean up any remaining callback functions
-    Object.keys(window).forEach(key => {
+    Object.keys(window as any).forEach(key => {
       if (key.startsWith('initGoogleMaps')) {
         console.log('🗑️ Cleaning up callback:', key)
-        delete window[key]
+        delete (window as any)[key]
       }
     })
 
     // Clear global google object if it exists (force reload)
-    if (window.google) {
+    if ((window as any).google) {
       console.log('🗑️ Clearing global google object')
-      delete window.google
+      delete (window as any).google
     }
   }
 

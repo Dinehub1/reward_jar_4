@@ -20,6 +20,7 @@ import {
   AlertCircle,
   Loader2
 } from 'lucide-react'
+import { CardLivePreview } from '@/components/unified/CardLivePreview'
 
 interface BusinessFormData {
   ownerName: string
@@ -30,6 +31,14 @@ interface BusinessFormData {
   description: string
   logoFile: File | null
   logoPreview: string | null
+  cardType?: 'stamp' | 'membership'
+  cardName?: string
+  iconEmoji?: string
+  cardColor?: string
+  stampsRequired?: number
+  reward?: string
+  membershipType?: string
+  totalSessions?: number
 }
 
 interface User {
@@ -50,7 +59,15 @@ export default function BusinessOnboardingPage() {
     location: '',
     description: '',
     logoFile: null,
-    logoPreview: null
+    logoPreview: null,
+    cardType: 'stamp',
+    cardName: 'Loyalty Card',
+    iconEmoji: '☕',
+    cardColor: '#8B4513',
+    stampsRequired: 10,
+    reward: 'Buy 9, get 1 free',
+    membershipType: 'Standard',
+    totalSessions: 10
   })
 
   const router = useRouter()
@@ -425,6 +442,124 @@ export default function BusinessOnboardingPage() {
                     </div>
                   </div>
 
+                  {/* Preview Setup (interactive) */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold">Preview Setup (Optional)</h3>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <Label htmlFor="cardName">Card Name</Label>
+                        <Input
+                          id="cardName"
+                          value={formData.cardName}
+                          onChange={(e) => handleInputChange('cardName', e.target.value)}
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="iconEmoji">Icon Emoji</Label>
+                        <Input
+                          id="iconEmoji"
+                          value={formData.iconEmoji}
+                          onChange={(e) => handleInputChange('iconEmoji', e.target.value)}
+                          className="mt-1"
+                          maxLength={3}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-3">
+                      <div className="space-y-2">
+                        <Label>Card Type</Label>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            variant={formData.cardType === 'stamp' ? 'default' : 'outline'}
+                            onClick={() => setFormData(prev => ({ ...prev, cardType: 'stamp' }))}
+                          >
+                            Stamp
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={formData.cardType === 'membership' ? 'default' : 'outline'}
+                            onClick={() => setFormData(prev => ({ ...prev, cardType: 'membership' }))}
+                          >
+                            Membership
+                          </Button>
+                        </div>
+                      </div>
+                      <div>
+                        <Label htmlFor="cardColor">Card Color</Label>
+                        <Input
+                          id="cardColor"
+                          value={formData.cardColor}
+                          onChange={(e) => handleInputChange('cardColor', e.target.value)}
+                          className="mt-1"
+                          placeholder="#8B4513"
+                        />
+                      </div>
+                      {formData.cardType === 'stamp' ? (
+                        <div>
+                          <Label htmlFor="stampsRequired">Stamps Required</Label>
+                          <Input
+                            id="stampsRequired"
+                            type="number"
+                            min={4}
+                            max={20}
+                            value={formData.stampsRequired || 10}
+                            onChange={(e) => setFormData(prev => ({ ...prev, stampsRequired: parseInt(e.target.value || '10') }))}
+                            className="mt-1"
+                          />
+                        </div>
+                      ) : (
+                        <div>
+                          <Label htmlFor="totalSessions">Total Sessions</Label>
+                          <Input
+                            id="totalSessions"
+                            type="number"
+                            min={4}
+                            max={50}
+                            value={formData.totalSessions || 10}
+                            onChange={(e) => setFormData(prev => ({ ...prev, totalSessions: parseInt(e.target.value || '10') }))}
+                            className="mt-1"
+                          />
+                        </div>
+                      )}
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {formData.cardType === 'stamp' ? (
+                        <div>
+                          <Label htmlFor="reward">Reward</Label>
+                          <Input
+                            id="reward"
+                            value={formData.reward || ''}
+                            onChange={(e) => handleInputChange('reward', e.target.value)}
+                            className="mt-1"
+                            placeholder="Free coffee"
+                          />
+                        </div>
+                      ) : (
+                        <div>
+                          <Label htmlFor="membershipType">Membership Type</Label>
+                          <Input
+                            id="membershipType"
+                            value={formData.membershipType || ''}
+                            onChange={(e) => handleInputChange('membershipType', e.target.value)}
+                            className="mt-1"
+                            placeholder="10-session pack"
+                          />
+                        </div>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Quick Templates</Label>
+                      <div className="flex flex-wrap gap-2">
+                        <Button type="button" variant="secondary" onClick={() => setFormData(prev => ({ ...prev, iconEmoji: '☕', cardColor: '#8B4513', reward: 'Buy 9, get 1 free', cardType: 'stamp', stampsRequired: 10, cardName: 'Coffee Loyalty' }))}>Coffee</Button>
+                        <Button type="button" variant="secondary" onClick={() => setFormData(prev => ({ ...prev, iconEmoji: '✂️', cardColor: '#ec4899', cardType: 'membership', membershipType: '10-session pack', totalSessions: 10, cardName: 'Salon Membership' }))}>Salon</Button>
+                        <Button type="button" variant="secondary" onClick={() => setFormData(prev => ({ ...prev, iconEmoji: '🛍️', cardColor: '#0ea5e9', reward: 'Spend & earn', cardType: 'stamp', stampsRequired: 12, cardName: 'Retail Rewards' }))}>Retail</Button>
+                        <Button type="button" variant="secondary" onClick={() => setFormData(prev => ({ ...prev, iconEmoji: '🏋️', cardColor: '#6366f1', cardType: 'membership', membershipType: 'Monthly', totalSessions: 12, cardName: 'Fitness Pass' }))}>Fitness</Button>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Logo Upload */}
                   <div className="space-y-4">
                     <h3 className="text-lg font-semibold">Business Logo (Optional)</h3>
@@ -466,6 +601,7 @@ export default function BusinessOnboardingPage() {
                       id="logoUpload"
                       type="file"
                       accept="image/*"
+                      capture="environment"
                       onChange={handleLogoUpload}
                       className="hidden"
                     />
@@ -504,55 +640,31 @@ export default function BusinessOnboardingPage() {
                 <CardTitle className="text-lg">Preview</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Logo Preview */}
-                <div className="text-center">
-                  <div className="w-20 h-20 mx-auto bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center mb-2">
-                    {formData.logoPreview ? (
-                      <Image
-                        src={formData.logoPreview}
-                        alt="Business logo"
-                        width={60}
-                        height={60}
-                        className="object-contain rounded-lg"
-                      />
-                    ) : (
-                      <Building className="h-8 w-8 text-gray-400" />
-                    )}
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {formData.logoPreview ? 'Your logo' : 'Your logo will appear here'}
-                  </p>
-                </div>
-
-                {/* Business Info Preview */}
-                <div className="space-y-2 text-sm">
-                  <div>
-                    <span className="font-medium">Business:</span>
-                    <span className="ml-2 text-muted-foreground">
-                      {formData.businessName || 'Business name'}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="font-medium">Owner:</span>
-                    <span className="ml-2 text-muted-foreground">
-                      {formData.ownerName || 'Owner name'}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="font-medium">Location:</span>
-                    <span className="ml-2 text-muted-foreground">
-                      {formData.location || 'Business location'}
-                    </span>
-                  </div>
-                </div>
+                {/* Live Card Preview */}
+                <CardLivePreview
+                  showControls={true}
+                  defaultPlatform="apple"
+                  cardData={{
+                    cardType: formData.cardType || 'stamp',
+                    businessName: formData.businessName || 'Your Business',
+                    businessLogoUrl: formData.logoPreview || undefined,
+                    cardName: formData.cardName || 'Loyalty Card',
+                    cardColor: formData.cardColor || '#8B4513',
+                    iconEmoji: formData.iconEmoji || '☕',
+                    stampsRequired: formData.stampsRequired || 10,
+                    reward: formData.reward || 'Free item',
+                    totalSessions: formData.totalSessions || 10,
+                    membershipType: formData.membershipType || 'Membership',
+                  }}
+                />
 
                 {/* Next Steps */}
                 <div className="mt-6 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                   <h4 className="font-medium text-sm mb-2">What happens next?</h4>
                   <ul className="text-xs text-muted-foreground space-y-1">
                     <li>• Our team will review your business</li>
-                    <li>• We'll create your custom stamp cards and membership cards</li>
-                    <li>• You'll receive an email when ready</li>
+                    <li>• We&apos;ll create your custom stamp cards and membership cards</li>
+                    <li>• You&apos;ll receive an email when ready</li>
                     <li>• Start engaging customers right away!</li>
                   </ul>
                 </div>

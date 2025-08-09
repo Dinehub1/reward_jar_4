@@ -162,7 +162,7 @@ export default function ApiHealthPage() {
       handleCheckAll()
     } else {
       // In development, just set initial loading state
-      setEndpoints(prev => prev.map(ep => ({ ...ep, status: 'idle' })))
+      setEndpoints(prev => prev.map(ep => ({ ...ep, status: 'loading' })))
     }
   }, [])
 

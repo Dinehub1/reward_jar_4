@@ -380,7 +380,7 @@ export default function DevToolsPage() {
   // Health Check Function with Auto-refresh Detection
   const runHealthCheck = useCallback(async (tool: DevTool): Promise<HealthCheckResult> => {
     const startTime = Date.now()
-    let result: HealthCheckResult = {
+    const result: HealthCheckResult = {
       tool,
       httpStatus: 0,
       responseTime: 0,
@@ -818,7 +818,7 @@ export default function DevToolsPage() {
                     <div className="text-center py-8 text-muted-foreground">
                       <Stethoscope className="h-12 w-12 mx-auto mb-4 opacity-50" />
                       <p>No health check results yet.</p>
-                      <p className="text-xs">Click "Run All Tool Health Checks" to start testing.</p>
+                      <p className="text-xs">Click &quot;Run All Tool Health Checks&quot; to start testing.</p>
                     </div>
                   )}
                 </div>

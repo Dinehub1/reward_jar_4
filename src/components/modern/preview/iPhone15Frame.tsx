@@ -68,7 +68,7 @@ export const IPhone15Frame: React.FC<IPhone15FrameProps> = ({
           rounded-[3rem] p-2
         `}
         style={{ 
-          boxShadow: designTokens.shadows.device,
+          boxShadow: designTokens.wallet.shadows.device,
           filter: 'drop-shadow(0 4px 20px rgba(0, 0, 0, 0.15))'
         }}
       >

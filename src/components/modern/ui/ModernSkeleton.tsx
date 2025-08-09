@@ -1,6 +1,6 @@
 'use client'
 
-import { motion } from 'framer-motion'
+import { motion, type HTMLMotionProps } from 'framer-motion'
 import { cn } from "@/lib/utils"
 
 interface ModernSkeletonProps {
@@ -17,7 +17,7 @@ const ModernSkeleton = ({
   width, 
   height,
   ...props 
-}: ModernSkeletonProps & React.HTMLAttributes<HTMLDivElement>) => {
+}: ModernSkeletonProps & Omit<HTMLMotionProps<'div'>, 'ref'>) => {
   const getVariantStyles = () => {
     switch (variant) {
       case 'text':

@@ -213,7 +213,7 @@ export default function MembershipsPage() {
             <CardContent className="pt-6">
               <div className="text-blue-700">
                 <p className="font-medium">Cards are created and managed by RewardJar Admins.</p>
-                <p className="text-sm mt-1">Contact support if you'd like to update or request a new membership card.</p>
+                <p className="text-sm mt-1">Contact support if you&apos;d like to update or request a new membership card.</p>
               </div>
             </CardContent>
           </Card>

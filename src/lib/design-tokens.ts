@@ -147,8 +147,9 @@ export const designTokens = {
 } as const
 
 // Utility function to get design token values
-export const getToken = (path: string) => {
-  return path.split('.').reduce((obj, key) => obj?.[key], designTokens)
+export const getToken = (path: string): unknown => {
+  // Safe reduce with any to support dynamic access paths
+  return path.split('.').reduce((obj: any, key) => (obj ? obj[key] : undefined), designTokens as any)
 }
 
 // Theme variants for different modes

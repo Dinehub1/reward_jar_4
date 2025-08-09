@@ -32,6 +32,7 @@ import {
   Loader2,
   QrCode
 } from 'lucide-react'
+import Image from 'next/image'
 
 interface BusinessDetails {
   id: string
@@ -229,9 +230,11 @@ export default function BusinessDetailsPage({
             
             <div className="flex items-center gap-3">
               {business.logo_url && (
-                <img
+                <Image
                   src={business.logo_url}
                   alt={`${business.name} logo`}
+                  width={48}
+                  height={48}
                   className="w-12 h-12 object-contain rounded-lg border border-gray-200 bg-white"
                 />
               )}
@@ -413,9 +416,11 @@ function BusinessOverview({ business }: { business: BusinessDetails }) {
             <div>
               <label className="text-sm font-medium text-gray-500">Business Logo</label>
               <div className="mt-2">
-                <img
+                <Image
                   src={business.logo_url}
                   alt={`${business.name} logo`}
+                  width={80}
+                  height={80}
                   className="w-20 h-20 object-contain rounded-lg border border-gray-200 bg-white"
                 />
               </div>

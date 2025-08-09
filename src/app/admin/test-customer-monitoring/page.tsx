@@ -158,9 +158,10 @@ export default function TestCustomerMonitoringPage() {
         value: typeof metric.value === 'number' 
           ? Math.round(metric.value * (0.8 + Math.random() * 0.4))
           : metric.value,
-        status: success ? 
-          (Math.random() > 0.7 ? 'warning' : 'good') as const :
-          'critical' as const
+        status: ((): 'warning' | 'good' | 'critical' => {
+          if (!success) return 'critical'
+          return Math.random() > 0.7 ? 'warning' : 'good'
+        })()
       })) || []
       
       setCustomerTests(prev => prev.map(test => 

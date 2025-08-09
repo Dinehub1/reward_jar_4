@@ -189,7 +189,9 @@ export default function DebugMapsPage() {
               </div>
               <div className="flex items-start gap-2">
                 <span className="font-semibold text-red-600">❌ Multiple Scripts:</span>
-                <span>If Scripts Loaded > 1, this indicates the "multiple times" error</span>
+                <span>
+                  If Scripts Loaded &gt; 1, this indicates the &quot;multiple times&quot; error
+                </span>
               </div>
               <div className="flex items-start gap-2">
                 <span className="font-semibold text-blue-600">🔍 Debug:</span>
@@ -197,7 +199,7 @@ export default function DebugMapsPage() {
               </div>
               <div className="flex items-start gap-2">
                 <span className="font-semibold text-orange-600">🔄 Reset:</span>
-                <span>Use "Reset Loader" to clean up and try again without page reload</span>
+                <span>Use &quot;Reset Loader&quot; to clean up and try again without page reload</span>
               </div>
             </div>
           </CardContent>

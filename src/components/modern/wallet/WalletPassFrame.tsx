@@ -3,6 +3,7 @@
 import React from 'react'
 import { motion } from 'framer-motion'
 import { designTokens } from '@/lib/design-tokens'
+import QRCodeDisplayShared, { type QRCodeDisplayProps as SharedQRCodeDisplayProps } from '@/components/shared/QRCodeDisplay'
 
 // Unified interfaces for all wallet components
 export interface WalletCardData {
@@ -36,83 +37,9 @@ export interface WalletViewProps {
   className?: string
 }
 
-// Unified QR Code Display Component
-interface QRCodeDisplayProps {
-  value: string
-  size?: number
-  walletType?: 'apple' | 'google' | 'pwa' | 'default'
-  className?: string
-}
-
-export const QRCodeDisplay = React.memo<QRCodeDisplayProps>(({ 
-  value, 
-  size = 48, 
-  walletType = 'default',
-  className = ''
-}) => {
-  const [qrCodeUrl, setQrCodeUrl] = React.useState<string>('')
-  
-  // Dynamic sizing based on wallet type for optimal user experience
-  const getOptimalSize = React.useCallback(() => {
-    switch (walletType) {
-      case 'apple': return Math.min(size, 48) // Compact for Apple's design
-      case 'google': return Math.min(size, 44) // Smaller for Google's header
-      case 'pwa': return Math.max(size, 48) // Larger for better PWA visibility
-      default: return size
-    }
-  }, [size, walletType])
-
-  const optimalSize = getOptimalSize()
-  
-  React.useEffect(() => {
-    const generateQR = async () => {
-      try {
-        const qrcode = await import('qrcode')
-        const url = await qrcode.toDataURL(value, {
-          width: optimalSize * 2, // Higher resolution for crisp display
-          margin: walletType === 'google' ? 0 : 1, // Minimal margin for Google
-          color: { dark: '#000000', light: '#FFFFFF' },
-          errorCorrectionLevel: 'M' // Medium error correction for better scanning
-        })
-        setQrCodeUrl(url)
-      } catch (error) {
-        console.error('Failed to generate QR code:', error)
-      }
-    }
-    
-    if (value) generateQR()
-  }, [value, optimalSize, walletType])
-
-  if (qrCodeUrl) {
-    return (
-      <img 
-        src={qrCodeUrl} 
-        alt="QR Code" 
-        width={optimalSize} 
-        height={optimalSize} 
-        className={`transition-all duration-200 ${
-          walletType === 'google' ? 'rounded-sm' : 'rounded'
-        } ${className}`}
-        style={{ imageRendering: 'crisp-edges' }} // Ensure crisp QR code rendering
-      />
-    )
-  }
-
-  return (
-    <div 
-      className={`bg-white flex items-center justify-center border-2 border-dashed border-gray-300 animate-pulse ${
-        walletType === 'google' ? 'rounded-sm' : 'rounded'
-      } ${className}`}
-      style={{ width: optimalSize, height: optimalSize }}
-    >
-      <div className="w-6 h-6 text-gray-400 text-xs font-mono flex items-center justify-center">
-        QR
-      </div>
-    </div>
-  )
-})
-
-QRCodeDisplay.displayName = 'QRCodeDisplay'
+// Re-export shared QR code component to keep API stable in this module
+export type QRCodeDisplayProps = SharedQRCodeDisplayProps
+export const QRCodeDisplay = QRCodeDisplayShared
 
 // Unified Stamp Grid Generator
 export interface StampGridResult {

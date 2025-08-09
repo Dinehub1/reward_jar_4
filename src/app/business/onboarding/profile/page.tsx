@@ -628,8 +628,10 @@ export default function BusinessProfilePage() {
                       {logoPreview || business?.logo_url ? (
                         <div className="space-y-2">
                           <img 
-                            src={logoPreview || business?.logo_url || ''} 
-                            alt="Business logo" 
+                            src={logoPreview || business?.logo_url || ''}
+                            alt="Business logo"
+                            width={80}
+                            height={80}
                             className="mx-auto h-20 w-20 object-cover rounded-lg"
                           />
                           <p className="text-sm text-green-600">

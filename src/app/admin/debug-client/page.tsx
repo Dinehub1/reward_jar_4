@@ -83,20 +83,19 @@ export default function ClientDebugPage() {
       touchSupport: 'ontouchstart' in window || navigator.maxTouchPoints > 0
     }
 
-    // @ts-ignore - newer browser API
-    if (navigator.deviceMemory) {
-      info.deviceMemory = navigator.deviceMemory
+    if ('deviceMemory' in navigator) {
+      info.deviceMemory = (navigator as unknown as { deviceMemory?: number }).deviceMemory
     }
 
-    // @ts-ignore - newer browser API
-    if (navigator.connection) {
-      info.connection = navigator.connection
+    if ('connection' in navigator) {
+      const conn = (navigator as unknown as { connection?: any }).connection
+      info.connection = conn
       setNetworkInfo({
-        type: navigator.connection.type || 'unknown',
-        effectiveType: navigator.connection.effectiveType || 'unknown',
-        downlink: navigator.connection.downlink || 0,
-        rtt: navigator.connection.rtt || 0,
-        saveData: navigator.connection.saveData || false
+        type: conn?.type || 'unknown',
+        effectiveType: conn?.effectiveType || 'unknown',
+        downlink: conn?.downlink || 0,
+        rtt: conn?.rtt || 0,
+        saveData: conn?.saveData || false
       })
     }
 

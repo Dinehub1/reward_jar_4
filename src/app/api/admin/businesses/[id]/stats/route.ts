@@ -91,14 +91,14 @@ export async function GET(
                    (customerCards?.filter(c => c.membership_card_id).length || 0)
 
     // Generate recent activity (mock data for now)
-    const recentActivity = customerCards?.slice(0, 10).map(card => ({
+    const recentActivity = (customerCards || []).slice(0, 10).map(card => ({
       id: card.id,
       type: card.stamp_card_id ? 'stamp' as const : 'membership' as const,
-      description: `${card.customers?.name || card.customers?.email || 'Customer'} ${
+      description: `${(card as any).customers?.name || (card as any).customers?.email || 'Customer'} ${
         card.stamp_card_id ? `earned ${card.current_stamps} stamps` : 'joined membership'
       }`,
       timestamp: card.created_at,
-      customer: card.customers?.name || card.customers?.email
+      customer: (card as any).customers?.name || (card as any).customers?.email
     })) || []
 
     const stats = {

@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin-client'
 import { NextRequest, NextResponse } from 'next/server'
 import QRCode from 'qrcode'
+import { buildPwaHtml } from '@/lib/wallet/builders/pwa-pass-builder'
 
 export async function GET(
   request: NextRequest,
@@ -106,258 +107,37 @@ export async function GET(
       sessions_used: customerCard.sessions_used
     })
 
-    // Helper function to adjust color brightness
-    const adjustColorBrightness = (hex: string, percent: number) => {
-      const num = parseInt(hex.replace('#', ''), 16)
-      const amt = Math.round(2.55 * percent)
-      const R = (num >> 16) + amt
-      const G = (num >> 8 & 0x00FF) + amt
-      const B = (num & 0x0000FF) + amt
-      return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
-        (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
-        (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1)
-    }
-
-    // Determine card type and styling - use card-specific colors
+    // Determine card type
     const cardTitle = isMembershipCard ? 'Membership Card' : 'Stamp Cards'
-    const cardColor = cardData.card_color || '#8B4513' // Use card-specific color or default brown
-    const primaryColor = cardColor
-    const secondaryColor = adjustColorBrightness(cardColor, -20) // Darker variant
-    const isGymMembership = isMembershipCard // Define the missing variable
+    const cardColor = cardData.card_color || '#8B4513'
+    const isGymMembership = isMembershipCard
 
-    // Generate PWA HTML
-    const html = `
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>${cardData.name} - ${cardTitle}</title>
-        <meta name="description" content="${businessData.name} ${cardTitle}">
-        
-        <!-- PWA Manifest -->
-        <link rel="manifest" href="/api/wallet/pwa/${customerCardId}/manifest">
-        <meta name="theme-color" content="${primaryColor}">
-        
-        <!-- PWA Meta Tags -->
-        <meta name="apple-mobile-web-app-capable" content="yes">
-        <meta name="apple-mobile-web-app-status-bar-style" content="default">
-        <meta name="apple-mobile-web-app-title" content="${cardTitle}">
-        
-        <!-- Icons -->
-        <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
-        <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-192x192.png">
-        
-        <style>
-            * {
-                margin: 0;
-                padding: 0;
-                box-sizing: border-box;
-            }
-            
-            body {
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                background: linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%);
-                min-height: 100vh;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                padding: 20px;
-            }
-            
-            .card-container {
-                background: white;
-                border-radius: 20px;
-                padding: 30px;
-                max-width: 400px;
-                width: 100%;
-                box-shadow: 0 20px 40px rgba(0,0,0,0.15);
-                text-align: center;
-            }
-            
-            .card-icon {
-                font-size: 64px;
-                margin-bottom: 20px;
-            }
-            
-            .card-title {
-                font-size: 24px;
-                font-weight: bold;
-                color: #1f2937;
-                margin-bottom: 8px;
-            }
-            
-            .business-name {
-                font-size: 16px;
-                color: #6b7280;
-                margin-bottom: 30px;
-            }
-            
-            .progress-container {
-                background: #f9fafb;
-                border-radius: 15px;
-                padding: 20px;
-                margin-bottom: 30px;
-            }
-            
-            .progress-label {
-                font-size: 14px;
-                color: #6b7280;
-                margin-bottom: 10px;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-            }
-            
-            .progress-value {
-                font-size: 32px;
-                font-weight: bold;
-                color: ${primaryColor};
-                margin-bottom: 15px;
-            }
-            
-            .progress-bar {
-                background: #e5e7eb;
-                height: 8px;
-                border-radius: 4px;
-                overflow: hidden;
-                margin-bottom: 10px;
-            }
-            
-            .progress-fill {
-                background: linear-gradient(90deg, ${primaryColor}, ${secondaryColor});
-                height: 100%;
-                border-radius: 4px;
-                transition: width 0.3s ease;
-            }
-            
-            .reward-info {
-                background: #fef3c7;
-                border: 1px solid #fbbf24;
-                border-radius: 10px;
-                padding: 15px;
-                margin-bottom: 20px;
-            }
-            
-            .reward-label {
-                font-size: 12px;
-                color: #92400e;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-                margin-bottom: 5px;
-            }
-            
-            .reward-text {
-                font-size: 14px;
-                color: #92400e;
-                font-weight: 500;
-            }
-            
-            .install-prompt {
-                background: #f3f4f6;
-                border-radius: 10px;
-                padding: 15px;
-                font-size: 14px;
-                color: #4b5563;
-                line-height: 1.4;
-            }
-            
-            .install-button {
-                background: ${primaryColor};
-                color: white;
-                border: none;
-                border-radius: 10px;
-                padding: 12px 24px;
-                font-size: 16px;
-                font-weight: 500;
-                cursor: pointer;
-                margin-top: 15px;
-                width: 100%;
-                transition: background-color 0.2s;
-            }
-            
-            .install-button:hover {
-                background: ${secondaryColor};
-            }
-            
-            .install-button:disabled {
-                background: #9ca3af;
-                cursor: not-allowed;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="card-container">
-            <div class="card-icon">${isGymMembership ? '🏋️‍♂️' : '☕'}</div>
-            <h1 class="card-title">${isMembershipCard ? cardData.name : 'Stamp Cards'}</h1>
-            <div class="business-name">${businessData.name}</div>
-            
-            <div class="progress-container">
-                <div class="progress-label">${isGymMembership ? 'Sessions Used' : 'Stamps Collected'}</div>
-                <div class="progress-value">
-                    ${isGymMembership 
-                      ? `${customerCard.sessions_used || 0}/${cardData.total_sessions || 0}`
-                      : `${customerCard.current_stamps || 0}/${cardData.total_stamps}`
-                    }
-                </div>
-                <div class="progress-bar">
-                    <div class="progress-fill" style="width: ${
-                      isGymMembership 
-                        ? Math.min(((customerCard.sessions_used || 0) / (cardData.total_sessions || 1)) * 100, 100)
-                        : Math.min(((customerCard.current_stamps || 0) / cardData.total_stamps) * 100, 100)
-                    }%"></div>
-                </div>
-            </div>
-            
-            <div class="reward-info">
-                <div class="reward-label">${isGymMembership ? 'Benefits' : 'Reward'}</div>
-                <div class="reward-text">${cardData.reward_description || 'Enjoy your rewards!'}</div>
-            </div>
-            
-            <div class="install-prompt">
-                <div>📱 Add this ${cardTitle.toLowerCase()} to your home screen for quick access!</div>
-                <button class="install-button" id="installButton" style="display: none;">
-                    Add to Home Screen
-                </button>
-            </div>
-        </div>
-
-        <script>
-            // PWA Installation
-            let deferredPrompt;
-            const installButton = document.getElementById('installButton');
-
-            window.addEventListener('beforeinstallprompt', (e) => {
-                e.preventDefault();
-                deferredPrompt = e;
-                installButton.style.display = 'block';
-            });
-
-            installButton.addEventListener('click', async () => {
-                if (deferredPrompt) {
-                    deferredPrompt.prompt();
-                    const { outcome } = await deferredPrompt.userChoice;
-                    console.log('PWA install outcome:', outcome);
-                    deferredPrompt = null;
-                    installButton.style.display = 'none';
-                }
-            });
-
-            // Service Worker Registration
-            if ('serviceWorker' in navigator) {
-                window.addEventListener('load', () => {
-                    navigator.serviceWorker.register('/sw.js')
-                        .then((registration) => {
-                            console.log('SW registered: ', registration);
-                        })
-                        .catch((registrationError) => {
-                            console.log('SW registration failed: ', registrationError);
-                        });
-                });
-            }
-        </script>
-    </body>
-    </html>
-    `
+    // Build HTML via builder
+    const html = buildPwaHtml(
+      isMembershipCard
+        ? {
+            type: 'membership',
+            businessName: businessData.name,
+            cardName: cardData.name,
+            cardColor,
+            sessionsUsed: customerCard.sessions_used || 0,
+            totalSessions: cardData.total_sessions || 0,
+            cost: (customerCard as any).cost,
+            expiryDate: (customerCard as any).expiry_date || null,
+            qrCodeDataUrl: qrCodeDataUrl,
+          }
+        : {
+            type: 'stamp',
+            businessName: businessData.name,
+            cardName: 'Stamp Cards',
+            cardColor,
+            iconEmoji: cardData.icon_emoji || '⭐',
+            currentStamps: customerCard.current_stamps || 0,
+            totalStamps: cardData.total_stamps,
+            rewardDescription: cardData.reward_description,
+            qrCodeDataUrl: qrCodeDataUrl,
+          }
+    )
 
     return new NextResponse(html, {
       headers: {

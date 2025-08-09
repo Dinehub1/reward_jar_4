@@ -1,6 +1,7 @@
 'use client'
 
-import { motion, AnimatePresence } from 'framer-motion'
+import React from 'react'
+import { motion, AnimatePresence, type Easing } from 'framer-motion'
 import { usePathname } from 'next/navigation'
 
 interface PageTransitionProps {
@@ -9,8 +10,8 @@ interface PageTransitionProps {
 }
 
 // Custom easing curves for smooth transitions
-const easeInOut = [0.4, 0.0, 0.2, 1]
-const easeOut = [0.0, 0.0, 0.2, 1]
+const easeInOut: Easing = [0.4, 0.0, 0.2, 1]
+const easeOut: Easing = [0.0, 0.0, 0.2, 1]
 
 const PageTransition = ({ children, className }: PageTransitionProps) => {
   const pathname = usePathname()

@@ -79,7 +79,7 @@ export default function JoinCardPage() {
         console.log('📊 Searching for stamp card with ID:', cardId)
         
         // Try stamp cards first
-        let { data: stampCard, error: stampError } = await supabase
+        const { data: stampCard, error: stampError } = await supabase
           .from('stamp_cards')
           .select(`
             id,
@@ -111,7 +111,7 @@ export default function JoinCardPage() {
         console.log('📊 Searching for membership card with ID:', cardId)
 
         // Try membership cards
-        let { data: membershipCard, error: membershipError } = await supabase
+        const { data: membershipCard, error: membershipError } = await supabase
           .from('membership_cards')
           .select(`
             id,
@@ -463,7 +463,7 @@ export default function JoinCardPage() {
               )}
               
               <p className="text-gray-600 mb-6">
-                Choose how you'd like to store your {cardInfo.name} card:
+                Choose how you&apos;d like to store your {cardInfo.name} card:
               </p>
 
               <div className="space-y-3">
@@ -480,7 +480,7 @@ export default function JoinCardPage() {
                       <div>
                         <h3 className="font-semibold">Apple Wallet</h3>
                         <p className="text-sm text-gray-600">
-                          Add to your iPhone's built-in wallet app
+                          Add to your iPhone&apos;s built-in wallet app
                         </p>
                       </div>
                     </div>

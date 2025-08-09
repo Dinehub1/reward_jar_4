@@ -532,8 +532,10 @@ export default function BusinessProfilePage() {
                 {formData.logo_url.trim() && !validationErrors.logo_url && (
                   <div className="mt-2">
                     <img 
-                      src={formData.logo_url} 
-                      alt="Logo preview" 
+                      src={formData.logo_url}
+                      alt="Logo preview"
+                      width={64}
+                      height={64}
                       className="w-16 h-16 object-cover rounded-lg border"
                       onError={(e) => {
                         e.currentTarget.style.display = 'none'

@@ -851,7 +851,7 @@ function DeleteBusinessDialog({ business, onBusinessDeleted }: { business: Busin
         <DialogHeader>
           <DialogTitle>Delete Business</DialogTitle>
           <DialogDescription>
-            Are you sure you want to delete "{business.name}"? This action cannot be undone.
+            Are you sure you want to delete &quot;{business.name}&quot;? This action cannot be undone.
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">

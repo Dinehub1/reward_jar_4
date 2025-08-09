@@ -8,6 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { buildGoogleIds, createLoyaltyObject, createSaveToWalletJwt, buildSaveUrl } from '@/lib/wallet/builders/google-pass-builder'
 import { createAdminClient } from '@/lib/supabase/admin-client'
 
 export async function GET(
@@ -64,78 +65,23 @@ export async function GET(
       businessData = data
     }
 
-    // Use existing approved class
-    const issuerID = process.env.GOOGLE_ISSUER_ID || '3388000000022940702'
-    const classId = `${issuerID}.loyalty.rewardjar_v3` // Use the approved class
-    const objectId = `${classId}.${customerCardId.replace(/-/g, '')}`
-
-    console.log('🆔 Generated IDs:', { classId, objectId })
+    const ids = buildGoogleIds(customerCardId)
+    console.log('🆔 Generated IDs:', { classId: ids.classId, objectId: ids.objectId })
 
     // We're using the existing approved class, so no need to define it again
 
-    // Create minimal loyalty object
-    const loyaltyObject = {
-      id: objectId,
-      classId: classId,
-      state: 'ACTIVE',
-      loyaltyPoints: {
-        label: 'Points',
-        balance: {
-          string: `${customerCard.current_stamps || 0}/${cardData?.total_stamps || cardData?.stamps_required || 10}`
-        }
-      },
-      accountName: 'Guest User',
-      accountId: customerCard.id.substring(0, 20),
-      barcode: {
-        type: 'QR_CODE',
-        value: customerCard.id,
-        alternateText: customerCard.id.substring(0, 20)
-      }
-    }
+    const loyaltyObject = createLoyaltyObject({
+      ids,
+      current: customerCard.current_stamps || 0,
+      total: cardData?.total_stamps || cardData?.stamps_required || 10,
+      displayName: 'Guest User',
+      objectDisplayId: customerCard.id,
+    })
 
-    // Create JWT payload - only include the object, not the class since it already exists
-    const payload = {
-      iss: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-      aud: 'google',
-      typ: 'savetowallet',
-      iat: Math.floor(Date.now() / 1000),
-      exp: Math.floor(Date.now() / 1000) + (60 * 60),
-      payload: {
-        loyaltyObjects: [loyaltyObject]
-      }
-    }
-
-    console.log('🔍 JWT payload created')
-
-    // Check environment variables
-    const serviceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
-    let privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY
-
-    if (!serviceAccountEmail || !privateKey) {
-      console.error('❌ Missing Google Wallet credentials')
-      return NextResponse.json({ error: 'Google Wallet not configured' }, { status: 500 })
-    }
-
-    // Process private key
-    privateKey = privateKey.replace(/\\n/g, '\n').replace(/^["']|["']$/g, '')
-
-    if (!privateKey.includes('-----BEGIN PRIVATE KEY-----')) {
-      console.error('❌ Invalid private key format')
-      return NextResponse.json({ error: 'Invalid private key format' }, { status: 500 })
-    }
-
-    // Sign JWT
-    const crypto = require('crypto')
-    
+    // Create Save to Wallet JWT
     let jwt: string
     try {
-      const header = Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).toString('base64url')
-      const payloadStr = Buffer.from(JSON.stringify(payload)).toString('base64url')
-      const signatureInput = `${header}.${payloadStr}`
-      
-      const signature = crypto.sign('RSA-SHA256', Buffer.from(signatureInput), privateKey).toString('base64url')
-      jwt = `${signatureInput}.${signature}`
-      
+      jwt = createSaveToWalletJwt(loyaltyObject)
       console.log('✅ JWT signed successfully')
     } catch (signError) {
       console.error('❌ JWT signing failed:', signError)
@@ -146,7 +92,7 @@ export async function GET(
     }
 
     // Generate save URL
-    const saveUrl = `https://pay.google.com/gp/v/save/${jwt}`
+    const saveUrl = buildSaveUrl(jwt)
 
     // Return HTML page
     const html = `

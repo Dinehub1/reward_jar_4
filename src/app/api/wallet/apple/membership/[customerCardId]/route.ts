@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient, getServerUser, getServerSession } from '@/lib/supabase/server'
+import { buildApplePass } from '@/lib/wallet/builders/apple-pass-builder'
+import { buildAppleBarcode, getAppleWebServiceUrl } from '@/lib/wallet/apple-helpers'
 import validateUUID from 'uuid-validate'
 
 // Type definitions for membership card data
@@ -158,144 +160,31 @@ export async function GET(
       )
     }
     
-    // Generate PKPass data for gym membership
-    const passData = {
-      formatVersion: 1,
-      passTypeIdentifier: process.env.APPLE_PASS_TYPE_IDENTIFIER,
-      serialNumber: customerCardId,
-      teamIdentifier: process.env.APPLE_TEAM_IDENTIFIER,
-      organizationName: "RewardJar",
-      description: `Premium Gym Membership - ${businessData.name}`,
-      
-      // Membership-specific styling (indigo theme)
-      backgroundColor: "rgb(99, 102, 241)", // indigo-500
-      foregroundColor: "rgb(255, 255, 255)", // white
-      labelColor: "rgb(255, 255, 255)", // white
-      logoText: "RewardJar",
-      
-      // Store card layout for gym membership
-      storeCard: {
-        // Primary display - sessions remaining
-        primaryFields: [
-          {
-            key: "sessions",
-            label: "Sessions Remaining",
-            value: `${sessionsRemaining}/${customerCard.total_sessions || 20}`,
-            textAlignment: "PKTextAlignmentCenter"
-          }
-        ],
-        
-        // Secondary fields - value and expiry
-        secondaryFields: [
-          {
-            key: "value",
-            label: "Membership Value",
-            value: `₩${(customerCard.cost || 15000).toLocaleString()}`,
-            textAlignment: "PKTextAlignmentLeft"
-          },
-          {
-            key: "expiry",
-            label: "Expires",
-            value: customerCard.expiry_date ? 
-              new Date(customerCard.expiry_date).toLocaleDateString() : 
-              "No expiry",
-            textAlignment: "PKTextAlignmentRight"
-          }
-        ],
-        
-        // Header field - membership type
-        headerFields: [
-          {
-            key: "membership_type",
-            label: "Membership",
-            value: "Premium Gym Membership",
-            textAlignment: "PKTextAlignmentCenter"
-          }
-        ],
-        
-        // Auxiliary fields - additional info
-        auxiliaryFields: [
-          {
-            key: "facility",
-            label: "Facility",
-            value: businessData.name,
-            textAlignment: "PKTextAlignmentLeft"
-          },
-          {
-            key: "status",
-            label: "Status",
-            value: isExpired ? 'Expired' : 
-                   isCompleted ? 'Complete' : 'Active',
-            textAlignment: "PKTextAlignmentRight"
-          }
-        ],
-        
-        // Back of card information
-        backFields: [
-          {
-            key: "membership_details",
-            label: "Membership Details",
-            value: `This premium gym membership includes ${customerCard.total_sessions || 20} sessions at ${businessData.name}.`
-          },
-          {
-            key: "usage_info",
-            label: "Usage Information",
-            value: `Sessions Used: ${customerCard.sessions_used || 0}\nSessions Remaining: ${sessionsRemaining}\nPer-Session Value: ₩${Math.round(costPerSession).toLocaleString()}`
-          },
-          {
-            key: "validity_info",
-            label: "Membership Validity",
-            value: customerCard.expiry_date ? 
-              `Valid until: ${new Date(customerCard.expiry_date).toLocaleDateString()}\nPurchased: ${new Date(customerCard.created_at).toLocaleDateString()}` :
-              `Purchased: ${new Date(customerCard.created_at).toLocaleDateString()}\nNo expiry date`
-          },
-          {
-            key: "instructions",
-            label: "How to Use",
-            value: "Show this pass at the gym to mark session usage. Your pass will automatically update when sessions are used."
-          },
-          {
-            key: "support",
-            label: "Support",
-            value: `Membership ID: ${customerCardId.substring(0, 8)}\nFor questions, contact the facility or visit rewardjar.com`
-          }
-        ]
+    // Generate PKPass data for gym membership via centralized builder
+    const passData = buildApplePass(
+      {
+        name: 'Premium Gym Membership',
+        total_sessions: customerCard.total_sessions,
+        cost: customerCard.cost,
       },
-      
-      // QR code for session marking
-      barcode: {
-        message: `gym:${customerCardId}`,
-        format: "PKBarcodeFormatQR",
-        messageEncoding: "iso-8859-1",
-        altText: `Gym Membership ID: ${customerCardId.substring(0, 8)}`
-      },
-      
-      // Web service for real-time updates
-      webServiceURL: `${process.env.BASE_URL || 'https://www.rewardjar.xyz'}/api/wallet/apple/membership/updates`,
-      authenticationToken: customerCardId,
-      
-      // Expiry and relevance
-      ...(customerCard.expiry_date && { expirationDate: customerCard.expiry_date }),
-      relevantDate: new Date().toISOString(),
-      
-      // User metadata
-      userInfo: {
-        customerCardId: customerCardId,
-        membershipType: 'gym',
-        businessName: businessData.name,
-        cardType: 'membership'
-      },
-      
-      // Conditional styling based on status
-      ...(isExpired && {
-        backgroundColor: "rgb(239, 68, 68)", // red-500 for expired
-        foregroundColor: "rgb(255, 255, 255)"
-      }),
-      ...(isCompleted && {
-        backgroundColor: "rgb(34, 197, 94)", // green-500 for completed
-        foregroundColor: "rgb(255, 255, 255)"
-      })
-    }
+      businessData,
+      customerCardId,
+      {
+        type: 'membership',
+        derived: {
+          progressLabel: 'Sessions Used',
+          remainingLabel: isExpired || isCompleted ? 'Status' : 'Remaining',
+          primaryValue: `${customerCard.sessions_used || 0}/${customerCard.total_sessions || 20}`,
+          progressPercent: progress,
+          remainingCount: sessionsRemaining,
+          isCompleted,
+          isExpired,
+          membershipCost: customerCard.cost,
+          membershipTotalSessions: customerCard.total_sessions,
+          membershipExpiryDate: customerCard.expiry_date,
+        },
+      }
+    ) as any
 
     // For debug mode, return JSON structure
     if (request.nextUrl.searchParams.get('debug') === 'true') {

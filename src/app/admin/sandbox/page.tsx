@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { CardLivePreview } from '@/components/unified/CardLivePreview'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -35,52 +36,21 @@ interface TestResult {
 }
 
 function WalletPreview({ card, walletType }: { card: TestCard, walletType: 'apple' | 'google' | 'pwa' }) {
-  const isStampCard = card.type === 'stamp'
-  const themeColor = card.card_color || (isStampCard ? '#10b981' : '#6366f1')
-  const themeGradient = isStampCard 
-    ? 'from-green-500 to-green-600' 
-    : 'from-indigo-500 to-indigo-600'
-
   return (
-    <div className={`bg-gradient-to-br ${themeGradient} rounded-lg p-6 text-white shadow-lg`}>
-      <div className="flex items-center justify-between mb-4">
-        <div className="text-lg font-bold">{card.name}</div>
-        <div className="text-sm opacity-80">{walletType.toUpperCase()}</div>
-      </div>
-      
-      <div className="text-sm opacity-90 mb-4">{card.business_name}</div>
-      
-      <div className="space-y-2">
-        {isStampCard ? (
-          <>
-            <div className="text-2xl font-bold">0/{card.total_stamps}</div>
-            <div className="text-sm opacity-80">Stamps Collected</div>
-            <div className="w-full bg-white/20 rounded-full h-2">
-              <div className="bg-white h-2 rounded-full" style={{ width: '0%' }}></div>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="text-2xl font-bold">0/{card.total_sessions}</div>
-            <div className="text-sm opacity-80">Sessions Used</div>
-            <div className="w-full bg-white/20 rounded-full h-2">
-              <div className="bg-white h-2 rounded-full" style={{ width: '0%' }}></div>
-            </div>
-            <div className="text-sm opacity-80">
-              Value: ${card.cost?.toLocaleString()}
-            </div>
-          </>
-        )}
-      </div>
-      
-      <div className="mt-4 pt-4 border-t border-white/20">
-        <div className="text-xs opacity-70">
-          {walletType === 'apple' && 'Add to Apple Wallet'}
-          {walletType === 'google' && 'Save to Google Pay'}
-          {walletType === 'pwa' && 'PWA Wallet Card'}
-        </div>
-      </div>
-    </div>
+    <CardLivePreview
+      defaultPlatform={walletType}
+      showControls={false}
+      cardData={{
+        cardType: card.type === 'stamp' ? 'stamp' : 'membership',
+        businessName: card.business_name,
+        cardName: card.name,
+        cardColor: card.card_color || '#10b981',
+        iconEmoji: card.icon_emoji || '⭐',
+        stampsRequired: card.total_stamps,
+        totalSessions: card.total_sessions,
+        reward: card.reward_description,
+      }}
+    />
   )
 }
 

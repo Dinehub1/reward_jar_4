@@ -17,6 +17,10 @@
 /.next/
 /out/
 
+# wallet build artifacts
+/dist/
+*.pkpass
+
 # production
 /build
 

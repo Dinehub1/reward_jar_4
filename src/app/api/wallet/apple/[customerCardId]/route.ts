@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin-client'
 import { getAppleWalletBaseUrl } from '@/lib/env'
+import { buildApplePassJson } from '@/lib/wallet/builders/apple-pass-builder'
+import { buildAppleBarcode, getAppleWebServiceUrl, generatePKPass as generatePKPassShared } from '@/lib/wallet/apple-helpers'
 import crypto from 'crypto'
 import archiver from 'archiver'
 import forge from 'node-forge'
@@ -155,137 +157,49 @@ export async function GET(
       remainingLabel = isCompleted ? "Status" : "Remaining"
     }
 
-    // Generate Apple Wallet pass JSON
+    // Generate Apple Wallet pass JSON via centralized builder
+    const basePass = buildApplePassJson({
+      customerCardId,
+      isMembershipCard,
+      cardData: {
+        name: cardData.name,
+        total_stamps: cardData.total_stamps,
+        reward_description: cardData.reward_description,
+        card_color: cardData.card_color,
+      },
+      businessData: {
+        name: businessData.name,
+        description: businessData.description,
+      },
+      derived: {
+        progressLabel,
+        remainingLabel,
+        primaryValue,
+        progressPercent: progress,
+        remainingCount: remaining,
+        isCompleted,
+        isExpired: isMembershipCard ? (customerCard.expiry_date ? new Date(customerCard.expiry_date) < new Date() : false) : undefined,
+        membershipCost: customerCard.membership_cards?.[0]?.cost,
+        membershipTotalSessions: customerCard.membership_cards?.[0]?.total_sessions,
+        membershipExpiryDate: customerCard.expiry_date ?? null,
+      },
+    })
+
     const passData = {
-      formatVersion: 1,
-      passTypeIdentifier: process.env.APPLE_PASS_TYPE_IDENTIFIER,
-      serialNumber: customerCardId,
-      teamIdentifier: process.env.APPLE_TEAM_IDENTIFIER,
-      organizationName: "RewardJar",
-      description: `${cardData.name} - ${businessData.name}`,
-      logoText: "RewardJar",
-      backgroundColor: cardData.card_color ? hexToRgb(cardData.card_color) : (isMembershipCard ? "rgb(99, 102, 241)" : "rgb(16, 185, 129)"), // Use card-specific color
-      foregroundColor: "rgb(255, 255, 255)",
-      labelColor: "rgb(255, 255, 255)",
-      
-      storeCard: {
-        primaryFields: [
-          {
-            key: isMembershipCard ? "sessions" : "stamps",
-            label: progressLabel,
-            value: primaryValue,
-            textAlignment: "PKTextAlignmentCenter"
-          }
-        ],
-        secondaryFields: [
-          {
-            key: "progress",
-            label: "Progress",
-            value: `${Math.round(progress)}%`,
-            textAlignment: "PKTextAlignmentLeft"
-          },
-          {
-            key: "remaining",
-            label: remainingLabel,
-            value: isCompleted ? 
-              (isMembershipCard ? "Complete" : "Completed!") : 
-              `${remaining} ${isMembershipCard ? 'sessions' : 'stamps'}`,
-            textAlignment: "PKTextAlignmentRight"
-          }
-        ],
-        auxiliaryFields: [
-          {
-            key: "business",
-            label: "Business",
-            value: businessData.name,
-            textAlignment: "PKTextAlignmentLeft"
-          },
-          ...(isMembershipCard ? [
-            {
-              key: "cost",
-              label: "Value",
-              value: `₩${(customerCard.membership_cards?.[0]?.cost || 15000).toLocaleString()}`,
-              textAlignment: "PKTextAlignmentRight"
-            }
-          ] : [
-            {
-              key: "reward",
-              label: "Reward",
-              value: cardData.reward_description,
-              textAlignment: "PKTextAlignmentRight"
-            }
-          ])
-        ],
-        headerFields: [
-          {
-            key: "card_name",
-            label: isMembershipCard ? "Membership" : "Stamp Card",
-                          value: cardData.name,
-            textAlignment: "PKTextAlignmentCenter"
-          }
-        ],
-        backFields: [
-          {
-            key: "description",
-            label: "About",
-            value: isMembershipCard ? 
-              `Gym membership with ${customerCard.membership_cards?.[0]?.total_sessions || 20} sessions. Value: ₩${(customerCard.membership_cards?.[0]?.cost || 15000).toLocaleString()}.` :
-              `Collect ${cardData.total_stamps} stamps to earn: ${cardData.reward_description}`
-          },
-          {
-            key: "business_info",
-            label: businessData.name,
-            value: businessData.description || (isMembershipCard ? 
-              "Visit us to use your gym sessions!" : 
-              "Visit us to collect stamps and earn rewards!")
-          },
-          {
-            key: "instructions",
-            label: "How to Use",
-            value: isMembershipCard ?
-              "Show this pass at the gym to mark session usage. Your pass will automatically update when sessions are used." :
-              "Show this pass to collect stamps at participating locations. Your pass will automatically update when new stamps are added."
-          },
-          ...(isMembershipCard && customerCard.expiry_date ? [
-            {
-              key: "expiry_info",
-              label: "Valid Until",
-              value: new Date(customerCard.expiry_date).toLocaleDateString()
-            }
-          ] : []),
-          {
-            key: "contact",
-            label: "Questions?",
-            value: "Contact the business directly or visit rewardjar.com for support."
-          }
-        ]
-      },
-      
-      barcode: {
-        message: customerCardId,
-        format: "PKBarcodeFormatQR",
-        messageEncoding: "iso-8859-1",
-        altText: `${isMembershipCard ? 'Membership' : 'Card'} ID: ${customerCardId}`
-      },
-      
-      webServiceURL: `${process.env.BASE_URL || 'https://www.rewardjar.xyz'}/api/wallet/apple/updates`,
+      ...basePass,
+      ...buildAppleBarcode(customerCardId, { altTextPrefix: isMembershipCard ? 'Membership ID' : 'Card ID' }),
+      webServiceURL: getAppleWebServiceUrl(),
       authenticationToken: customerCardId,
-      
       userInfo: {
-        customerCardId: customerCardId,
-        stampCardId: cardData.id,
+        customerCardId,
+        stampCardId: (cardData as any).id,
         businessName: businessData.name,
-        cardType: isMembershipCard ? 'membership' : 'stamp'
+        cardType: isMembershipCard ? 'membership' : 'stamp',
       },
-      
       locations: [],
       maxDistance: 1000,
       relevantDate: new Date().toISOString(),
-      
-      // Add expiry for gym memberships
-      ...(isMembershipCard && customerCard.expiry_date && {
-        expirationDate: customerCard.expiry_date
-      })
+      ...(isMembershipCard && customerCard.expiry_date && { expirationDate: customerCard.expiry_date }),
     }
 
     // Check if we have all required certificates for PKPass generation
@@ -335,7 +249,7 @@ export async function GET(
           )
         }
         
-        const pkpassBuffer = await generatePKPass(passData)
+        const pkpassBuffer = await generatePKPassShared(passData)
         
         console.log('✅ PKPass generated successfully:', {
           size: pkpassBuffer.length,
@@ -343,7 +257,7 @@ export async function GET(
         })
         
         // IMPROVED HEADERS for better iOS Safari compatibility
-        return new NextResponse(pkpassBuffer, {
+        return new NextResponse(pkpassBuffer as unknown as BodyInit, {
           status: 200,
           headers: {
             'Content-Type': 'application/vnd.apple.pkpass',

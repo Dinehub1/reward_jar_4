@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
 
     // Now generate customer cards for each business
     const customerCardsToCreate: CustomerCardData[] = []
-    let cardStats = {
+    const cardStats = {
       totalCards: 0,
       stampCards: 0,
       membershipCards: 0,

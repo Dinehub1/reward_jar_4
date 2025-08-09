@@ -1,5 +1,10 @@
 'use client'
 
+// Types for Google Maps JS API
+ 
+// @ts-expect-error - type-only module for global google namespace
+import type {} from '@types/google.maps'
+
 import React, { useEffect, useRef, useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'

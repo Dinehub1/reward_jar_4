@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if customer already exists by email
-    let { data: existingCustomer } = await supabase
+    const { data: existingCustomer } = await supabase
       .from('customers')
       .select('id')
       .eq('email', email.trim())

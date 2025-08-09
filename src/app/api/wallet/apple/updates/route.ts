@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient, getServerUser, getServerSession } from '@/lib/supabase/server'
+import { buildApplePass } from '@/lib/wallet/builders/apple-pass-builder'
+import { buildAppleBarcode, getAppleWebServiceUrl } from '@/lib/wallet/apple-helpers'
 
 // Apple Wallet Update Service
 // This endpoint handles Apple Wallet pass updates when data changes
@@ -102,122 +104,42 @@ export async function POST(request: NextRequest) {
     const isCompleted = customerCard.current_stamps >= stampCardData.total_stamps
     const stampsRemaining = Math.max(stampCardData.total_stamps - customerCard.current_stamps, 0)
 
-    // Generate updated pass data
+    // Generate updated pass data using centralized builder
+    const basePass = buildApplePass(
+      {
+        name: stampCardData.name,
+        total_stamps: stampCardData.total_stamps,
+        reward_description: stampCardData.reward_description,
+      },
+      { name: businessData.name, description: businessData.description },
+      serialNumber,
+      {
+        type: 'stamp',
+        derived: {
+          progressLabel: 'Stamps Collected',
+          remainingLabel: isCompleted ? 'Status' : 'Remaining',
+          primaryValue: `${customerCard.current_stamps}/${stampCardData.total_stamps}`,
+          progressPercent: progress,
+          remainingCount: stampsRemaining,
+          isCompleted,
+        },
+      }
+    ) as any
+
     const updatedPassData = {
-      formatVersion: 1,
-      passTypeIdentifier: process.env.APPLE_PASS_TYPE_IDENTIFIER,
-      serialNumber: serialNumber,
-      teamIdentifier: process.env.APPLE_TEAM_IDENTIFIER,
-      organizationName: "RewardJar",
-      description: `${stampCardData.name} - ${businessData.name}`,
-      logoText: "RewardJar",
-      backgroundColor: "rgb(16, 185, 129)", // green-500
-      foregroundColor: "rgb(255, 255, 255)",
-      labelColor: "rgb(255, 255, 255)",
-      
-      storeCard: {
-        primaryFields: [
-          {
-            key: "stamps",
-            label: "Stamps Collected",
-            value: `${customerCard.current_stamps}/${stampCardData.total_stamps}`,
-            textAlignment: "PKTextAlignmentCenter"
-          }
-        ],
-        secondaryFields: [
-          {
-            key: "progress",
-            label: "Progress",
-            value: `${Math.round(progress)}%`,
-            textAlignment: "PKTextAlignmentLeft"
-          },
-          {
-            key: "remaining",
-            label: isCompleted ? "Status" : "Remaining",
-            value: isCompleted ? "Completed!" : `${stampsRemaining} stamps`,
-            textAlignment: "PKTextAlignmentRight"
-          }
-        ],
-        auxiliaryFields: [
-          {
-            key: "business",
-            label: "Business",
-            value: businessData.name,
-            textAlignment: "PKTextAlignmentLeft"
-          },
-          {
-            key: "reward",
-            label: "Reward",
-            value: stampCardData.reward_description,
-            textAlignment: "PKTextAlignmentLeft"
-          }
-        ],
-        headerFields: [
-          {
-            key: "card_name",
-            label: "Loyalty Card",
-            value: stampCardData.name,
-            textAlignment: "PKTextAlignmentCenter"
-          }
-        ],
-        backFields: [
-          {
-            key: "description",
-            label: "About",
-            value: `Collect ${stampCardData.total_stamps} stamps to earn: ${stampCardData.reward_description}`
-          },
-          {
-            key: "business_info",
-            label: businessData.name,
-            value: businessData.description || "Visit us to collect stamps and earn rewards!"
-          },
-          {
-            key: "customer_info",
-            label: "Customer",
-            value: `This card belongs to ${customerData.name} (${customerData.email})`
-          },
-          {
-            key: "last_updated",
-            label: "Last Updated",
-            value: new Date(customerCard.updated_at).toLocaleDateString()
-          }
-        ]
-      },
-
-      // QR code with customer card ID
-      barcodes: [
-        {
-          message: serialNumber,
-          format: "PKBarcodeFormatQR",
-          messageEncoding: "iso-8859-1",
-          altText: `Card ID: ${serialNumber}`
-        }
-      ],
-      
-      // Legacy barcode for iOS 8 compatibility
-      barcode: {
-        message: serialNumber,
-        format: "PKBarcodeFormatQR",
-        messageEncoding: "iso-8859-1",
-        altText: `Card ID: ${serialNumber}`
-      },
-
-      // Web service configuration
-      webServiceURL: `${process.env.BASE_URL || 'https://rewardjar.com'}/api/wallet/apple/updates`,
+      ...basePass,
+      ...buildAppleBarcode(serialNumber, { altTextPrefix: 'Card ID' }),
+      webServiceURL: getAppleWebServiceUrl(),
       authenticationToken: serialNumber,
-      
-      // Metadata
       userInfo: {
         customerCardId: serialNumber,
         stampCardId: stampCardData.id,
         businessName: businessData.name,
-        lastUpdated: customerCard.updated_at
+        lastUpdated: customerCard.updated_at,
       },
-
-      // Relevance
       locations: [],
       maxDistance: 1000,
-      relevantDate: new Date().toISOString()
+      relevantDate: new Date().toISOString(),
     }
 
     // Check if Apple Wallet certificates are configured

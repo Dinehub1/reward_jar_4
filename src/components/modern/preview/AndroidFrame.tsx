@@ -62,7 +62,7 @@ export const AndroidFrame: React.FC<AndroidFrameProps> = ({
           rounded-[2.5rem] p-2
         `}
         style={{ 
-          boxShadow: designTokens.shadows.device,
+          boxShadow: designTokens.wallet.shadows.device,
           filter: 'drop-shadow(0 4px 20px rgba(0, 0, 0, 0.15))'
         }}
       >

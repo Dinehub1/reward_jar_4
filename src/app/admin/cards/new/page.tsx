@@ -36,6 +36,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
+import Image from 'next/image'
 import { PageTransition } from '@/components/modern/layout/PageTransition'
 import { Slider } from '@/components/ui/slider'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -68,8 +69,7 @@ import { AndroidFrame } from '@/components/modern/preview/AndroidFrame'
 import { WebFrame } from '@/components/modern/preview/WebFrame'
 import { designTokens, modernStyles } from '@/lib/design-tokens'
 import { motion, AnimatePresence } from 'framer-motion'
-import { WalletPreviewCard } from '@/components/modern/wallet/WalletPreviewCard'
-import type { StampCard } from '@/components/modern/wallet/WalletPreviewCard'
+import { CardLivePreview } from '@/components/unified/CardLivePreview'
 
 // Types
 interface Business {
@@ -313,33 +313,6 @@ const LivePreview = React.memo(({
   // Calculate demo progress (show about 40% completion for preview)
   const demoFilledStamps = Math.max(1, Math.floor(cardData.stampsRequired * 0.4))
   
-  // Transform CardFormData to StampCard format for the unified component
-  const stampCard: StampCard = {
-    id: 'preview-card',
-    business_id: cardData.businessId,
-    card_name: cardData.cardName,
-    reward: cardData.reward,
-    reward_description: cardData.rewardDescription,
-    stamps_required: cardData.stampsRequired,
-    status: 'active',
-    card_color: cardData.cardColor,
-    icon_emoji: cardData.iconEmoji,
-    barcode_type: cardData.barcodeType as 'PDF417' | 'QR_CODE',
-    card_expiry_days: cardData.cardExpiryDays,
-    reward_expiry_days: cardData.rewardExpiryDays,
-    stamp_config: cardData.stampConfig,
-    card_description: cardData.cardDescription,
-    how_to_earn_stamp: cardData.howToEarnStamp,
-    reward_details: cardData.rewardDetails,
-    earned_stamp_message: cardData.earnedStampMessage,
-    earned_reward_message: cardData.earnedRewardMessage,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    business: {
-      name: cardData.businessName,
-      logo_url: cardData.businessLogoUrl
-    }
-  }
 
   const previewSettings = {
     showBackPage,
@@ -356,16 +329,26 @@ const LivePreview = React.memo(({
           <div className="text-gray-500">Loading wallet preview...</div>
         </div>
       }>
-        <WalletPreviewCard
-          platform={activeView === 'pwa' ? 'web' : activeView}
-          card={stampCard}
-          settings={previewSettings}
-          onToggleBack={onToggleBack}
+        <CardLivePreview
+          defaultPlatform={activeView}
+          showControls={false}
+          cardData={{
+            cardType: 'stamp',
+            businessName: cardData.businessName,
+            businessLogoUrl: cardData.businessLogoUrl,
+            cardName: cardData.cardName,
+            cardColor: cardData.cardColor,
+            iconEmoji: cardData.iconEmoji,
+            stampsRequired: cardData.stampsRequired,
+            reward: cardData.reward,
+            cardDescription: cardData.cardDescription,
+          }}
         />
       </Suspense>
     </div>
   )
 })
+LivePreview.displayName = 'LivePreview'
 
 // Main Component with Search Params
 function CardCreationPageContent() {
@@ -662,11 +645,7 @@ function CardCreationPageContent() {
                   <div className="flex items-center gap-2">
                     {business.logo_url && (
                       <div className="w-4 h-4 rounded overflow-hidden bg-gray-100 flex items-center justify-center">
-                        <img 
-                          src={business.logo_url} 
-                          alt="" 
-                          className="w-3 h-3 object-contain"
-                        />
+                        <Image src={business.logo_url} alt="" width={12} height={12} className="w-3 h-3 object-contain" />
                       </div>
                     )}
                     <span>{business.name}</span>
@@ -1030,7 +1009,7 @@ function CardCreationPageContent() {
         <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
           <div className="flex items-center justify-between mb-3">
             <h4 className="font-semibold text-blue-900">Back Page Preview</h4>
-            <div className="text-sm text-blue-700">This information appears when customers tap "Details"</div>
+            <div className="text-sm text-blue-700">This information appears when customers tap &quot;Details&quot;</div>
           </div>
           <div className="bg-white p-4 rounded border space-y-3 text-sm">
             <div>

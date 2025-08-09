@@ -80,7 +80,7 @@ export default function TestAuthDebugPage() {
       ]
 
       setAuthTests(mockAuthTests)
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error loading auth debug data:', error)
     } finally {
       setIsLoading(false)
@@ -141,10 +141,10 @@ export default function TestAuthDebugPage() {
             }
           : test
       ))
-    } catch (error) {
+    } catch (error: unknown) {
       setAuthTests(prev => prev.map(test => 
         test.id === testId 
-          ? { ...test, status: 'failed', result: { error: error.message } }
+          ? { ...test, status: 'failed', result: { error: error instanceof Error ? error.message : 'Unknown error' } }
           : test
       ))
     }

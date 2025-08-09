@@ -7,6 +7,7 @@
 
 import useSWR from 'swr'
 import { adminNotifications } from '@/lib/admin-events'
+import { fetchJsonWithTimeout } from '@/lib/admin-fetch'
 import type { 
   AdminStats, 
   Business, 
@@ -44,59 +45,30 @@ const ADMIN_SWR_CONFIG = {
 // ✅ ENHANCED: Generic fetcher with retry logic and admin notifications
 const fetcher = async (url: string) => {
   console.log(`🔍 SWR Fetching: ${url}`)
-  
-  // Add timeout for slow endpoints
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 second timeout
-  
   try {
-    const response = await fetch(url, {
-      signal: controller.signal,
-      credentials: 'include'
-    })
-    
-    clearTimeout(timeoutId)
-    
-    if (!response.ok) {
-      // Try to parse JSON error response first
-      try {
-        const errorData = await response.json()
-        const errorMessage = errorData.error || errorData.message || `HTTP ${response.status}: Failed to fetch data`
-        
-        // ✅ ADMIN NOTIFICATION: Notify about API failures
-        if (response.status >= 500) {
+    const data = await fetchJsonWithTimeout<any>(url, {
+      timeoutMs: 15000,
+      credentials: 'include',
+      onServerError: ({ url: failedUrl, status, message }) => {
+        if (status >= 500) {
           adminNotifications.systemError(
             'Admin API Failure',
-            `${url} returned ${response.status}: ${errorMessage}`,
-            { url, status: response.status, error: errorMessage }
+            `${failedUrl} returned ${status}: ${message}`,
+            { url: failedUrl, status, error: message }
           )
         }
-        
-        throw new Error(errorMessage)
-      } catch (parseError) {
-        // If JSON parsing fails, use status text
-        const errorMessage = `HTTP ${response.status}: ${response.statusText || 'Failed to fetch data'}`
-        throw new Error(errorMessage)
+      },
+      onTimeout: ({ url: timedOutUrl, timeoutMs }) => {
+        adminNotifications.systemError(
+          'Admin API Timeout',
+          `Request timeout: ${timedOutUrl} took longer than ${timeoutMs}ms`,
+          { url: timedOutUrl, timeout: timeoutMs }
+        )
       }
-    }
-    
-    const data = await response.json()
-    console.log(`✅ SWR Data fetched from ${url}:`, data.success ? 'Success' : 'Failed')
+    })
+    console.log(`✅ SWR Data fetched from ${url}:`, (data as any)?.success ? 'Success' : 'Failed')
     return data
-    
   } catch (error) {
-    clearTimeout(timeoutId)
-    
-    if (error instanceof Error && error.name === 'AbortError') {
-      const timeoutError = `Request timeout: ${url} took longer than 15 seconds`
-      adminNotifications.systemError(
-        'Admin API Timeout',
-        timeoutError,
-        { url, timeout: 15000 }
-      )
-      throw new Error(timeoutError)
-    }
-    
     throw error
   }
 }
