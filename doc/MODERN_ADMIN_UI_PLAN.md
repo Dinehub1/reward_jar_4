@@ -116,15 +116,12 @@
 
 ### ✅ ADVANCED WALLET PREVIEW SYSTEM (INDUSTRY-LEADING)
 
-#### 1. **WalletPreviewContainer** (`src/components/modern/wallet/WalletPreviewContainer.tsx`)
+#### 1. **Unified Presentational Layer** (`src/components/shared/CardPresentational.tsx` + `src/components/unified/CardLivePreview.tsx`)
 ```typescript
-// ✅ EXCEPTIONAL IMPLEMENTATION:
-- Unified container supporting 3 platforms (Apple, Google, Web)
-- Interactive controls: device switching, card flipping, theme toggle
-- Screenshot mode for clean marketing captures
-- Dark/light theme support across all platforms
-- Smooth platform switching with AnimatePresence
-- Real-time form sync across all preview modes
+// ✅ CURRENT ARCHITECTURE:
+- Single presentational component renders the card once; `CardLivePreview` wraps it with platform toggles.
+- Admin Cards, Sandbox, and QuickStart now import `CardLivePreview` for identical visuals across screens.
+- Real-time form sync across all preview modes; screenshot/controls remain via the wrapper.
 ```
 
 #### 2. **AppleWalletView** (`src/components/modern/wallet/AppleWalletView.tsx`)
@@ -138,15 +135,11 @@
 - QR code integration with proper positioning
 ```
 
-#### 3. **GoogleWalletView** (`src/components/modern/wallet/GoogleWalletView.tsx`)
+#### 3. **Google Wallet Builder** (`src/lib/wallet/builders/google-pass-builder.ts`)
 ```typescript
-// ✅ MATERIAL DESIGN COMPLIANCE:
-- Material Design 3.0 elevation system
-- Proper Android styling with rounded corners
-- Expandable details section with smooth animations
-- Logo placement in circular containers per Google guidelines
-- Authentic color schemes and typography
-- Touch-friendly interaction patterns
+// ✅ SINGLE SOURCE OF TRUTH:
+- IDs: buildGoogleIds; Object: createLoyaltyObject; JWT: createSaveToWalletJwt; URL: buildSaveUrl.
+- `src/app/api/wallet/google/[customerCardId]/route.ts` consumes these; no inline duplicates.
 ```
 
 #### 4. **WebPassView** (`src/components/modern/wallet/WebPassView.tsx`)

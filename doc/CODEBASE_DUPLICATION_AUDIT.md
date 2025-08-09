@@ -6,11 +6,10 @@ This report summarizes duplication, broken references, dead code, and consolidat
 
 ## 1) File Duplication Detection
 
-Exact duplicates were detected by SHA-1 checksum over .ts, .tsx, .js, .json, .scss, .css, plus selected assets.
+Exact duplicates were detected by SHA-1 checksum over .ts, .tsx, .js, .json, .scss, .css, plus selected assets. Most findings have been addressed in this pass.
 
-- Exact duplicate assets
-  - `dist/working.pkpass` ↔ `public/working.pkpass`
-  - Recommendation: keep only one copy under `public/` or remove both if they are build artifacts. Avoid committing generated PKPass files; they should be created at runtime.
+- Exact duplicate assets — RESOLVED
+  - Removed `public/*.pkpass` and `dist/*` artifacts from source; `.gitignore` excludes `*.pkpass` and `/dist/`.
 
 - Exact duplicate source files (same content hash)
   - Hash: `b858cb282617fb0956d960215c8e84d1ccf909c6`
@@ -29,14 +28,11 @@ Near-duplicates
 
 ## 2) Function / Component Duplication
 
-- QR Code components
-  - `src/app/admin/cards/page.tsx` defines a local `QRCodeDisplay` component.
-  - `src/components/modern/wallet/WalletPassFrame.tsx` exports a `QRCodeDisplay` with almost identical logic (dynamic import of `qrcode`, `.toDataURL`, sizing by walletType).
-  - Recommendation: Extract a single `QRCodeDisplay` into `src/components/shared/QRCodeDisplay.tsx` (client), and update usages to import from that shared component.
+- QR Code components — RESOLVED
+  - Single shared `src/components/shared/QRCodeDisplay.tsx` used in admin cards and WalletPassFrame.
 
-- Live preview components
-  - Central component: `src/components/unified/CardLivePreview.tsx` used in multiple pages (`/templates`, `/onboarding/business`, admin card creation).
-  - Wrapper: `src/components/unified/CardLivePreviewInFrame.tsx` wraps the same preview inside `IPhone15Frame`. This is not duplicated logic, just composition; OK to keep. If rarely used, consider inlining where needed.
+- Live preview components — RESOLVED
+  - `CardLivePreview` now delegates to `CardPresentational`; admin pages refactored to use it. Wrapper removed.
 
 - Wallet building logic (Apple)
   - Centralized in `src/lib/wallet/builders/apple-pass-builder.ts` with `buildApplePassJson` and `buildApplePass`.

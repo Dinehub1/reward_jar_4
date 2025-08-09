@@ -62,8 +62,7 @@ This audit covers all files involved in card creation and wallet delivery across
 
 ### Templates / Static JSON / Assets
 
-- `public/*.pkpass` test/reference artifacts
-  - `public/working.pkpass`, `public/working_fixed.pkpass`, `public/working_enhanced.pkpass`, `public/ios_production.pkpass`, etc.
+- `public/*.pkpass` test/reference artifacts — removed in this pass; `.gitignore` protects against re-commit.
 - `public/sw.js` (PWA service worker)
 - `public/icons/*`
 - `dist/ios_production_fix.js` (script used during Apple pass troubleshooting)
@@ -182,7 +181,7 @@ webServiceURL: `${process.env.BASE_URL || 'https://rewardjar.com'}/api/wallet/ap
 - Use `src/lib/card-mappers.ts` to produce preview data consistently.
 - Risk: visual; requires QA across screens.
 
-2) P0: Standardize Apple barcode and webServiceURL
+2) P0: Standardize Apple barcode and webServiceURL — DONE
 - Introduce `buildAppleBarcode(passId: string, opts)` helper and a `getAppleWebServiceUrl()` utility; use in both Apple routes.
 - Ensure one of `barcodes` vs `barcode` is used consistently (Apple recommends `barcodes`).
 - Risk: moderate; requires testing of Apple pass acceptance and updates.
@@ -192,7 +191,7 @@ webServiceURL: `${process.env.BASE_URL || 'https://rewardjar.com'}/api/wallet/ap
 - Replace inline mapping in `admin/cards/page.tsx` with `mapAdminCardFormToPreview`.
 - Risk: low; safe refactor.
 
-4) P1: Unify PWA manifest generation
+4) P1: Unify PWA manifest generation — DONE
 - Extract a shared `buildPwaManifest({name, short_name, ...})` used by both stamp and membership manifest routes; align icons, scope, and headers.
 - Risk: low.
 

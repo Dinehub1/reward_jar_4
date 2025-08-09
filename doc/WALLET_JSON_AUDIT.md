@@ -15,8 +15,9 @@ Static JSON files found in the repo matching the requested keys/patterns:
     - `/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/dist/manifest.json`
     - `/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/dist/ios_production_build/manifest.json`
 
-- PWA Manifest (served dynamically as JSON; no static file checked into repo):
-  - Route: `/Users/dev/Documents/Reward jar 4.0/rewardjar_4.0/src/app/api/wallet/pwa/membership/[customerCardId]/manifest/route.ts`
+- PWA Manifest (served dynamically; unified via builder):
+  - Builder: `src/lib/wallet/pwa-manifest.ts` (single source)
+  - Routes: `src/app/api/wallet/pwa/[customerCardId]/manifest/route.ts`, `src/app/api/wallet/pwa/membership/[customerCardId]/manifest/route.ts`
 
 - Google Wallet: no static `.json` templates checked in; JSON payloads are constructed dynamically in API routes.
 
@@ -35,6 +36,7 @@ Common directories checked: `dist/`, `public/`, `src/app/api/wallet/*`, and rela
 
 - Google Wallet JSON:
   - No duplicate `.json` templates exist; JSON is composed dynamically in code.
+  - Single builder used for IDs/object/JWT (`google-pass-builder.ts`).
 
 Resolution: Removed duplicated artifacts and enforced programmatic generation. `dist/` is now git-ignored to prevent re-commits.
 
@@ -94,6 +96,7 @@ Notes on UI entry points related to wallet flows:
 
 - Clarify PWA vs PKPass manifests:
   - PKPass `manifest.json` (SHA-1 map) differs from the PWA manifest (web app manifest). Keep naming clear in docs and code comments to prevent confusion.
+  - PWA manifest is now built by `buildPwaManifest` and used by both routes; identical icons/scope/headers.
 
 ---
 
