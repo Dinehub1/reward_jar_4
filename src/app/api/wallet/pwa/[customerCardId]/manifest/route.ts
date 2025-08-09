@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient, getServerUser, getServerSession } from '@/lib/supabase/server'
+import { createServerClient } from '@/lib/supabase/server'
+import { buildPwaManifest, DEFAULT_PWA_ICONS } from '@/lib/wallet/pwa-manifest'
 
 export async function GET(
   request: NextRequest,
@@ -29,33 +30,16 @@ export async function GET(
       .single()
 
     if (error || !customerCard) {
-      // Return default manifest if card not found
-      const defaultManifest = {
-        name: "RewardJar Loyalty Card",
-        short_name: "RewardJar",
-        description: "Your digital loyalty card",
-        start_url: `/api/wallet/pwa/${customerCardId}`,
-        display: "standalone",
-        background_color: "#10b981",
-        theme_color: "#10b981",
-        orientation: "portrait",
-        icons: [
-          {
-            src: "/icons/icon-192x192.png",
-            sizes: "192x192",
-            type: "image/png",
-            purpose: "any maskable"
-          },
-          {
-            src: "/icons/icon-512x512.png",
-            sizes: "512x512", 
-            type: "image/png",
-            purpose: "any maskable"
-          }
-        ]
-      }
-      
-      return NextResponse.json(defaultManifest, {
+      const fallback = buildPwaManifest({
+        name: 'RewardJar Loyalty Card',
+        shortName: 'RewardJar',
+        themeColor: '#10b981',
+        backgroundColor: '#10b981',
+        scope: `/api/wallet/pwa/${customerCardId}/`,
+        startUrl: `/api/wallet/pwa/${customerCardId}`,
+        icons: DEFAULT_PWA_ICONS,
+      })
+      return NextResponse.json(fallback, {
         headers: {
           'Content-Type': 'application/manifest+json',
           'Cache-Control': 'public, max-age=3600'
@@ -88,32 +72,15 @@ export async function GET(
 
     // Generate customized manifest
     const manifest = {
-      name: `${stampCard.name} - ${business.name}`,
-      short_name: stampCard.name,
-      description: `Your ${stampCard.name} loyalty card from ${business.name}`,
-      start_url: `/api/wallet/pwa/${customerCardId}`,
-      display: "standalone",
-      background_color: "#10b981",
-      theme_color: "#10b981",
-      orientation: "portrait",
-      scope: `/api/wallet/pwa/${customerCardId}/`,
-      
-      // Dynamic icons based on stamp progress
-      icons: [
-        {
-          src: "/icons/icon-192x192.png",
-          sizes: "192x192",
-          type: "image/png",
-          purpose: "any maskable"
-        },
-        {
-          src: "/icons/icon-512x512.png",
-          sizes: "512x512",
-          type: "image/png", 
-          purpose: "any maskable"
-        }
-      ],
-      
+      ...buildPwaManifest({
+        name: `${stampCard.name} - ${business.name}`,
+        shortName: stampCard.name,
+        themeColor: '#10b981',
+        backgroundColor: '#10b981',
+        scope: `/api/wallet/pwa/${customerCardId}/`,
+        startUrl: `/api/wallet/pwa/${customerCardId}`,
+        icons: DEFAULT_PWA_ICONS,
+      }),
       // Useful shortcuts
       shortcuts: [
         {
@@ -139,26 +106,16 @@ export async function GET(
           ]
         }
       ],
-      
-      // Categories for app store classification
       categories: ["lifestyle", "shopping", "business"],
-      
-      // Related applications
       related_applications: [
         {
           platform: "webapp",
           url: `${process.env.BASE_URL || 'https://rewardjar.com'}/customer/card/${customerCardId}`
         }
       ],
-      
-      // PWA features
       prefer_related_applications: false,
       display_override: ["window-controls-overlay", "standalone", "minimal-ui"],
-      
-      // Launch handler for file associations
-      launch_handler: {
-        client_mode: "focus-existing"
-      }
+      launch_handler: { client_mode: "focus-existing" },
     }
 
     return NextResponse.json(manifest, {

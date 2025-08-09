@@ -161,14 +161,8 @@ webServiceURL: `${process.env.BASE_URL || 'https://rewardjar.com'}/api/wallet/ap
 // Uses snake_case directly: card_color, icon_emoji, reward_description
 ```
 
-4) PWA manifest duplication and header handling
-- Files
-  - `src/app/api/wallet/pwa/[customerCardId]/manifest/route.ts` (dynamic manifest)
-  - `src/app/api/wallet/pwa/membership/[customerCardId]/manifest/route.ts` (membership)
-- Issue
-  - Two manifest generators with overlapping logic; risk of drift (icons, theme_color, scope). Minor header differences.
-- Why it’s a problem
-  - Install prompt appearance and icon sets can differ across stamp vs membership PWAs.
+4) PWA manifest duplication and header handling — RESOLVED
+- Unified via `src/lib/wallet/pwa-manifest.ts` and imported by both manifest routes. Identical icons, scope, display, and headers; only names/URLs differ by type.
 
 5) Checked-in PKPass artifacts
 - Files
@@ -178,12 +172,8 @@ webServiceURL: `${process.env.BASE_URL || 'https://rewardjar.com'}/api/wallet/ap
 - Why it’s a problem
   - Developers may reference stale artifacts; increases maintenance and adds confusion.
 
-6) Apple pass webServiceURL construction divergence
-- Files
-  - `src/app/api/wallet/apple/[customerCardId]/route.ts` → uses `getAppleWalletBaseUrl()` in helper but later constructs URL from `process.env.BASE_URL`
-  - `src/app/api/wallet/apple/updates/route.ts` → uses `process.env.BASE_URL || 'https://rewardjar.com'`
-- Issue
-  - Inconsistent base URL source and domain; can break device update callbacks in certain environments.
+6) Apple pass webServiceURL construction divergence — RESOLVED
+- Standardized with `getAppleWebServiceUrl()` in `src/lib/wallet/apple-helpers.ts` and applied in both routes.
 
 ## 4. Recommendations (numbered; quick wins first)
 

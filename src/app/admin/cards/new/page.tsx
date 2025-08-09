@@ -30,6 +30,7 @@ if (typeof document !== 'undefined') {
 }
 import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
+import { mapQuickToAdvancedPayload, generateCardContent } from '@/lib/generation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ModernButton, LoadingButton } from '@/components/modern/ui/ModernButton'
 import { Input } from '@/components/ui/input'
@@ -515,24 +516,24 @@ function CardCreationPageContent() {
     setErrors([])
     
     try {
-      const payload = {
-        card_name: cardData.cardName,
-        business_id: cardData.businessId,
+      const payload = mapQuickToAdvancedPayload({
+        cardName: cardData.cardName,
+        businessId: cardData.businessId,
         reward: cardData.reward,
-        reward_description: cardData.rewardDescription, // NEW: Include reward description
-        stamps_required: cardData.stampsRequired,
-        card_color: cardData.cardColor,
-        icon_emoji: cardData.iconEmoji,
-        barcode_type: cardData.barcodeType,
-        card_expiry_days: cardData.cardExpiryDays,
-        reward_expiry_days: cardData.rewardExpiryDays,
-        stamp_config: cardData.stampConfig,
-        card_description: cardData.cardDescription,
-        how_to_earn_stamp: cardData.howToEarnStamp,
-        reward_details: cardData.rewardDetails,
-        earned_stamp_message: cardData.earnedStampMessage,
-        earned_reward_message: cardData.earnedRewardMessage
-      }
+        rewardDescription: cardData.rewardDescription,
+        stampsRequired: cardData.stampsRequired,
+        cardColor: cardData.cardColor,
+        iconEmoji: cardData.iconEmoji,
+        barcodeType: cardData.barcodeType,
+        cardExpiryDays: cardData.cardExpiryDays,
+        rewardExpiryDays: cardData.rewardExpiryDays,
+        stampConfig: cardData.stampConfig,
+        cardDescription: cardData.cardDescription,
+        howToEarnStamp: cardData.howToEarnStamp,
+        rewardDetails: cardData.rewardDetails,
+        earnedStampMessage: cardData.earnedStampMessage,
+        earnedRewardMessage: cardData.earnedRewardMessage,
+      })
 
       const response = await fetch('/api/admin/cards', {
         method: 'POST',
@@ -572,19 +573,13 @@ function CardCreationPageContent() {
     const template = CARD_TEMPLATES.find(t => t.id === templateId)
     if (!template) return
 
+    const content = generateCardContent(prev?.businessName || 'Business', template)
     setCardData(prev => ({
       ...prev,
-      cardColor: template.cardColor,
-      iconEmoji: template.iconEmoji,
-      stampsRequired: template.stampsRequired,
-      reward: template.reward,
-      rewardDescription: template.rewardDescription,
-      cardDescription: template.cardDescription,
-      howToEarnStamp: template.howToEarnStamp,
-      rewardDetails: template.rewardDetails,
+      ...content,
       stampConfig: {
-        ...template.stampConfig,
-        duplicateVisitBuffer: template.stampConfig.duplicateVisitBuffer as '12h' | '1d' | 'none'
+        ...content.stampConfig,
+        duplicateVisitBuffer: content.stampConfig.duplicateVisitBuffer as '12h' | '1d' | 'none'
       }
     }))
 
