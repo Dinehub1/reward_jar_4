@@ -573,15 +573,18 @@ function CardCreationPageContent() {
     const template = CARD_TEMPLATES.find(t => t.id === templateId)
     if (!template) return
 
-    const content = generateCardContent(prev?.businessName || 'Business', template)
-    setCardData(prev => ({
-      ...prev,
-      ...content,
-      stampConfig: {
-        ...content.stampConfig,
-        duplicateVisitBuffer: content.stampConfig.duplicateVisitBuffer as '12h' | '1d' | 'none'
+    // Use current state for businessName as source of truth
+    setCardData(prev => {
+      const content = generateCardContent(prev.businessName || 'Business', template)
+      return {
+        ...prev,
+        ...content,
+        stampConfig: {
+          ...content.stampConfig,
+          duplicateVisitBuffer: content.stampConfig.duplicateVisitBuffer as '12h' | '1d' | 'none'
+        }
       }
-    }))
+    })
 
     setShowTemplateSelector(false)
   }, [])
