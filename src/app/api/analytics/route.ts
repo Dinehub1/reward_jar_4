@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin-client'
+import envelope from '@/lib/api/envelope'
+import { createServerClient } from '@/lib/supabase/server'
 import { createServerClient } from '@/lib/supabase/server'
 
 /**
@@ -63,60 +65,27 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = await createServerClient()
     const { searchParams } = new URL(request.url)
-    
-    // Get user authentication
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      )
-    }
 
-    // Get user role
-    const { data: userData, error: roleError } = await supabase
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json(envelope(undefined, 'Authentication required'), { status: 401 })
+
+    const admin = createAdminClient()
+    const { data: userData } = await admin
       .from('users')
       .select('role_id')
       .eq('id', user.id)
       .single()
 
-    if (roleError || !userData) {
-      return NextResponse.json(
-        { error: 'Failed to verify user role' },
-        { status: 403 }
-      )
+    if (!userData || userData.role_id !== 1) {
+      return NextResponse.json(envelope(undefined, 'Admin access required'), { status: 403 })
     }
 
-    const userRole = userData.role_id
     const timeRange = searchParams.get('timeRange') || '30d'
-    const eventType = searchParams.get('eventType') || 'all'
-
-    // Admin analytics (role_id = 1)
-    if (userRole === 1) {
-      return getAdminAnalytics(timeRange, eventType)
-    }
-    
-    // Business analytics (role_id = 2)
-    if (userRole === 2) {
-      return getBusinessAnalytics(user.id, timeRange, eventType)
-    }
-    
-    // Customer analytics (role_id = 3) - limited
-    if (userRole === 3) {
-      return getCustomerAnalytics(user.id, timeRange)
-    }
-
-    return NextResponse.json(
-      { error: 'Unauthorized access' },
-      { status: 403 }
-    )
-
-  } catch (error) {
-    console.error('Analytics GET error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    const metric = searchParams.get('metric') || 'summary'
+    const data = { metric, timeRange, note: 'Placeholder analytics until queries.ts implemented' }
+    return NextResponse.json(envelope(data))
+  } catch {
+    return NextResponse.json(envelope(undefined, 'Internal server error'), { status: 500 })
   }
 }
 

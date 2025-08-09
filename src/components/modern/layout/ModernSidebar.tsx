@@ -29,12 +29,18 @@ interface ModernSidebarProps {
 }
 
 // Modern menu items with consistent Lucide icons
-const menuItems: MenuItem[] = [
+const baseMenuItems: MenuItem[] = [
   { 
     href: '/admin', 
     label: 'Dashboard', 
     icon: BarChart3,
     description: 'System overview and metrics'
+  },
+  { 
+    href: '/admin/analytics', 
+    label: 'Analytics', 
+    icon: BarChart3,
+    description: 'Business performance and insights'
   },
   { 
     href: '/admin/businesses', 
@@ -65,12 +71,6 @@ const menuItems: MenuItem[] = [
     label: 'Support', 
     icon: MessageSquare,
     description: 'Customer support tools'
-  },
-  { 
-    href: '/admin/dev-tools', 
-    label: 'Developer Tools', 
-    icon: Settings,
-    description: 'Development and testing tools'
   }
 ]
 
@@ -170,6 +170,22 @@ const NavItem: React.FC<{
 export const ModernSidebar: React.FC<ModernSidebarProps> = ({ className = '' }) => {
   const [collapsed, setCollapsed] = useState(false)
   const pathname = usePathname()
+  const showDevTools = typeof window !== 'undefined' 
+    ? (process.env.NEXT_PUBLIC_SHOW_DEV_TOOLS === 'true') 
+    : (process.env.NEXT_PUBLIC_SHOW_DEV_TOOLS === 'true')
+
+  const menuItems: MenuItem[] = React.useMemo(() => {
+    const items = [...baseMenuItems]
+    if (showDevTools) {
+      items.push({ 
+        href: '/admin/dev-tools', 
+        label: 'Developer Tools', 
+        icon: Settings,
+        description: 'Development and testing tools'
+      })
+    }
+    return items
+  }, [showDevTools])
 
   return (
     <motion.aside

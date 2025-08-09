@@ -1,4 +1,4 @@
-### Canonical Routes — RewardJar 4.0
+``### Canonical Routes — RewardJar 4.0
 
 This document lists canonical endpoints after consolidation. All responses follow the standard envelope: `{ success, data, error, meta }`.
 
