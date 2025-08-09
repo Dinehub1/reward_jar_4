@@ -467,3 +467,24 @@ export function isWalletGenerationEnabled(): boolean {
 
 // Export types
 export type { UnifiedCardData } from './unified-card-data'
+
+// Simple helpers for API routes
+export async function buildUnifiedCardData(cardId: string, customerId?: string) {
+  // Reuse the service's internal data fetch by creating a lightweight request
+  // We call the private method via a small shim to avoid re-implementing logic
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const service: any = walletGenerationService as unknown as { fetchCardData: (cardId: string, customerId?: string) => Promise<UnifiedCardData> }
+  return service.fetchCardData(cardId, customerId)
+}
+
+export async function signForPlatform(platform: 'apple' | 'google' | 'pwa', data: UnifiedCardData) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const service: any = walletGenerationService as unknown as { 
+    generateAppleWallet: (data: UnifiedCardData) => Promise<{ success: boolean; pkpassUrl?: string; error?: string }>
+    generateGoogleWallet: (data: UnifiedCardData) => Promise<{ success: boolean; jwt?: string; saveUrl?: string; error?: string }>
+    generatePWAWallet: (data: UnifiedCardData) => Promise<{ success: boolean; cardData?: any; error?: string }>
+  }
+  if (platform === 'apple') return service.generateAppleWallet(data)
+  if (platform === 'google') return service.generateGoogleWallet(data)
+  return service.generatePWAWallet(data)
+}

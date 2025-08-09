@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin-client'
+import envelope from '@/lib/api/envelope'
+import { buildUnifiedCardData, signForPlatform } from '@/lib/wallet/wallet-generation-service'
 import { getAppleWalletBaseUrl } from '@/lib/env'
 import crypto from 'crypto'
 import archiver from 'archiver'
@@ -34,93 +36,31 @@ export async function GET(
 ) {
   try {
     const resolvedParams = await params
-    // Use admin client for wallet generation
-    const supabase = createAdminClient()
     const customerCardId = resolvedParams.customerCardId
+    const admin = createAdminClient()
 
     console.log('🍎 Generating Apple Wallet for card ID:', customerCardId)
 
-    // Get customer card with unified schema
-    const { data: customerCard, error } = await supabase
+    // Get customer card with minimal fields then delegate to service
+    const { data: customerCard, error } = await admin
       .from('customer_cards')
-      .select(`
-        id,
-        current_stamps,
-        sessions_used,
-        stamp_card_id,
-        membership_card_id,
-        expiry_date,
-        created_at,
-        updated_at,
-        stamp_cards (
-          id,
-          name,
-          total_stamps,
-          reward_description,
-          card_color,
-          icon_emoji,
-          businesses (
-            name,
-            description
-          )
-        ),
-        membership_cards (
-          id,
-          name,
-          total_sessions,
-          cost,
-          card_color,
-          icon_emoji,
-          businesses (
-            name,
-            description
-          )
-        )
-      `)
+      .select('id, customer_id, stamp_card_id, membership_card_id')
       .eq('id', customerCardId)
       .single()
 
     if (error || !customerCard) {
       console.error('❌ Customer card not found:', error)
-      return NextResponse.json(
-        { error: 'Customer card not found' },
-        { status: 404 }
-      )
+      return NextResponse.json(envelope(undefined, 'Customer card not found'), { status: 404 })
     }
 
     console.log('✅ Fetched customer card:', customerCard)
 
-    // Determine card type from unified schema
-    const isStampCard = customerCard.stamp_card_id !== null
-    const isMembershipCard = customerCard.membership_card_id !== null
-
-    if (!isStampCard && !isMembershipCard) {
-      console.error('❌ Invalid customer card: no card type found')
-      return NextResponse.json(
-        { error: 'Invalid customer card: no card type found' },
-        { status: 400 }
-      )
-    }
-
-    // Get card data based on type
-    let cardData: any
-    let businessData: any
-
-    if (isStampCard) {
-      cardData = customerCard.stamp_cards
-      businessData = cardData?.businesses
-    } else {
-      cardData = customerCard.membership_cards
-      businessData = cardData?.businesses
-    }
-
-    if (!cardData) {
-      console.error('❌ Card template data missing')
-      return NextResponse.json(
-        { error: 'Card template not found' },
-        { status: 404 }
-      )
-    }
+    const cardId = customerCard.stamp_card_id || customerCard.membership_card_id
+    if (!cardId) return NextResponse.json(envelope(undefined, 'No linked card'), { status: 400 })
+    const unified = await buildUnifiedCardData(cardId, customerCard.customer_id)
+    const signed = await signForPlatform('apple', unified)
+    if (!signed.success) return NextResponse.json(envelope(undefined, signed.error || 'Failed to sign'), { status: 500 })
+    return NextResponse.json(envelope({ pkpassUrl: signed.pkpassUrl }))
     let progress: number
     let isCompleted: boolean
     let remaining: number
