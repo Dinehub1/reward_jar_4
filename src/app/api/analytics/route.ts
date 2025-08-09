@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin-client'
 import envelope from '@/lib/api/envelope'
 import { createServerClient } from '@/lib/supabase/server'
-import { createServerClient } from '@/lib/supabase/server'
 
 /**
  * 🔧 CONSOLIDATED ANALYTICS ENDPOINT
@@ -20,10 +19,7 @@ export async function POST(request: NextRequest) {
     const { event, properties, user_id, session_id } = body
     
     if (!event) {
-      return NextResponse.json(
-        { error: 'Event name is required' },
-        { status: 400 }
-      )
+      return NextResponse.json(envelope(undefined, 'Event name is required'), { status: 400 })
     }
 
     // Log analytics event
@@ -43,20 +39,14 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('Analytics logging error:', error)
-      return NextResponse.json(
-        { error: 'Failed to log analytics event' },
-        { status: 500 }
-      )
+      return NextResponse.json(envelope(undefined, 'Failed to log analytics event'), { status: 500 })
     }
 
-    return NextResponse.json({ success: true, event_id: data.id })
+    return NextResponse.json(envelope({ eventId: data.id }))
 
   } catch (error) {
     console.error('Analytics POST error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json(envelope(undefined, 'Internal server error'), { status: 500 })
   }
 }
 
