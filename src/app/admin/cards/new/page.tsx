@@ -71,6 +71,7 @@ import { WebFrame } from '@/components/modern/preview/WebFrame'
 import { designTokens, modernStyles } from '@/lib/design-tokens'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CardLivePreview } from '@/components/unified/CardLivePreview'
+import { mapAdminCardFormToPreview } from '@/lib/card-mappers'
 
 // Types
 interface Business {
@@ -125,7 +126,20 @@ interface ValidationError {
 }
 
 // Constants
+// Extended step flow to include Type (Step 0) and Mode (Step 1)
 const STEPS = [
+  {
+    id: 'type',
+    title: 'Card Type',
+    icon: <Smartphone className="w-4 h-4" />,
+    description: 'Choose between Stamp and Membership (extensible)'
+  },
+  {
+    id: 'mode',
+    title: 'Creation Mode',
+    icon: <Settings className="w-4 h-4" />,
+    description: 'Standard (template-based) or Advanced (full designer)'
+  },
   { 
     id: 'details', 
     title: 'Card Details', 
@@ -304,12 +318,14 @@ const LivePreview = React.memo(({
   cardData, 
   activeView,
   showBackPage = false,
-  onToggleBack
+  onToggleBack,
+  cardType
 }: { 
   cardData: CardFormData
   activeView: 'apple' | 'google' | 'pwa'
   showBackPage?: boolean
   onToggleBack?: (show: boolean) => void
+  cardType: 'stamp' | 'membership'
 }) => {
   // Calculate demo progress (show about 40% completion for preview)
   const demoFilledStamps = Math.max(1, Math.floor(cardData.stampsRequired * 0.4))
@@ -334,15 +350,20 @@ const LivePreview = React.memo(({
           defaultPlatform={activeView}
           showControls={false}
           cardData={{
-            cardType: 'stamp',
-            businessName: cardData.businessName,
-            businessLogoUrl: cardData.businessLogoUrl,
-            cardName: cardData.cardName,
-            cardColor: cardData.cardColor,
-            iconEmoji: cardData.iconEmoji,
-            stampsRequired: cardData.stampsRequired,
-            reward: cardData.reward,
-            cardDescription: cardData.cardDescription,
+            ...mapAdminCardFormToPreview({
+              cardName: cardData.cardName,
+              businessName: cardData.businessName,
+              businessLogoUrl: cardData.businessLogoUrl,
+              reward: cardData.reward,
+              rewardDescription: cardData.rewardDescription,
+              stampsRequired: cardData.stampsRequired,
+              cardColor: cardData.cardColor,
+              iconEmoji: cardData.iconEmoji,
+              cardDescription: cardData.cardDescription,
+              howToEarnStamp: cardData.howToEarnStamp,
+              rewardDetails: cardData.rewardDetails
+            }),
+            cardType
           }}
         />
       </Suspense>
@@ -357,13 +378,17 @@ function CardCreationPageContent() {
   const searchParams = useSearchParams()
   
   const [currentStep, setCurrentStep] = useState(0)
+  type CardType = 'stamp' | 'membership'
+  type CreationMode = 'standard' | 'advanced'
+  const [cardType, setCardType] = useState<CardType>('stamp')
+  const [creationMode, setCreationMode] = useState<CreationMode>('standard')
   const [businesses, setBusinesses] = useState<Business[]>([])
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState<ValidationError[]>([])
   const [activePreview, setActivePreview] = useState<'apple' | 'google' | 'pwa'>('apple')
   const [showBackPage, setShowBackPage] = useState(false)
-  const [showTemplateSelector, setShowTemplateSelector] = useState(true)
+  const [showTemplateSelector, setShowTemplateSelector] = useState(false)
   
   const [cardData, setCardData] = useState<CardFormData>({
     // Step 1: Card Details
@@ -447,7 +472,11 @@ function CardCreationPageContent() {
     const newErrors: ValidationError[] = []
     
     switch (step) {
-            case 0: // Card Details
+      case 0: // Type selection (no validation required)
+        break
+      case 1: // Mode selection (no validation required)
+        break
+      case 2: // Card Details
         if (!cardData.cardName.trim()) {
           newErrors.push({ field: 'cardName', message: 'Card name is required' })
         }
@@ -465,7 +494,7 @@ function CardCreationPageContent() {
         }
         break
       
-      case 1: // Design
+      case 3: // Design
         if (!cardData.cardColor) {
           newErrors.push({ field: 'cardColor', message: 'Please select a card color' })
         }
@@ -474,7 +503,7 @@ function CardCreationPageContent() {
         }
         break
       
-      case 2: // Stamp Rules
+      case 4: // Stamp Rules
         if (cardData.stampConfig.minSpendAmount < 0) {
           newErrors.push({ field: 'minSpendAmount', message: 'Minimum spend amount cannot be negative' })
         }
@@ -483,7 +512,7 @@ function CardCreationPageContent() {
         }
         break
       
-      case 3: // Information
+      case 5: // Information
         if (!cardData.cardDescription.trim()) {
           newErrors.push({ field: 'cardDescription', message: 'Card description is required' })
         }
@@ -510,7 +539,7 @@ function CardCreationPageContent() {
 
   // Save card
   const saveCard = useCallback(async () => {
-    if (!validateStep(3)) return // Validate all steps
+    if (!validateStep(5)) return // Validate all steps up to Information
     
     setSaving(true)
     setErrors([])
@@ -578,11 +607,20 @@ function CardCreationPageContent() {
       const content = generateCardContent(prev.businessName || 'Business', template)
       return {
         ...prev,
-        ...content,
+        // Ensure required string fields remain strings, not undefined
+        reward: content.reward ?? prev.reward ?? '',
+        rewardDescription: content.rewardDescription ?? prev.rewardDescription ?? '',
+        cardDescription: content.cardDescription ?? prev.cardDescription ?? '',
+        howToEarnStamp: content.howToEarnStamp ?? prev.howToEarnStamp ?? '',
+        rewardDetails: content.rewardDetails ?? prev.rewardDetails ?? '',
+        cardColor: content.cardColor ?? prev.cardColor,
+        iconEmoji: content.iconEmoji ?? prev.iconEmoji,
+        stampsRequired: content.stampsRequired ?? prev.stampsRequired,
         stampConfig: {
+          ...prev.stampConfig,
           ...content.stampConfig,
-          duplicateVisitBuffer: content.stampConfig.duplicateVisitBuffer as '12h' | '1d' | 'none'
-        }
+          duplicateVisitBuffer: (content.stampConfig?.duplicateVisitBuffer as '12h' | '1d' | 'none') ?? prev.stampConfig.duplicateVisitBuffer
+        },
       }
     })
 
@@ -592,7 +630,68 @@ function CardCreationPageContent() {
   // Render step content
   const renderStepContent = () => {
     switch (currentStep) {
-      case 0: // Card Details
+      case 0: // Card Type
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {[{ id: 'stamp', label: 'Stamp Card', desc: 'Collect stamps to unlock rewards' }, { id: 'membership', label: 'Membership Card', desc: 'Track sessions or time-based access' }].map((type) => (
+                <button
+                  key={type.id}
+                  onClick={() => setCardType(type.id as CardType)}
+                  className={`p-4 rounded-xl border-2 text-left transition ${cardType === type.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}
+                >
+                  <div className="text-lg font-semibold">{type.label}</div>
+                  <div className="text-sm text-gray-600 mt-1">{type.desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )
+      case 1: // Creation Mode
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {[{ id: 'standard', label: 'Standard', desc: 'Start from curated templates and essentials' }, { id: 'advanced', label: 'Advanced', desc: 'Full designer with sections and ordering' }].map((mode) => (
+                <button
+                  key={mode.id}
+                  onClick={() => setCreationMode(mode.id as CreationMode)}
+                  className={`p-4 rounded-xl border-2 text-left transition ${creationMode === mode.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}
+                >
+                  <div className="text-lg font-semibold">{mode.label}</div>
+                  <div className="text-sm text-gray-600 mt-1">{mode.desc}</div>
+                </button>
+              ))}
+            </div>
+
+            {creationMode === 'standard' && (
+              <div className="mt-2">
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Choose a template</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {CARD_TEMPLATES.map((template) => (
+                    <button
+                      key={template.id}
+                      onClick={() => applyTemplate(template.id)}
+                      className="p-3 rounded-xl border hover:border-blue-400 text-left"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="font-medium">{template.name}</div>
+                        <div className="w-5 h-5 rounded-full" style={{ backgroundColor: template.cardColor }} />
+                      </div>
+                      <div className="text-xs text-gray-600 mt-1">{template.description}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {creationMode === 'advanced' && (
+              <div className="rounded-lg border p-4 bg-gray-50 text-sm text-gray-700">
+                Full-section designer will appear here. You can continue with the standard fields for now and refine later.
+              </div>
+            )}
+          </div>
+        )
+      case 2: // Card Details
         return (
     <div className="space-y-6">
         <div className="space-y-2">
@@ -643,7 +742,8 @@ function CardCreationPageContent() {
                   <div className="flex items-center gap-2">
                     {business.logo_url && (
                       <div className="w-4 h-4 rounded overflow-hidden bg-gray-100 flex items-center justify-center">
-                        <Image src={business.logo_url} alt="" width={12} height={12} className="w-3 h-3 object-contain" />
+                        {/* Next/Image requires configured remote host; fallback to img if not configured */}
+                        <Image src={business.logo_url} alt={business.name} width={12} height={12} className="w-3 h-3 object-contain" />
                       </div>
                     )}
                     <span>{business.name}</span>
@@ -723,7 +823,7 @@ function CardCreationPageContent() {
     </div>
   )
 
-      case 1: // Design
+      case 3: // Design
         return (
     <div className="space-y-6">
             {/* Card Style Selection */}
@@ -845,7 +945,7 @@ function CardCreationPageContent() {
     </div>
   )
 
-      case 2: // Stamp Rules
+      case 4: // Stamp Rules
         return (
     <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -944,7 +1044,7 @@ function CardCreationPageContent() {
     </div>
   )
 
-      case 3: // Information
+      case 5: // Information
     return (
     <div className="space-y-6">
         {/* Information Form Fields */}
@@ -1035,7 +1135,7 @@ function CardCreationPageContent() {
     </div>
   )
 
-      case 4: // Preview & Save
+      case 6: // Preview & Save
         return (
     <div className="space-y-6">
       <div className="text-center">
@@ -1078,7 +1178,7 @@ function CardCreationPageContent() {
             <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-8 rounded-xl shadow-inner">
               <div className="flex justify-center">
                 <div className="w-80 h-96">
-                  <LivePreview cardData={cardData} activeView={activePreview} />
+                  <LivePreview cardData={cardData} activeView={activePreview} cardType={cardType} />
                 </div>
               </div>
         </div>
@@ -1525,12 +1625,13 @@ function CardCreationPageContent() {
                             transition={{ duration: 0.3, delay: 0.2 }}
                             className="w-full h-full"
                           >
-                            <LivePreview 
-                              cardData={cardData} 
-                              activeView={activePreview}
-                              showBackPage={showBackPage}
-                              onToggleBack={setShowBackPage}
-                            />
+                             <LivePreview 
+                               cardData={cardData} 
+                               activeView={activePreview}
+                               showBackPage={showBackPage}
+                               onToggleBack={setShowBackPage}
+                               cardType={cardType}
+                             />
                           </motion.div>
                         </IPhone15Frame>
                       )}
@@ -1547,12 +1648,13 @@ function CardCreationPageContent() {
                             transition={{ duration: 0.3, delay: 0.2 }}
                             className="w-full h-full"
                           >
-                            <LivePreview 
-                              cardData={cardData} 
-                              activeView={activePreview}
-                              showBackPage={showBackPage}
-                              onToggleBack={setShowBackPage}
-                            />
+                             <LivePreview 
+                               cardData={cardData} 
+                               activeView={activePreview}
+                               showBackPage={showBackPage}
+                               onToggleBack={setShowBackPage}
+                               cardType={cardType}
+                             />
                           </motion.div>
                         </AndroidFrame>
                       )}
@@ -1571,12 +1673,13 @@ function CardCreationPageContent() {
                             className="w-full h-full flex items-center justify-center bg-gray-50"
                           >
                             <div className="w-full max-w-md mx-auto p-4">
-                              <LivePreview 
-                                cardData={cardData} 
-                                activeView={activePreview}
-                                showBackPage={showBackPage}
-                                onToggleBack={setShowBackPage}
-                              />
+                               <LivePreview 
+                                 cardData={cardData} 
+                                 activeView={activePreview}
+                                 showBackPage={showBackPage}
+                                 onToggleBack={setShowBackPage}
+                                 cardType={cardType}
+                               />
                             </div>
                           </motion.div>
                         </WebFrame>

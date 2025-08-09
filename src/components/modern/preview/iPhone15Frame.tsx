@@ -99,9 +99,12 @@ export const IPhone15Frame: React.FC<IPhone15FrameProps> = ({
                   ease: designTokens.animation.easing.out,
                   delay: 0.2 
                 }}
-                className="w-full h-full relative"
+                className="w-full h-full relative flex items-start justify-center"
               >
-                {children}
+                {/* Content area mimics a typical Wallet scroll view top padding */}
+                <div className="w-full flex justify-center pt-8">
+                  {children}
+                </div>
               </motion.div>
             </div>
             

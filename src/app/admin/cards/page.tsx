@@ -2,67 +2,32 @@
 
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { AdminLayoutClient } from '@/components/layouts/AdminLayoutClient'
 import { CardLivePreview } from '@/components/unified/CardLivePreview'
-import { createClient } from '@/lib/supabase/client'
-// Note: keep QRCode import if used elsewhere; otherwise remove
-import QRCodeDisplayShared from '@/components/shared/QRCodeDisplay'
+// Supabase client is not used here; avoid importing admin/service role in client code
+// import { createClient } from '@/lib/supabase/client'
 import { 
   Plus, 
   Search, 
-  Filter, 
   Eye, 
   Edit, 
-  Trash2, 
   Users, 
   Activity,
-  TrendingUp,
   Star,
   Clock,
   Building,
-  QrCode,
   Apple,
   Chrome,
   Globe
 } from 'lucide-react'
 
-// Use shared QRCodeDisplay
-const QRCodeDisplay = QRCodeDisplayShared
-
-// Unified preview wrapper
-const EnhancedLivePreview = React.memo(({ 
-  cardData, 
-  activeView = 'apple',
-}: { 
-  cardData: any
-  activeView?: 'apple' | 'google' | 'pwa'
-}) => {
-  return (
-    <div className="flex justify-center">
-      <CardLivePreview
-        defaultPlatform={activeView}
-        showControls={false}
-        cardData={{
-          cardType: 'stamp',
-          businessName: cardData.businesses?.name || cardData.business_name || 'Business',
-          businessLogoUrl: cardData.business_logo_url,
-          cardName: cardData.card_name || cardData.name || 'Loyalty Card',
-          cardColor: cardData.card_color || '#8B4513',
-          iconEmoji: cardData.icon_emoji || '☕',
-          stampsRequired: cardData.stamps_required || cardData.total_stamps || 10,
-          reward: cardData.reward || cardData.reward_description,
-          cardDescription: cardData.card_description,
-        }}
-      />
-    </div>
-  )
-})
-EnhancedLivePreview.displayName = 'EnhancedLivePreview'
+import { mapSimpleToPreview } from '@/lib/card-mappers'
+import { normalizeDatabaseResponse } from '@/lib/utils/field-mapping'
 
 interface StampCard {
   id: string
@@ -112,16 +77,18 @@ interface MembershipCard {
 
 export default function AdminCardsPage() {
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState<'stamp' | 'membership'>('stamp')
+  const [activeTab, setActiveTab] = useState<'stamp' | 'membership' | 'templates'>('stamp')
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'draft'>('all')
   const [isLoading, setIsLoading] = useState(false)
-  const [previewCard, setPreviewCard] = useState<any>(null)
+  const [previewCard, setPreviewCard] = useState<StampCard | MembershipCard | null>(null)
+  const [previewCardType, setPreviewCardType] = useState<'stamp' | 'membership'>('stamp')
   const [previewWalletType, setPreviewWalletType] = useState<'apple' | 'google' | 'pwa'>('apple')
   const [showBackPage, setShowBackPage] = useState(false)
   
   const [stampCards, setStampCards] = useState<StampCard[]>([])
   const [membershipCards, setMembershipCards] = useState<MembershipCard[]>([])
+  const [templates, setTemplates] = useState<any[]>([])
   const [stats, setStats] = useState({
     totalStampCards: 0,
     totalMembershipCards: 0,
@@ -169,6 +136,15 @@ export default function AdminCardsPage() {
         setStampCards(stampCards)
         setMembershipCards(membershipCards)
         setStats(stats)
+
+        // Load templates list (best-effort)
+        try {
+          const tRes = await fetch('/api/admin/templates')
+          const tJson = await tRes.json()
+          setTemplates(tJson?.data || [])
+        } catch (e) {
+          console.warn('Templates fetch skipped:', e)
+        }
 
       } catch (error) {
         console.error('❌ ADMIN CARDS - Error loading cards:', error)
@@ -238,33 +214,8 @@ export default function AdminCardsPage() {
   })
 
   const handlePreviewCard = (card: StampCard | MembershipCard, type: 'stamp' | 'membership') => {
-    const cardData = {
-      id: card.id,
-      name: card.name,
-      business_name: card.businesses?.name || 'Unknown Business',
-      card_type: type,
-      theme: {
-        background: type === 'stamp' ? '#4F46E5' : '#DC2626',
-        primaryColor: type === 'stamp' ? '#4F46E5' : '#DC2626',
-        secondaryColor: type === 'stamp' ? '#E0E7FF' : '#FEE2E2',
-        textColor: '#FFFFFF',
-        font: 'Inter'
-      },
-      values: type === 'stamp' ? {
-        stamps_used: 3,
-        total_stamps: (card as StampCard).total_stamps || 10
-      } : {
-        sessions_used: 5,
-        total_sessions: (card as MembershipCard).total_sessions || 20,
-        expiry_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        cost: (card as MembershipCard).cost || 100
-      },
-      reward_description: type === 'stamp' ? 
-        (card as StampCard).reward_description : 
-        `${(card as MembershipCard).total_sessions} sessions for $${(card as MembershipCard).cost}`
-    }
-    
-    setPreviewCard(cardData)
+    setPreviewCard(card)
+    setPreviewCardType(type)
   }
 
   return (
@@ -366,9 +317,9 @@ export default function AdminCardsPage() {
             </div>
           </div>
 
-          {/* Tabs for Stamp and Membership Cards */}
-          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'stamp' | 'membership')} className="space-y-4">
-            <TabsList className="grid w-full grid-cols-2">
+          {/* Tabs for Stamp, Membership, and Templates */}
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)} className="space-y-4">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="stamp" className="flex items-center gap-2">
                 <Star className="h-4 w-4" />
                 📮 Stamp Cards ({filteredStampCards.length})
@@ -376,6 +327,9 @@ export default function AdminCardsPage() {
               <TabsTrigger value="membership" className="flex items-center gap-2">
                 <Clock className="h-4 w-4" />
                 🎟️ Membership Cards ({filteredMembershipCards.length})
+              </TabsTrigger>
+              <TabsTrigger value="templates" className="flex items-center gap-2">
+                🧩 Templates ({templates.length})
               </TabsTrigger>
             </TabsList>
 
@@ -524,6 +478,42 @@ export default function AdminCardsPage() {
             </TabsContent>
           </Tabs>
 
+          {/* Templates Tab content (placed after Tabs for layout consistency) */}
+          {activeTab === 'templates' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">🧩 Templates</h2>
+                  <Badge variant="outline">{templates.length} total</Badge>
+                </div>
+                <Button onClick={() => router.push('/admin/cards/new')}>New Card</Button>
+              </div>
+              {templates.length === 0 ? (
+                <Card>
+                  <CardContent className="p-8 text-center">
+                    <p className="text-gray-600 dark:text-gray-400">No templates yet. Create a card to start a template or use the Template Editor.</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {templates.map((tpl) => (
+                    <Card key={tpl.id} className="hover:shadow-lg transition-shadow">
+                      <CardContent className="p-6">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-semibold text-lg text-gray-900 dark:text-white">{tpl.name}</div>
+                            <div className="text-sm text-gray-600 dark:text-gray-400">{tpl.type}</div>
+                          </div>
+                          <Button size="sm" variant="outline" onClick={() => router.push(`/admin/templates/${tpl.id}`)}>Edit</Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Enhanced Live Preview Panel */}
           <Card className="sticky top-6">
             <CardContent className="p-6">
@@ -601,27 +591,41 @@ export default function AdminCardsPage() {
                   
                   {/* Unified Preview */}
                   <div className="bg-gray-50 p-4 rounded-lg min-h-[400px] flex items-center justify-center">
-                    {/* Map previewCard to CardLivePreviewData */}
-                    <CardLivePreview
-                      defaultPlatform={previewWalletType}
-                      showControls={false}
-                      cardData={{
-                        cardType: 'stamp',
+                    {previewCard && (() => {
+                      const canonical = normalizeDatabaseResponse(previewCard)
+                      const isStamp = previewCardType === 'stamp'
+                      const stamp = isStamp ? (previewCard as StampCard) : undefined
+                      const member = !isStamp ? (previewCard as MembershipCard) : undefined
+                      const previewData = mapSimpleToPreview({
+                        cardType: previewCardType,
                         businessName: previewCard.businesses?.name || 'Business',
-                        cardName: previewCard.card_name || previewCard.name || 'Card',
-                        cardColor: previewCard.card_color || '#8B4513',
-                        iconEmoji: previewCard.icon_emoji || '☕',
-                        stampsRequired: previewCard.stamps_required || previewCard.total_stamps || 10,
-                        reward: previewCard.reward || previewCard.reward_description || 'Reward',
-                      }}
-                    />
+                        cardName: canonical.card_name,
+                        cardColor: canonical.card_color,
+                        iconEmoji: canonical.icon_emoji,
+                        stampsRequired: isStamp ? (canonical.stamps_required || stamp?.total_stamps || 10) : undefined,
+                        totalSessions: !isStamp ? (member?.total_sessions || 0) : undefined,
+                        reward: (stamp?.reward_description as string | undefined) || (canonical as any).reward || 'Reward'
+                      })
+                      return (
+                        <CardLivePreview
+                          defaultPlatform={previewWalletType}
+                          showControls={false}
+                          cardData={previewData}
+                        />
+                      )
+                    })()}
                   </div>
                   
                   {/* Card Info */}
                   <div className="text-sm text-gray-600 space-y-1">
-                    <div><strong>Card:</strong> {previewCard.card_name || previewCard.name}</div>
+                    <div><strong>Card:</strong> {(previewCard as any).card_name || (previewCard as any).name}</div>
                     <div><strong>Business:</strong> {previewCard.businesses?.name || 'Unknown'}</div>
-                    <div><strong>Stamps:</strong> {previewCard.stamps_required || previewCard.total_stamps || 0}</div>
+                    {previewCardType === 'stamp' && previewCard && (
+                      <div><strong>Stamps:</strong> {(previewCard as StampCard).total_stamps || 0}</div>
+                    )}
+                    {previewCardType === 'membership' && previewCard && (
+                      <div><strong>Total Sessions:</strong> {(previewCard as MembershipCard).total_sessions || 0}</div>
+                    )}
                     <div><strong>Status:</strong> <Badge variant={previewCard.status === 'active' ? 'default' : 'secondary'}>{previewCard.status}</Badge></div>
                   </div>
                 </div>

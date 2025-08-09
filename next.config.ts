@@ -1,5 +1,15 @@
 import type { NextConfig } from "next";
 
+// Dynamically allow Supabase Storage host for Next/Image
+const supabaseHostname = (() => {
+  try {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
+    return url ? new URL(url).hostname : undefined
+  } catch {
+    return undefined
+  }
+})()
+
 const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
@@ -24,6 +34,23 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/static/wallet/images/**',
       },
+      // Supabase Storage public/signed objects (business logos, etc.)
+      ...(supabaseHostname
+        ? [
+            {
+              protocol: 'https' as const,
+              hostname: supabaseHostname,
+              port: '',
+              pathname: '/storage/v1/object/public/**',
+            },
+            {
+              protocol: 'https' as const,
+              hostname: supabaseHostname,
+              port: '',
+              pathname: '/storage/v1/object/sign/**',
+            },
+          ]
+        : []),
     ],
   },
   async headers() {
