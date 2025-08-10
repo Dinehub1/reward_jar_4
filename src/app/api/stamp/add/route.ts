@@ -173,6 +173,31 @@ export async function POST(request: NextRequest) {
 
       console.log(`✅ Stamp added: ${newStampCount}/${totalStamps} ${isComplete ? '(COMPLETE!)' : ''}`)
 
+      // Emit card_events: stamp_given; optionally purchase when billAmount provided
+      try {
+        await supabase.from('card_events').insert({
+          card_id: customerCardId,
+          event_type: 'stamp_given',
+          metadata: { business_id: businessId || stampCard.business_id, marked_by: markedBy, notes, amount_cents: billAmount ? Math.round(billAmount * 100) : undefined }
+        })
+        if (billAmount) {
+          await supabase.from('card_events').insert({
+            card_id: customerCardId,
+            event_type: 'purchase',
+            metadata: { business_id: businessId || stampCard.business_id, amount_cents: Math.round(billAmount * 100) }
+          })
+        }
+        if (isComplete) {
+          await supabase.from('card_events').insert({
+            card_id: customerCardId,
+            event_type: 'reward_redeemed',
+            metadata: { business_id: businessId || stampCard.business_id, reward_value_cents: 0 }
+          })
+        }
+      } catch (e) {
+        console.warn('card_events insert failed (non-fatal):', e)
+      }
+
     } else {
       // Handle membership card logic
       const membershipCard = customerCard.membership_cards![0]
@@ -243,6 +268,17 @@ export async function POST(request: NextRequest) {
       }
 
       console.log(`✅ Session marked: ${newSessionCount}/${totalSessions} (${sessionsRemaining} remaining)`)
+
+      // Emit card_events: session_marked
+      try {
+        await supabase.from('card_events').insert({
+          card_id: customerCardId,
+          event_type: 'session_marked',
+          metadata: { business_id: businessId || membershipCard.business_id, marked_by: markedBy, notes }
+        })
+      } catch (e) {
+        console.warn('card_events insert failed (non-fatal):', e)
+      }
     }
 
     // Add to wallet update queue for real-time wallet updates

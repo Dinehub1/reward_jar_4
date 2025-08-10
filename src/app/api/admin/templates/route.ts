@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin-client'
+import { createServerClient } from '@/lib/supabase/server-only'
 import type { AuthoringPayload, CardTemplate, CardTemplateVersion } from '@/lib/templates/types'
 
 // GET /api/admin/templates
@@ -30,6 +31,22 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const { businessId, name, type, uiPayload } = body as { businessId: string; name: string; type: 'stamp'|'membership'; uiPayload: AuthoringPayload }
+
+    // Admin enforcement: require authenticated admin (role_id = 1)
+    const serverClient = await createServerClient()
+    const { data: { user }, error: authError } = await serverClient.auth.getUser()
+    if (authError || !user) {
+      return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 })
+    }
+    const adminCheck = createAdminClient()
+    const { data: roleRow, error: roleErr } = await adminCheck
+      .from('users')
+      .select('role_id')
+      .eq('id', user.id)
+      .single()
+    if (roleErr || !roleRow || roleRow.role_id !== 1) {
+      return NextResponse.json({ success: false, error: 'Admin access required' }, { status: 403 })
+    }
 
     const supabase = createAdminClient()
 

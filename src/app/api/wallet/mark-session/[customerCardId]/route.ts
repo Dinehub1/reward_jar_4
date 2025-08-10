@@ -205,6 +205,18 @@ export async function POST(
         result.completionReward = 'Membership benefits fully utilized'
       }
 
+      // Emit card_events: session_marked
+      try {
+        const adminClient = await (await import('@/lib/supabase/admin-client')).createAdminClient()
+        await adminClient.from('card_events').insert({
+          card_id: customerCardId,
+          event_type: 'session_marked',
+          metadata: { business_id: businessData.id, method: 'qr', notes }
+        })
+      } catch (e) {
+        console.warn('card_events insert failed (non-fatal):', e)
+      }
+
     } else if (!isMembership && actualUsageType === 'stamp') {
       // Handle loyalty card stamp addition
       const currentStamps = customerCard.current_stamps || 0
@@ -275,6 +287,18 @@ export async function POST(
       if ((currentStamps + 1) >= totalStamps) {
         result.message = 'Congratulations! Your reward is ready to claim.'
         result.rewardReady = true
+      }
+
+      // Emit card_events: stamp_given
+      try {
+        const adminClient = await (await import('@/lib/supabase/admin-client')).createAdminClient()
+        await adminClient.from('card_events').insert({
+          card_id: customerCardId,
+          event_type: 'stamp_given',
+          metadata: { business_id: businessData.id, method: 'qr', notes }
+        })
+      } catch (e) {
+        console.warn('card_events insert failed (non-fatal):', e)
       }
 
     } else {

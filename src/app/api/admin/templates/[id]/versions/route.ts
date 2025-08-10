@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin-client'
+import { createServerClient } from '@/lib/supabase/server-only'
 import type { AuthoringPayload } from '@/lib/templates/types'
 import { buildApplePassJson } from '@/lib/wallet/builders/apple-pass-builder'
 import { createLoyaltyObject, buildGoogleIds } from '@/lib/wallet/builders/google-pass-builder'
@@ -11,6 +12,22 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   try {
     const body = await req.json()
     const { uiPayload, publish } = body as { uiPayload: AuthoringPayload; publish?: boolean }
+    // Admin enforcement
+    const serverClient = await createServerClient()
+    const { data: { user }, error: authError } = await serverClient.auth.getUser()
+    if (authError || !user) {
+      return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 })
+    }
+    const adminCheck = createAdminClient()
+    const { data: roleRow, error: roleErr } = await adminCheck
+      .from('users')
+      .select('role_id')
+      .eq('id', user.id)
+      .single()
+    if (roleErr || !roleRow || roleRow.role_id !== 1) {
+      return NextResponse.json({ success: false, error: 'Admin access required' }, { status: 403 })
+    }
+
     const supabase = createAdminClient()
 
     // Determine next version number
@@ -53,6 +70,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (vErr) throw vErr
 
     if (publish) {
+      // Log template published event (non-financial)
+      try {
+        const adminClient = createAdminClient()
+        await adminClient.from('card_events').insert({
+          card_id: '00000000-0000-0000-0000-000000000000',
+          event_type: 'template_published',
+          metadata: { template_id: id, version: nextVersion }
+        })
+      } catch (e) {
+        console.warn('template_published event insert failed (non-fatal):', e)
+      }
       const { error: uErr } = await supabase
         .from('card_template_versions')
         .update({ is_published: false })
