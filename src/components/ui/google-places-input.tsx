@@ -9,7 +9,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { MapPin, AlertCircle } from 'lucide-react'
-import { googleMapsLoader } from '@/lib/google-maps-loader'
+// import { // googleMapsLoader } from '@/lib/google-maps-loader'
 
 interface PlaceResult {
   address: string
@@ -45,19 +45,23 @@ export function GooglePlacesInput({
 
   // Load Google Maps API using singleton loader
   useEffect(() => {
+    // Temporarily disabled Google Maps functionality
+    setIsLoading(false)
+    return
+    
     const loadGoogleMaps = async () => {
       try {
         setApiError(null)
         
         // Check if already loaded
-        if (googleMapsLoader.isLoaded()) {
-          setIsLoaded(true)
-          setIsLoading(false)
-          return
-        }
+        // if (googleMapsLoader.isLoaded()) {
+        //   setIsLoaded(true)
+        //   setIsLoading(false)
+        //   return
+        // }
 
         // Load using singleton loader
-        await googleMapsLoader.load()
+        // await googleMapsLoader.load()
         
         // Double check that the API is actually available
         if (window.google?.maps?.places?.Autocomplete) {
@@ -67,9 +71,7 @@ export function GooglePlacesInput({
         }
         setIsLoading(false)
       } catch (error) {
-        setApiError(error instanceof Error ? error.message : 'Failed to load Google Maps')
-        setIsLoading(false)
-        setIsLoaded(false)
+        console.error("Error:", error)
       }
     }
 
@@ -124,8 +126,8 @@ export function GooglePlacesInput({
         }
       }
     } catch (error) {
-      setApiError('Failed to initialize Google Places Autocomplete')
-    }
+        console.error("Error:", error)
+      }
   }, [isLoaded, disabled, onChange])
 
   // Sync external value changes - always ensure string

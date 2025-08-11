@@ -460,7 +460,7 @@ function CardCreationPageContent() {
         }
       }
     } catch (error) {
-      setErrors([{ field: 'business', message: 'Failed to load businesses. Please refresh and try again.' }])
+      console.error("Error:", error)
     } finally {
       setLoading(false)
     }
@@ -588,7 +588,8 @@ function CardCreationPageContent() {
         throw new Error(result.error || 'Failed to create card')
       }
     } catch (error) {
-      setErrors([{ field: 'save', message: error instanceof Error ? error.message : 'Failed to save card' }])
+      console.error("Error:", error)
+      setErrors([{ field: 'general', message: error instanceof Error ? error.message : 'Failed to create card' }])
     } finally {
       setSaving(false)
     }

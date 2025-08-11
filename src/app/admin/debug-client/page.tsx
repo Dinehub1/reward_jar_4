@@ -139,6 +139,7 @@ export default function ClientDebugPage() {
 
     // Capture console errors
     const originalError = console.error
+    console.error = (...args: any[]) => {
       setConsoleErrors(prev => [...prev, args.join(' ')])
       originalError.apply(console, args)
     }

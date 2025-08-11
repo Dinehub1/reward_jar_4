@@ -33,9 +33,7 @@ export async function fetchJsonWithTimeout<T = unknown>(
 
     return (await response.json()) as T
   } catch (error) {
-    clearTimeout(timeoutId)
     if (error instanceof Error && error.name === 'AbortError') {
-      if (onTimeout) onTimeout({ url, timeoutMs })
       throw new Error(`Request timeout after ${timeoutMs}ms: ${url}`)
     }
     throw error

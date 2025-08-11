@@ -198,8 +198,9 @@ export function BusinessEditForm({
         }
       }
     } catch (error) {
-      setErrors({ submit: 'Network error. Please try again.' })
-    } finally {
+        console.error("Error:", error)
+      }
+    }} finally {
       setSaving(false)
       setUploading(false)
     }

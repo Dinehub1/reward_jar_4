@@ -170,6 +170,7 @@ export function useAdminRealtime() {
         }
 
       } catch (error) {
+        console.error("Error:", error)
       }
     }, 500) // 500ms delay for database consistency
   }

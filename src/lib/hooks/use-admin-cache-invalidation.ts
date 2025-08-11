@@ -41,7 +41,8 @@ export async function invalidateAdminDashboard() {
     })
     
   } catch (error) {
-  }
+        console.error("Error:", error)
+      }
 }
 
 /**
@@ -58,7 +59,8 @@ export async function invalidateAdminSection(section: 'businesses' | 'customers'
     await mutate(cacheKey, undefined, { revalidate: true })
     await mutate(ADMIN_CACHE_KEYS.UNIFIED_DASHBOARD, undefined, { revalidate: true })
   } catch (error) {
-  }
+        console.error("Error:", error)
+      }
 }
 
 /**

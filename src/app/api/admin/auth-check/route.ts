@@ -24,11 +24,6 @@ export async function GET(request: NextRequest) {
 
     // Check if user has admin role (role_id === 1)
     const isAdmin = authResult.data.userRole === 1
-    
-      userId: authResult.data.userId,
-      userRole: authResult.data.userRole,
-      isAdmin
-    })
 
     return NextResponse.json({
       success: true,

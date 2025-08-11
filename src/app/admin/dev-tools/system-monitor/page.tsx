@@ -179,12 +179,8 @@ export default function SystemMonitorPage() {
       await checkServicesHealth()
       
     } catch (error) {
-      // Set error state for metrics that failed to load
-      setMetrics(prev => prev.map(metric => ({
-        ...metric,
-        status: 'error' as const,
-        value: 'Error'
-      })))
+      console.error("Error:", error)
+      setSystemHealth(prev => ({ ...prev, status: 'error', message: error instanceof Error ? error.message : 'Unknown error' }))
     } finally {
       setIsLoading(false)
       setLastRefresh(new Date())
@@ -241,16 +237,13 @@ export default function SystemMonitorPage() {
       })
 
       const updatedServices = await Promise.all(healthChecks)
-        name: s.name, 
-        status: s.status, 
-        responseTime: s.responseTime 
-      })))
       
       setServices(updatedServices)
       setLastRefresh(new Date())
       
     } catch (error) {
-    }
+        console.error("Error:", error)
+      }
   }
 
   const getMetricIcon = (id: string) => {
@@ -326,10 +319,13 @@ export default function SystemMonitorPage() {
     : 0
 
   // Debug logging for health calculation
-    services: services.map(s => ({ name: s.name, status: s.status })),
-    overallHealth,
-    healthPercentage
-  })
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Health calculation:', {
+      services: services.map(s => ({ name: s.name, status: s.status })),
+      overallHealth,
+      healthPercentage
+    })
+  }
 
   return (
     <AdminLayoutClient>

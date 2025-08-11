@@ -216,7 +216,8 @@ export default function CustomerDetailPage() {
       const walletUrl = `${baseUrl}/api/wallet/${walletType}/${customer.id}`
       window.open(walletUrl, '_blank')
     } catch (error) {
-    }
+        console.error("Error:", error)
+      }
   }
 
   if (loading) {

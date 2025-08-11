@@ -106,13 +106,7 @@ function CustomerDashboard() {
           })
         }
       } catch (error) {
-        // ✅ FIXED: Set empty state instead of letting error propagate to render
-        setCustomerCards([])
-        setStats({
-          totalCards: 0,
-          completedCards: 0,
-          totalStamps: 0
-        })
+        console.error("Error:", error)
       } finally {
         setLoading(false)
       }

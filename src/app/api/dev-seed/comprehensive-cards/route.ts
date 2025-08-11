@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
           createdAuthUsers.push(authUser.user)
         }
       } catch (error) {
-        continue
+        console.error("Error:", error)
       }
     }
 

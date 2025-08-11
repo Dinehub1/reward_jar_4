@@ -27,14 +27,6 @@ export async function GET(request: NextRequest) {
     const businessId = url.searchParams.get('business_id')
     const walletType = url.searchParams.get('wallet_type') as 'apple' | 'google' | 'pwa' | null
     const detailed = url.searchParams.get('detailed') === 'true'
-    
-      page,
-      limit,
-      cardType,
-      businessId,
-      walletType,
-      detailed
-    })
 
     // Build base query with proper typing
     const baseQuery = supabase.from('customer_cards')

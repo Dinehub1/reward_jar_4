@@ -584,11 +584,8 @@ export default function DevToolsPage() {
       }
 
     } catch (error) {
-      result.success = false
-      result.hasErrors = true
-      result.errorDetails = error instanceof Error ? error.message : 'Unknown error'
-      result.responseTime = Date.now() - startTime
-      addLog(tool.title, 'error', `Health check error: ${result.errorDetails}`, error)
+      console.error("Error:", error)
+      result.errorDetails = `Request failed: ${error instanceof Error ? error.message : 'Unknown error'}`
     }
 
     return result

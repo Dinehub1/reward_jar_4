@@ -113,7 +113,6 @@ export async function POST(
         customer_card_id: customerCardId,
         usage_type: 'discount',
         marked_by: user.id,
-        notes,
         metadata: {
           business_id: businessId || membershipCard.business_id,
           device_id: deviceId,
@@ -143,12 +142,11 @@ export async function POST(
           discount_amount_cents: discountAmountCents,
           final_amount_cents: finalAmountCents,
           method: 'qr',
-          notes,
           device_id: deviceId,
           terminal_id: terminalId,
           override_used: override && roleId === 1
         }
-      })
+      }
     } catch (e) {
     }
 
@@ -158,8 +156,6 @@ export async function POST(
         customerCardId,
         discountApplied: {
           originalAmountCents: billAmountCents,
-          discountAmountCents,
-          finalAmountCents,
           discountType: membershipCard.discount_type,
           discountValue: membershipCard.discount_value
         },
@@ -168,7 +164,7 @@ export async function POST(
           businessName: 'Business' // Will be filled from actual business data in implementation
         }
       }
-    })
+    }
 
   } catch (error) {
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })

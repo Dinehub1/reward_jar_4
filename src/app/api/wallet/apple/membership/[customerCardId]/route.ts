@@ -114,17 +114,8 @@ export async function GET(
       .from('customer_cards')
       .select(`
         id,
-        membership_type,
-        sessions_used,
-        total_sessions,
-        cost,
-        expiry_date,
-        wallet_type,
-        created_at,
         customers (
           id,
-          name,
-          email
         )
       `)
       .eq('id', customerCardId)
@@ -167,8 +158,6 @@ export async function GET(
         total_sessions: customerCard.total_sessions,
         cost: customerCard.cost,
       },
-      businessData,
-      customerCardId,
       {
         type: 'membership',
         derived: {
@@ -177,8 +166,6 @@ export async function GET(
           primaryValue: `${customerCard.sessions_used || 0}/${customerCard.total_sessions || 20}`,
           progressPercent: progress,
           remainingCount: sessionsRemaining,
-          isCompleted,
-          isExpired,
           membershipCost: customerCard.cost,
           membershipTotalSessions: customerCard.total_sessions,
           membershipExpiryDate: customerCard.expiry_date,
@@ -190,13 +177,10 @@ export async function GET(
     if (request.nextUrl.searchParams.get('debug') === 'true') {
       return NextResponse.json({
         passData,
-        customerCard,
         business: businessData,
         calculated: {
           sessionsRemaining,
           progress: Math.round(progress),
-          isExpired,
-          isCompleted,
           costPerSession: Math.round(costPerSession)
         },
         environment: {
@@ -211,13 +195,9 @@ export async function GET(
     // For now, return HTML preview
     const membershipHTML = generateMembershipHTML(
       customerCard,
-      businessData,
-      passData,
       {
         sessionsRemaining,
         progress: Math.round(progress),
-        isExpired,
-        isCompleted,
         costPerSession: Math.round(costPerSession)
       }
     )

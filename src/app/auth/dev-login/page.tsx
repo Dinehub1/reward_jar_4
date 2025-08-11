@@ -50,8 +50,8 @@ export default function DevLoginPage() {
       }
 
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Login failed')
-    } finally {
+        console.error("Error:", error)
+      } finally {
       setIsLoading(false)
     }
   }

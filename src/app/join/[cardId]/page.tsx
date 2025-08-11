@@ -253,7 +253,8 @@ export default function JoinCardPage() {
         setStep(5)
       }
     } catch (error) {
-      setError(`Failed to add to ${walletType} wallet. Please try again.`)
+      console.error("Error:", error)
+      setError('Failed to join wallet. Please try again.')
     }
   }
 

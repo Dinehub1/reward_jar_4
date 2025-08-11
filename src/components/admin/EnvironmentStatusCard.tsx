@@ -63,8 +63,8 @@ export function EnvironmentStatusCard() {
         }
       })
     } catch (error) {
-      setEnvStatus(getEnvironmentStatus())
-    } finally {
+        console.error("Error:", error)
+      } finally {
       setIsRefreshing(false)
     }
   }

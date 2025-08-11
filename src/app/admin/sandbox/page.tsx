@@ -95,8 +95,8 @@ export default function AdminSandbox() {
         }
       }
     } catch (error) {
-      toast.error('Failed to load cards')
-    } finally {
+        console.error("Error:", error)
+      } finally {
       setLoading(false)
     }
   }
@@ -155,8 +155,8 @@ export default function AdminSandbox() {
       }, ...prev])
       
     } catch (error) {
-      toast.error('Failed to generate QR code')
-    } finally {
+        console.error("Error:", error)
+      } finally {
       setIsGeneratingQR(false)
     }
   }
@@ -208,15 +208,13 @@ export default function AdminSandbox() {
       }
       
     } catch (error) {
-      toast.error('Failed to generate test data: ' + (error instanceof Error ? error.message : 'Unknown error'))
-      
-      // Add error to test results
+      console.error("Error:", error)
       setTestResults(prev => [{
-        id: Date.now().toString(),
-        action: 'Generate Test Data',
-        timestamp: new Date().toLocaleString(),
-        result: 'error',
-        message: `Failed to create test data: ${error instanceof Error ? error.message : 'Unknown error'}`
+        id: Date.now(),
+        action: 'Generate test data',
+        status: 'error',
+        result: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date()
       }, ...prev])
     } finally {
       setIsGeneratingData(false)
@@ -263,8 +261,8 @@ export default function AdminSandbox() {
       }, ...prev])
       
     } catch (error) {
-      toast.error('Test action failed')
-    }
+        console.error("Error:", error)
+      }
   }
 
   if (loading) {

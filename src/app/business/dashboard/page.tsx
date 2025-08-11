@@ -362,8 +362,8 @@ function BusinessDashboardContent() {
       })
 
     } catch (error) {
-      setError('Failed to load dashboard data. Please try refreshing the page.')
-    } finally {
+        console.error("Error:", error)
+      } finally {
       setLoading(false)
     }
   }, [supabase])

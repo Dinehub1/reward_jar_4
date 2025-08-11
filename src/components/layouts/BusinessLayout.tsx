@@ -49,8 +49,7 @@ export default function BusinessLayout({ children }: BusinessLayoutProps) {
 
         setUser(authStatus.user as any)
       } catch (error) {
-        setAuthError('Authentication failed')
-        setTimeout(() => router.push('/auth/login'), 2000)
+        console.error("Error:", error)
       } finally {
         setLoading(false)
       }
@@ -65,7 +64,8 @@ export default function BusinessLayout({ children }: BusinessLayoutProps) {
       await adminSignOut()
       router.push('/auth/login')
     } catch (error) {
-    }
+        console.error("Error:", error)
+      }
   }
 
   const navigation = [

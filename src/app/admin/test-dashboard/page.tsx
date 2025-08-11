@@ -163,7 +163,8 @@ export default function TestDashboardPage() {
       setMetrics(mockMetrics)
       setTestResults(mockTestResults)
     } catch (error) {
-    } finally {
+        console.error("Error:", error)
+      } finally {
       setIsLoading(false)
     }
   }

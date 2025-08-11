@@ -139,7 +139,8 @@ export default function BusinessDetailsPage({
     const result = await response.json()
       setBusiness(result.data)
     } catch (error) {
-    }
+        console.error("Error:", error)
+      }
   }, [businessId, router])
 
   const fetchStats = useCallback(async () => {
@@ -150,7 +151,8 @@ export default function BusinessDetailsPage({
         setStats(result.data)
       }
     } catch (error) {
-    }
+        console.error("Error:", error)
+      }
   }, [businessId])
 
   const handleRefresh = async () => {

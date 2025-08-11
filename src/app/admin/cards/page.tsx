@@ -124,11 +124,6 @@ export default function AdminCardsPage() {
           totalCustomers: unifiedData.stats?.totalCustomers || 0,
           activeCards: unifiedData.stats?.totalCards || 0
         }
-        
-          stampCards: stampCards.length,
-          membershipCards: membershipCards.length,
-          stats
-        })
 
         setStampCards(stampCards)
         setMembershipCards(membershipCards)
@@ -143,46 +138,10 @@ export default function AdminCardsPage() {
         }
 
       } catch (error) {
-        
-        // Fallback: create some sample data to show the UI is working
-        
-        const sampleStampCards: StampCard[] = [
-          {
-            id: '1',
-            name: 'Sample Coffee Card',
-            total_stamps: 10,
-            reward_description: 'Free coffee after 10 stamps',
-            status: 'active',
-            created_at: new Date().toISOString(),
-            business_id: '1',
-            businesses: { id: '1', name: 'Sample Coffee Shop' },
-            customer_cards: []
-          }
-        ]
-        
-        const sampleMembershipCards: MembershipCard[] = [
-          {
-            id: '1',
-            name: 'Sample Gym Membership',
-            total_sessions: 20,
-            cost: 100,
-            duration_days: 365,
-            status: 'active',
-            created_at: new Date().toISOString(),
-            business_id: '1',
-            businesses: { id: '1', name: 'Sample Gym' },
-            customer_cards: []
-          }
-        ]
-        
-        setStampCards(sampleStampCards)
-        setMembershipCards(sampleMembershipCards)
-        setStats({
-          totalStampCards: sampleStampCards.length,
-          totalMembershipCards: sampleMembershipCards.length,
-          totalCustomers: 0,
-          activeCards: sampleStampCards.length + sampleMembershipCards.length
-        })
+        console.error("Error loading cards:", error)
+        setStampCards([])
+        setMembershipCards([])
+        setStats({ totalStampCards: 0, totalMembershipCards: 0, totalCustomers: 0, activeCards: 0 })
       } finally {
         setIsLoading(false)
       }

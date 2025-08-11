@@ -67,7 +67,7 @@ function QrPreview({ value, size = 128 }: { value: string; size?: number }) {
           background: '#fff',
         }}
       >
-        {grid.cells.map((on, i) {
+        {grid.cells.map((on, i) => (
           <div key={i} style={{ width: cellSize, height: cellSize, background: on ? '#000' : '#fff' }} />
         ))}
       </div>
@@ -79,7 +79,7 @@ function Code128Preview({ value, width = 320, height = 64 }: { value: string; wi
   // Deterministic bar widths (not scannable), visually plausible
   const bars = useMemo(() => {
     const ints = hashStringToInts(value, 80)
-    return ints.map((n, i) {{
+    return ints.map((n, i) => ({
       w: 1 + (n % 3), // bar unit width 1..3
       black: i % 2 === 0,
     }))

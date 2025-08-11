@@ -28,25 +28,14 @@ export async function POST(request: NextRequest) {
       .from('customer_cards')
       .select(`
         id,
-        current_stamps,
-        created_at,
-        updated_at,
         stamp_cards (
           id,
-          name,
-          total_stamps,
-          reward_description,
-          updated_at,
           businesses (
             name,
-            description,
-            updated_at
           )
         ),
         customers (
           name,
-          email,
-          updated_at
         )
       `)
       .eq('id', serialNumber)
@@ -108,7 +97,6 @@ export async function POST(request: NextRequest) {
         reward_description: stampCardData.reward_description,
       },
       { name: businessData.name, description: businessData.description },
-      serialNumber,
       {
         type: 'stamp',
         derived: {
@@ -117,7 +105,6 @@ export async function POST(request: NextRequest) {
           primaryValue: `${customerCard.current_stamps}/${stampCardData.total_stamps}`,
           progressPercent: progress,
           remainingCount: stampsRemaining,
-          isCompleted,
         },
       }
     ) as any
@@ -175,7 +162,7 @@ export async function POST(request: NextRequest) {
         'Last-Modified': lastModified,
         'Cache-Control': 'no-cache, no-store, must-revalidate'
       }
-    })
+    }
 
   } catch (error) {
     return NextResponse.json(
@@ -230,7 +217,7 @@ export async function GET(request: NextRequest) {
       headers: {
         'Last-Modified': lastModified
       }
-    })
+    }
 
   } catch (error) {
     return NextResponse.json(

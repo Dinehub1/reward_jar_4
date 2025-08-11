@@ -87,9 +87,8 @@ export default function BusinessesPage() {
       await refetch()
       setLastRefresh(new Date())
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to refresh data'
-      setRefreshError(errorMessage)
-    } finally {
+        console.error("Error:", error)
+      } finally {
       setIsRefreshing(false)
     }
   }
@@ -591,8 +590,8 @@ function CreateBusinessDialog({ onBusinessCreated }: { onBusinessCreated: () => 
         alert('Error: ' + result.error)
       }
     } catch (error) {
-      alert('Error creating business: ' + (error instanceof Error ? error.message : 'Unknown error'))
-    } finally {
+        console.error("Error:", error)
+      } finally {
       setLoading(false)
     }
   }
@@ -705,8 +704,8 @@ function EditBusinessDialog({ business, onBusinessUpdated }: { business: Busines
         alert('Error: ' + result.error)
       }
     } catch (error) {
-      alert('Error updating business: ' + (error instanceof Error ? error.message : 'Unknown error'))
-    } finally {
+        console.error("Error:", error)
+      } finally {
       setLoading(false)
     }
   }
@@ -827,8 +826,8 @@ function DeleteBusinessDialog({ business, onBusinessDeleted }: { business: Busin
         alert('Error: ' + result.error)
       }
     } catch (error) {
-      alert('Error deleting business: ' + (error instanceof Error ? error.message : 'Unknown error'))
-    } finally {
+        console.error("Error:", error)
+      } finally {
       setLoading(false)
     }
   }

@@ -48,13 +48,15 @@ export async function createServerClient(): Promise<ReturnType<typeof createSupa
             try {
               cookieStore.set(name, value, options)
             } catch (error) {
-            }
+        console.error("Error:", error)
+      }
           },
           remove(name: string, options: any) {
             try {
               cookieStore.delete(name)
             } catch (error) {
-            }
+        console.error("Error:", error)
+      }
           },
         },
         global: {

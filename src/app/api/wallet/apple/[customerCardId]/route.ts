@@ -42,39 +42,16 @@ export async function GET(
       .from('customer_cards')
       .select(`
         id,
-        current_stamps,
-        sessions_used,
-        stamp_card_id,
-        membership_card_id,
-        expiry_date,
-        created_at,
-        updated_at,
         stamp_cards (
           id,
-          name,
-          total_stamps,
-          reward_description,
-          card_color,
-          icon_emoji,
           businesses (
             name,
-            description,
-            currency_code,
-            locale
           )
         ),
         membership_cards (
           id,
-          name,
-          total_sessions,
-          cost,
-          card_color,
-          icon_emoji,
           businesses (
             name,
-            description,
-            currency_code,
-            locale
           )
         )
       `)
@@ -155,7 +132,6 @@ export async function GET(
     // Generate Apple Wallet pass JSON via centralized builder
     const basePass = buildApplePassJson({
       customerCardId,
-      isMembershipCard,
       cardData: {
         name: cardData.name,
         total_stamps: cardData.total_stamps,
@@ -168,11 +144,8 @@ export async function GET(
       },
       derived: {
         progressLabel,
-        remainingLabel,
-        primaryValue,
         progressPercent: progress,
         remainingCount: remaining,
-        isCompleted,
         isExpired: isMembershipCard ? (customerCard.expiry_date ? new Date(customerCard.expiry_date) < new Date() : false) : undefined,
         membershipCost: isMembershipCard ? cardData?.cost : undefined,
         membershipTotalSessions: isMembershipCard ? cardData?.total_sessions : undefined,
@@ -245,10 +218,6 @@ export async function GET(
         }
         
         const pkpassBuffer = await generatePKPassShared(passData)
-        
-          size: pkpassBuffer.length,
-          sizeKB: (pkpassBuffer.length / 1024).toFixed(1)
-        })
         
         // IMPROVED HEADERS for better iOS Safari compatibility
         return new NextResponse(pkpassBuffer as unknown as BodyInit, {
@@ -349,10 +318,7 @@ export async function GET(
     })
 
   } catch (error) {
-      message: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
-      name: error instanceof Error ? error.name : undefined
-    })
+    console.error("Error:", error)
     return NextResponse.json(
       { 
         error: 'Failed to generate Apple Wallet pass',
@@ -399,30 +365,16 @@ export async function POST(
       .from('customer_cards')
       .select(`
         id,
-        current_stamps,
-        sessions_used,
-        stamp_card_id,
-        membership_card_id,
-        expiry_date,
-        created_at,
         stamp_cards (
           id,
-          name,
-          total_stamps,
-          reward_description,
           businesses (
             name,
-            description
           )
         ),
         membership_cards (
           id,
-          name,
-          total_sessions,
-          cost,
           businesses (
             name,
-            description
           )
         )
       `)
@@ -446,13 +398,6 @@ export async function POST(
         { status: 400 }
       )
     }
-
-      id: customerCard.id,
-      isStampCard,
-      isMembershipCard,
-      current_stamps: customerCard.current_stamps,
-      sessions_used: customerCard.sessions_used
-    })
 
     // Determine card type - either from query param or auto-detect
     let cardType = requestedType
@@ -489,9 +434,6 @@ export async function POST(
       { 
         success: true, 
         message: `Apple Wallet ${cardType} card generated successfully`,
-        filename,
-        cardType,
-        backgroundColor
       },
       { 
         status: 200,

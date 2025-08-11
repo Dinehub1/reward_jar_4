@@ -57,15 +57,15 @@ export async function createServerClient() {
             try {
               cookieStore.set(name, value, options)
             } catch (error) {
-              // Handle cookie setting errors gracefully
-            }
+        console.error("Error:", error)
+      }
           },
           remove(name: string, options: any) {
             try {
               cookieStore.delete(name)
             } catch (error) {
-              // Handle cookie deletion errors gracefully
-            }
+        console.error("Error:", error)
+      }
           },
         },
         global: {

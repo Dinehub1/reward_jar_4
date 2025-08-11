@@ -187,7 +187,9 @@ class GoogleMapsLoader {
       } catch (error) {
         console.error("Error:", error)
       }
-    }// Clear callbacks
+    })
+
+    // Clear callbacks
     this.state.callbacks = []
   }
 
@@ -303,7 +305,6 @@ class GoogleMapsLoader {
 export const googleMapsLoader = new GoogleMapsLoader()
 
 // Extend window interface
-
 declare global {
   interface Window {
     google: typeof google
@@ -311,3 +312,4 @@ declare global {
     initGoogleMaps?: () => void
   }
 }
+

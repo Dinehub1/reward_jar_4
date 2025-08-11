@@ -103,7 +103,8 @@ export default function TestBusinessManagementPage() {
 
       setBusinessTests(mockBusinessTests)
     } catch (error) {
-    } finally {
+        console.error("Error:", error)
+      } finally {
       setIsLoading(false)
     }
   }

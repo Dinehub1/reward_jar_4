@@ -42,10 +42,14 @@ export function useAdminAuth(requireAuth: boolean = true): AdminAuthState & Admi
   const authResolved = useRef(false)
 
   const checkAuth = async () => {
-      authResolved: authResolved.current, 
-      authCheckInProgress: authCheckInProgress.current,
-      requireAuth 
-    })
+    // Debug auth state (development only)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Auth check:', {
+        authResolved: authResolved.current, 
+        authCheckInProgress: authCheckInProgress.current,
+        requireAuth 
+      })
+    }
     
     // If auth is already resolved or in progress, don't check again
     if (authResolved.current || authCheckInProgress.current) {
@@ -112,12 +116,8 @@ export function useAdminAuth(requireAuth: boolean = true): AdminAuthState & Admi
       authResolved.current = true
 
     } catch (error) {
-      setState({
-        isAdmin: false,
-        isLoading: false,
-        user: null,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      })
+      console.error("Error:", error)
+      setState({ isAdmin: false, isLoading: false, user: null, error: error instanceof Error ? error.message : 'Auth check failed' })
       authResolved.current = true
     } finally {
       authCheckInProgress.current = false
@@ -138,21 +138,21 @@ export function useAdminAuth(requireAuth: boolean = true): AdminAuthState & Admi
       authCheckInProgress.current = false
       router.push('/auth/login')
     } catch (error) {
-      setState(prev => ({
-        ...prev,
-        error: error instanceof Error ? error.message : 'Sign out failed'
-      }))
+      console.error("Error:", error)
     }
   }
 
   useEffect(() => {
     let isMounted = true
-const timeoutId: NodeJS.Timeout | null = null
+    let timeoutId: NodeJS.Timeout | null = null
     
     const performAuthCheck = async () => {
-        authResolved: authResolved.current,
-        isMounted 
-      })
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Performing auth check:', {
+          authResolved: authResolved.current,
+          isMounted 
+        })
+      }
       
       // Only perform auth check once per component lifecycle
       if (authResolved.current) {
@@ -162,6 +162,7 @@ const timeoutId: NodeJS.Timeout | null = null
       try {
         await checkAuth()
       } catch (error) {
+        console.error("Error:", error)
       }
       
       // Only update state if component is still mounted

@@ -23,12 +23,6 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(parseInt(url.searchParams.get('limit') || '20'), 100)
     const search = url.searchParams.get('search')
     const detailed = url.searchParams.get('detailed') === 'true'
-    
-      page,
-      limit,
-      search,
-      detailed
-    })
 
     // Build base query
     // Build query based on detailed flag

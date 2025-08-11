@@ -57,9 +57,10 @@ class AdminEventManager {
       try {
         listener(event)
       } catch (error) {
+        console.error("Error:", error)
       }
     })
-
+    
     // Handle different notification types
     if (options.log) {
       this.logEvent(event)
@@ -140,7 +141,8 @@ class AdminEventManager {
       //   severity: event.severity
       // })
     } catch (error) {
-    }
+        console.error("Error:", error)
+      }
   }
 
   /**
@@ -170,7 +172,8 @@ class AdminEventManager {
       // })
       
     } catch (error) {
-    }
+        console.error("Error:", error)
+      }
   }
 
   /**

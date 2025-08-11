@@ -337,14 +337,6 @@ export async function GET(request: NextRequest) {
       }
     }
 
-      businesses: businesses.length,
-      customers: customers.length,
-      customerCards: customerCards.length,
-      stampCards: stampCards.length,
-      membershipCards: membershipCards.length,
-      queryTime: Date.now() - startTime
-    })
-
     return NextResponse.json(response, {
       headers: {
         'Cache-Control': 'no-cache, no-store, must-revalidate',

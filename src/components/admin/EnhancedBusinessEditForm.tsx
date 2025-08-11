@@ -266,7 +266,8 @@ export function EnhancedBusinessEditForm({
       // Show subtle success indicator
       
     } catch (error) {
-    } finally {
+        console.error("Error:", error)
+      } finally {
       setSaving(false)
     }
   }
@@ -332,7 +333,7 @@ export function EnhancedBusinessEditForm({
       onSave(result.data)
       
     } catch (error) {
-      setErrors({ submit: error instanceof Error ? error.message : 'Failed to save changes' })
+      console.error("Error:", error)
     } finally {
       setSaving(false)
     }

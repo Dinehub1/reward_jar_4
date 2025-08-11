@@ -50,10 +50,8 @@ export function WalletProvisioningStatus({
         setWalletStatuses(data.statuses || walletStatuses)
       }
     } catch (error) {
-      // ✅ ADMIN NOTIFICATION: Notify about wallet status check failures
-      adminNotifications.walletFailure(
-        cardId,
-        `Failed to check wallet statuses: ${error instanceof Error ? error.message : 'Unknown error'}`
+        console.error("Error:", error)
+      }`
       )
     }
   }
@@ -75,10 +73,8 @@ export function WalletProvisioningStatus({
         throw new Error(`Provisioning failed: ${errorText}`)
       }
     } catch (error) {
-      // ✅ ADMIN NOTIFICATION: Notify about wallet provisioning failures
-      adminNotifications.walletFailure(
-        cardId,
-        `Wallet provisioning failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+        console.error("Error:", error)
+      }`
       )
       // Update statuses to show failures
       setWalletStatuses(prev => prev.map(status => ({

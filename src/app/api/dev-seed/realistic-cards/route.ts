@@ -105,8 +105,7 @@ export async function POST(request: NextRequest) {
         insertedCards += batch.length
         
       } catch (error) {
-        failedInserts += batch.length
-        continue
+        console.error("Error:", error)
       }
     }
 

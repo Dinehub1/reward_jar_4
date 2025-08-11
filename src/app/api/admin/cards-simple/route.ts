@@ -13,11 +13,10 @@ async function retryOperation<T>(
     try {
       return await operation()
     } catch (error) {
-      lastError = error as Error
-      
+      console.error(`Retry attempt ${attempt} failed:`, error)
+      lastError = error instanceof Error ? error : new Error('Unknown error')
       if (attempt < maxRetries) {
         await new Promise(resolve => setTimeout(resolve, delay))
-        delay *= 2 // Exponential backoff
       }
     }
   }
@@ -143,11 +142,6 @@ export async function GET(request: NextRequest) {
         timestamp: new Date().toISOString()
       }
     }
-    
-      stampCards: processedStampCards.length,
-      membershipCards: processedMembershipCards.length,
-      totalCards: processedStampCards.length + processedMembershipCards.length
-    })
     
     return NextResponse.json(result)
     

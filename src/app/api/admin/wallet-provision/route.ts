@@ -83,8 +83,6 @@ export async function POST(request: NextRequest) {
         *,
         businesses (
           id,
-          name,
-          contact_email
         )
       `)
       .eq('id', cardId)
@@ -110,11 +108,11 @@ export async function POST(request: NextRequest) {
         error: appleResult.error
       })
     } catch (error) {
+      console.error("Error:", error)
       statuses.push({
-        type: 'apple',
-        status: 'failed',
-        lastUpdated: timestamp,
-        error: 'Apple Wallet provisioning failed'
+        provider: 'apple',
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
       })
     }
 
@@ -128,12 +126,7 @@ export async function POST(request: NextRequest) {
         error: googleResult.error
       })
     } catch (error) {
-      statuses.push({
-        type: 'google',
-        status: 'failed',
-        lastUpdated: timestamp,
-        error: 'Google Wallet provisioning failed'
-      })
+      console.error("Error:", error)
     }
 
     // PWA Wallet (always succeeds as fallback)
@@ -145,12 +138,7 @@ export async function POST(request: NextRequest) {
         lastUpdated: timestamp
       })
     } catch (error) {
-      statuses.push({
-        type: 'pwa',
-        status: 'failed',
-        lastUpdated: timestamp,
-        error: 'PWA provisioning failed'
-      })
+      console.error("Error:", error)
     }
 
     // Store provisioning status in database
@@ -166,9 +154,8 @@ export async function POST(request: NextRequest) {
           metadata: {
             card_name: cardName,
             provisioning_admin: user.id,
-            statuses
           }
-        })
+        }
     } catch (statusError) {
     }
 

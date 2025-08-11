@@ -237,6 +237,7 @@ function QuickActionsPanel({ onRefreshAll }: { onRefreshAll: () => Promise<void>
       await actionFn()
       addResult(`✅ ${action} completed successfully`)
     } catch (error) {
+      console.error("Error:", error)
       addResult(`❌ ${action} failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setIsPerformingAction(false)
@@ -419,15 +420,8 @@ function AdminDashboardContent() {
         'All admin dashboard data has been successfully refreshed'
       )
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
-      setRefreshError(errorMessage)
-      
-      // ✅ ADMIN NOTIFICATION: Notify about refresh failures
-      adminNotifications.systemError(
-        'Dashboard Refresh Failed',
-        errorMessage,
-        { action: 'data_refresh', error: errorMessage }
-      )
+      console.error("Error:", error)
+      toast.error('Failed to refresh dashboard data')
     } finally {
       setRefreshing(false)
     }

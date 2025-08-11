@@ -44,11 +44,12 @@ export async function POST(request: NextRequest) {
     }
 
     // For development, we'll create a simple session token
-    // In a real app, you'd verify the password properly
-      id: userData.id,
-      email: userData.email,
-      role: userData.role_id
-    })
+            // In a real app, you'd verify the password properly
+        const loginInfo = {
+          id: userData.id,
+          email: userData.email,
+          role: userData.role_id
+        }
 
     return NextResponse.json({
       success: true,

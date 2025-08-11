@@ -39,13 +39,6 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-      name: file.name,
-      type: file.type,
-      size: file.size,
-      uploadType: type,
-      businessId
-    })
-
     // Create server-side admin Supabase client for storage operations
     const supabase = createAdminClient()
 

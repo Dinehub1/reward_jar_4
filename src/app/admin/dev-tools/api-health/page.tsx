@@ -304,7 +304,8 @@ export default function ApiHealthPage() {
       }
       
     } catch (error) {
-    } finally {
+        console.error("Error:", error)
+      } finally {
       setIsRunningAll(false)
     }
   }

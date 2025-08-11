@@ -137,8 +137,8 @@ export default function ManagerModeToggle({
       }
 
     } catch (error) {
-      setError('Failed to load manager permissions')
-    } finally {
+        console.error("Error:", error)
+      } finally {
       setIsLoading(false)
     }
   }, [userId, businessId])

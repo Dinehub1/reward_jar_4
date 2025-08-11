@@ -52,13 +52,6 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(parseInt(url.searchParams.get('limit') || '20'), 100)
     const offset = (page - 1) * limit
 
-      businessId,
-      cardType,
-      status,
-      page,
-      limit
-    })
-
     let stampCards = []
     let membershipCards = []
 
@@ -192,11 +185,6 @@ export async function POST(request: NextRequest) {
       stamp_condition,
       min_bill_amount
     } = body
-
-      cardName: cardName || name, 
-      businessId: businessId || business_id, 
-      stampsRequired: stampsRequired || values?.total_stamps 
-    })
 
     // Use server client to authenticate the user
     const supabase = await createServerClient()

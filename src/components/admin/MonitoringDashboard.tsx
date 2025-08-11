@@ -76,7 +76,8 @@ export default function MonitoringDashboard() {
         calculateMetrics(analyticsData)
       }
     } catch (error) {
-    } finally {
+        console.error("Error:", error)
+      } finally {
       setLoading(false)
     }
   }

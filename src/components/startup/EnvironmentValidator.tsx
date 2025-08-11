@@ -59,13 +59,9 @@ export function EnvironmentValidator({ children }: EnvironmentValidatorProps) {
         }
       }
     } catch (error) {
-      setValidationState({
-        isValid: false,
-        isLoading: false,
-        errors: ['Environment validation failed'],
-        warnings: []
-      })
-    }
+        console.error("Error:", error)
+      }
+    }}
   }, [])
 
   // Show loading state briefly

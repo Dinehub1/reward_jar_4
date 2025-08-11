@@ -77,6 +77,7 @@ export default function StampCardsPage() {
           setStampCards(cardsWithCounts)
         }
       } catch (error) {
+        console.error("Error:", error)
       } finally {
         setLoading(false)
       }

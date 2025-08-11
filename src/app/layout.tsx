@@ -22,8 +22,7 @@ export const metadata: Metadata = {
 // try {
 //   validateServerEnvironment()
 // } catch (error) {
-//   
-//   // Error is logged, but we let the app continue to show the error UI
+//   console.error("Error:", error)
 // }
 
 export default function RootLayout({

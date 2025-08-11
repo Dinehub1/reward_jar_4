@@ -108,8 +108,8 @@ export function CardLivePreview({
         setRealPassData(passData)
       }
     } catch (error) {
-      setRealPassData(null)
-    }
+        console.error("Error:", error)
+      }
   }
   const currentValue = simulateRewardReady ? maxValue : currentValueBase
 

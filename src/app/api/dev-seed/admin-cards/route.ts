@@ -11,14 +11,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { cardId, cardType, testCustomerId, currentStamps, sessionsUsed, walletType = 'pwa' } = body
 
-      cardId,
-      cardType,
-      testCustomerId,
-      currentStamps,
-      sessionsUsed,
-      walletType
-    })
-
     const supabase = createAdminClient()
 
     // First, check if we need to create a test customer (must be valid UUIDs per schema)

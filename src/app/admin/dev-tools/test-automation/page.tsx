@@ -223,6 +223,7 @@ export default function TestAutomationPage() {
           : s
       ))
     } catch (error) {
+      console.error("Error:", error)
       setSuites(prev => prev.map(s => 
         s.id === suite.id 
           ? { ...s, status: 'failed', lastRun: new Date() }

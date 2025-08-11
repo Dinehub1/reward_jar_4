@@ -75,7 +75,7 @@ export function CardPresentational({ data, platform, progressPercent }: CardPres
             return (
               <div className="mb-3">
                 <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
-                  {cells.map((filled, idx) {
+                  {cells.map((filled, idx) => (
                     <div key={idx} className={`aspect-square rounded-xl border flex items-center justify-center text-gray-400 ${filled ? 'bg-gray-200 border-gray-300' : 'bg-white border-gray-200'}`}>
                       <span className={`text-lg ${filled ? 'opacity-70' : 'opacity-40'}`}>{data.iconEmoji}</span>
                     </div>
