@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { DevLoginButton } from '@/components/debug/DevLoginButton'
-import { getUserRole, getRoleRedirectPath } from '@/lib/auth/auth-helpers'
+import { getUserRole, getUserRoleWithToken, getRoleRedirectPath } from '@/lib/auth/auth-helpers'
 
 // Simple form validation
 const validateEmail = (email: string) => {
@@ -112,7 +112,13 @@ function LoginContent() {
       // 🔐 SECURITY: Role lookup now uses /api/auth/get-role instead of direct database access
       // This prevents SUPABASE_SERVICE_ROLE_KEY exposure to the browser
       console.log('[AUTH-DEBUG] Getting user role via secure API for:', loginResult.user.id)
-      const userRole = await getUserRole(loginResult.user)
+      
+      // Pass session access token (not user object) to the role lookup
+      if (!loginResult.session?.access_token) {
+        throw new Error('No session access token available')
+      }
+      
+      const userRole = await getUserRoleWithToken(loginResult.session.access_token)
       console.log('[AUTH-DEBUG] User role resolved via secure API:', userRole)
 
       // Show success message

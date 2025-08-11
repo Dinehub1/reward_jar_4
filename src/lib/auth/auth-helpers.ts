@@ -52,18 +52,13 @@ export async function getUserRole(user: any): Promise<number> {
 }
 
 /**
- * 🔐 SECURE: API-based role lookup (client-safe)
- * Makes secure API call instead of direct database access
+ * 🔐 SECURE: Get user role directly with access token
+ * This is the preferred method for client components after authentication
  */
-export async function getUserRoleFromAPI(user: any): Promise<number> {
+export async function getUserRoleWithToken(accessToken: string): Promise<number> {
   try {
-    if (!user?.access_token) {
-      console.warn('[AUTH-HELPERS] No access token available for role lookup')
-      return 0
-    }
-
     const startTime = Date.now()
-    console.log('[AUTH-HELPERS] Calling secure API for role lookup')
+    console.log('[AUTH-HELPERS] Calling secure API for role lookup with token')
 
     const response = await fetch('/api/auth/get-role', {
       method: 'POST',
@@ -71,7 +66,7 @@ export async function getUserRoleFromAPI(user: any): Promise<number> {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        accessToken: user.access_token
+        accessToken
       } as GetRoleRequest),
     })
 
@@ -86,6 +81,28 @@ export async function getUserRoleFromAPI(user: any): Promise<number> {
     }
 
     return result.role || 0
+  } catch (error) {
+    console.error('[AUTH-HELPERS] API role lookup exception:', error)
+    return 0
+  }
+}
+
+/**
+ * 🔐 SECURE: API-based role lookup (client-safe)
+ * Makes secure API call instead of direct database access
+ * Note: This tries to extract access token from user object
+ */
+export async function getUserRoleFromAPI(user: any): Promise<number> {
+  try {
+    // Try different locations where access token might be stored
+    let accessToken = user?.access_token || user?.session?.access_token
+
+    if (!accessToken) {
+      console.warn('[AUTH-HELPERS] No access token available for role lookup in user object')
+      return 0
+    }
+
+    return await getUserRoleWithToken(accessToken)
   } catch (error) {
     console.error('[AUTH-HELPERS] API role lookup exception:', error)
     return 0
