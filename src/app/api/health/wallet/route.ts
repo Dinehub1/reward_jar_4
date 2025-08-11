@@ -20,11 +20,10 @@ export async function GET(request: NextRequest) {
       }
     };
 
-    // Check Apple Wallet configuration
+    // Check Apple Wallet configuration (updated env var names)
     const appleEnvVars = [
-      'APPLE_WALLET_TEAM_ID',
-      'APPLE_WALLET_KEY_ID', 
-      'APPLE_WALLET_PRIVATE_KEY'
+      'APPLE_TEAM_IDENTIFIER',
+      'APPLE_PASS_TYPE_IDENTIFIER'
     ];
     
     const appleConfigured = appleEnvVars.every(envVar => !!process.env[envVar]);

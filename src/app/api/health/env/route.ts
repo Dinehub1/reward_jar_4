@@ -1,7 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getEnvironmentConfig, validateEnvironment } from '@/lib/config/environment';
 
 export async function GET(request: NextRequest) {
   try {
+    const validation = validateEnvironment();
+    
+    if (!validation.valid) {
+      return NextResponse.json({
+        status: 'error',
+        message: 'Environment configuration issues detected',
+        errors: validation.errors,
+        timestamp: new Date().toISOString(),
+        environment: {
+          valid: false,
+          issues: validation.errors
+        }
+      }, { status: 500 });
+    }
+
+    const config = getEnvironmentConfig();
+
     const requiredEnvVars = [
       'NEXT_PUBLIC_SUPABASE_URL',
       'NEXT_PUBLIC_SUPABASE_ANON_KEY',
@@ -13,9 +31,8 @@ export async function GET(request: NextRequest) {
       'GOOGLE_WALLET_SERVICE_ACCOUNT_EMAIL',
       'GOOGLE_WALLET_PRIVATE_KEY',
       'GOOGLE_WALLET_ISSUER_ID',
-      'APPLE_WALLET_TEAM_ID',
-      'APPLE_WALLET_KEY_ID',
-      'APPLE_WALLET_PRIVATE_KEY'
+      'APPLE_TEAM_IDENTIFIER',
+      'APPLE_PASS_TYPE_IDENTIFIER'
     ];
 
     const envStatus: Record<string, any> = {
