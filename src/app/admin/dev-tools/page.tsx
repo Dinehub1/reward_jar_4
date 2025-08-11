@@ -130,7 +130,8 @@ const devTools: DevTool[] = [
     path: '/admin/demo/card-creation',
     icon: <PlayCircle className="h-5 w-5" />,
     category: 'testing',
-    status: 'active'
+    status: 'active',
+    lastUpdated: 'Just fixed'
   },
   {
     id: 'test-automation',
@@ -152,7 +153,7 @@ const devTools: DevTool[] = [
     icon: <Map className="h-5 w-5" />,
     category: 'debug',
     status: 'active',
-    lastUpdated: 'Just updated'
+    lastUpdated: 'Just fixed'
   },
   {
     id: 'debug-client',
@@ -217,7 +218,8 @@ const devTools: DevTool[] = [
     path: '/api/test/centralized-architecture',
     icon: <Database className="h-5 w-5" />,
     category: 'utilities',
-    status: 'active'
+    status: 'active',
+    lastUpdated: 'Just fixed'
   },
 
   // Monitoring

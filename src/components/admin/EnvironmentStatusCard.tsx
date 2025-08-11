@@ -38,17 +38,15 @@ export function EnvironmentStatusCard() {
       const env = envRes.ok ? await envRes.json() : null
       const wallet = walletRes.ok ? await walletRes.json() : null
 
-      // Derive wallet availability from server
+      // Derive wallet availability from server (updated for new wallet health endpoint)
       const appleReady = !!(
         wallet?.wallets?.apple && 
-        wallet.wallets.apple.configured && 
-        wallet.wallets.apple.status === 'configured'
+        wallet.wallets.apple.configured
       )
 
       const googleReady = !!(
         wallet?.wallets?.google && 
-        wallet.wallets.google.configured && 
-        wallet.wallets.google.status === 'configured'
+        wallet.wallets.google.configured
       )
 
       setEnvStatus({
