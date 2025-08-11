@@ -108,10 +108,12 @@ function LoginContent() {
       }
 
 
-      // Step 2: Get user role (optimized with fallback)
-      console.log('[AUTH-DEBUG] Getting user role for:', loginResult.user.id)
+      // Step 2: Get user role via SECURE API endpoint
+      // 🔐 SECURITY: Role lookup now uses /api/auth/get-role instead of direct database access
+      // This prevents SUPABASE_SERVICE_ROLE_KEY exposure to the browser
+      console.log('[AUTH-DEBUG] Getting user role via secure API for:', loginResult.user.id)
       const userRole = await getUserRole(loginResult.user)
-      console.log('[AUTH-DEBUG] User role resolved:', userRole)
+      console.log('[AUTH-DEBUG] User role resolved via secure API:', userRole)
 
       // Show success message
       setSuccessMessage('Login successful! Redirecting...')

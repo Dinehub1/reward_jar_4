@@ -1,7 +1,13 @@
-import { createAdminClient } from '@/lib/supabase/admin-client'
-
 /**
- * Enhanced auth helpers for production-ready authentication
+ * 🔐 SECURE AUTH HELPERS
+ * 
+ * These helpers are designed for CLIENT-SIDE use and DO NOT access service role keys.
+ * All database operations are handled by secure API endpoints.
+ * 
+ * SECURITY COMPLIANCE:
+ * - No createAdminClient() usage (prevents service role key exposure)
+ * - All database queries routed through secure API endpoints
+ * - Client-safe role resolution and redirect logic
  */
 
 export interface UserWithRole {
@@ -11,9 +17,20 @@ export interface UserWithRole {
   role_name?: string
 }
 
+export interface GetRoleRequest {
+  accessToken: string
+}
+
+export interface GetRoleResponse {
+  success: boolean
+  role?: number
+  userId?: string
+  error?: string
+}
+
 /**
- * Get user role from JWT claims (primary method)
- * Falls back to database if not present in claims
+ * 🔐 SECURE: Get user role via API endpoint
+ * This replaces direct database access and is safe for client components
  */
 export async function getUserRole(user: any): Promise<number> {
   try {
@@ -26,53 +43,51 @@ export async function getUserRole(user: any): Promise<number> {
       return parseInt(user.user_metadata.role_id)
     }
 
-    // Fallback: Query database (with caching)
-    return await getUserRoleFromDatabase(user.id)
+    // Secure fallback: Call API endpoint (no direct database access)
+    return await getUserRoleFromAPI(user)
   } catch (error) {
-    console.error('Error getting user role:', error)
+    console.error('[AUTH-HELPERS] Error getting user role:', error)
     return 0 // Default to no role
   }
 }
 
 /**
- * Database role lookup with error handling, performance logging, and timeout
+ * 🔐 SECURE: API-based role lookup (client-safe)
+ * Makes secure API call instead of direct database access
  */
-export async function getUserRoleFromDatabase(userId: string, timeoutMs: number = 3000): Promise<number> {
-  const startTime = Date.now()
-  
+export async function getUserRoleFromAPI(user: any): Promise<number> {
   try {
-    const supabase = createAdminClient()
-    
-    // Add timeout to prevent hanging
-    const queryPromise = supabase
-      .from('users')
-      .select('role_id')
-      .eq('id', userId)
-      .single()
-
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Role lookup timeout')), timeoutMs)
-    })
-
-    const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any
-
-    const queryTime = Date.now() - startTime
-    
-    if (queryTime > 1000) {
-      console.warn(`[AUTH-PERF] Slow role lookup: ${queryTime}ms for user ${userId}`)
-    }
-
-    if (error) {
-      console.error('[AUTH-ERROR] Role lookup failed:', error)
+    if (!user?.access_token) {
+      console.warn('[AUTH-HELPERS] No access token available for role lookup')
       return 0
     }
 
-    return data?.role_id || 0
-  } catch (error) {
-    const queryTime = Date.now() - startTime
-    console.error(`[AUTH-ERROR] Role lookup exception after ${queryTime}ms:`, error)
+    const startTime = Date.now()
+    console.log('[AUTH-HELPERS] Calling secure API for role lookup')
+
+    const response = await fetch('/api/auth/get-role', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        accessToken: user.access_token
+      } as GetRoleRequest),
+    })
+
+    const result: GetRoleResponse = await response.json()
+    const apiTime = Date.now() - startTime
     
-    // Return a safe default rather than blocking login
+    console.log('[AUTH-HELPERS] API role lookup completed in', apiTime, 'ms')
+
+    if (!result.success) {
+      console.error('[AUTH-HELPERS] API role lookup failed:', result.error)
+      return 0
+    }
+
+    return result.role || 0
+  } catch (error) {
+    console.error('[AUTH-HELPERS] API role lookup exception:', error)
     return 0
   }
 }

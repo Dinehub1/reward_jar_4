@@ -5,7 +5,6 @@
 
 import { createAdminClient } from '@/lib/supabase/admin-client'
 import { getServerUser, getServerSession } from '@/lib/supabase/server'
-import { getUserRole } from '@/lib/auth/auth-helpers'
 import type { MCPResponse, MCPAuthContext } from './types'
 
 export interface MCPUser {
@@ -31,13 +30,26 @@ export async function getAuthContext(): Promise<MCPResponse<MCPAuthContext & { u
       }
     }
     
-    // Get user role using optimized helper (with timeout and caching)
+    // Get user role directly from database (MCP is server-side)
+    // 🔐 SECURITY: MCP layer can safely use createAdminClient() as it's server-only
+    const supabase = createAdminClient()
     console.log('[MCP-AUTH] Getting user role for:', user.id)
-    const userRole = await getUserRole(user)
-    console.log('[MCP-AUTH] User role resolved:', userRole)
     
-    // Create userData object for backward compatibility
-    const userData = { role_id: userRole }
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('role_id')
+      .eq('id', user.id)
+      .single()
+    
+    if (userError) {
+      console.error('[MCP-AUTH] Role lookup failed:', userError)
+      return {
+        success: false,
+        error: 'Failed to get user role'
+      }
+    }
+    
+    console.log('[MCP-AUTH] User role resolved:', userData.role_id)
     
     // Get business ID if user is a business owner
     let businessId: string | undefined
