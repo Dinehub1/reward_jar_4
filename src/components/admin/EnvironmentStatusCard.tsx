@@ -53,7 +53,7 @@ export function EnvironmentStatusCard() {
 
       setEnvStatus({
         ...clientStatus,
-        hasServiceRoleKey: env?.status === 'healthy' && env?.environment?.required?.['SUPABASE_SERVICE_ROLE_KEY']?.present,
+        hasServiceRoleKey: env?.environment?.required?.['SUPABASE_SERVICE_ROLE_KEY']?.present || false,
         walletAvailability: {
           apple: appleReady,
           google: googleReady,
