@@ -29,33 +29,31 @@ export function EnvironmentStatusCard() {
     try {
       // Get client-side environment status
       const clientStatus = getEnvironmentStatus()
-      // Fetch server-side environment health (wallets) and simple service-role check in parallel
-      const [simpleRes, envRes] = await Promise.all([
-        fetch('/api/health/env/simple'),
-        fetch('/api/health/env')
+      // Fetch server-side environment health (wallets) and environment check in parallel
+      const [envRes, walletRes] = await Promise.all([
+        fetch('/api/health/env'),
+        fetch('/api/health/wallet')
       ])
 
-      const simple = simpleRes.ok ? await simpleRes.json() : null
       const env = envRes.ok ? await envRes.json() : null
+      const wallet = walletRes.ok ? await walletRes.json() : null
 
       // Derive wallet availability from server
       const appleReady = !!(
-        env?.appleWallet && (
-          env.appleWallet.status === 'ready_for_production' ||
-          (env.appleWallet.configured && env.appleWallet.certificatesValid)
-        )
+        wallet?.wallets?.apple && 
+        wallet.wallets.apple.configured && 
+        wallet.wallets.apple.status === 'configured'
       )
 
       const googleReady = !!(
-        env?.googleWallet && (
-          env.googleWallet.status === 'ready_for_production' ||
-          env.googleWallet.configured
-        )
+        wallet?.wallets?.google && 
+        wallet.wallets.google.configured && 
+        wallet.wallets.google.status === 'configured'
       )
 
       setEnvStatus({
         ...clientStatus,
-        hasServiceRoleKey: simple?.hasServiceRoleKey ?? null,
+        hasServiceRoleKey: env?.status === 'healthy' && env?.environment?.required?.['SUPABASE_SERVICE_ROLE_KEY']?.present,
         walletAvailability: {
           apple: appleReady,
           google: googleReady,
