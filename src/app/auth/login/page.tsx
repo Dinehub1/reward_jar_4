@@ -4,6 +4,8 @@ import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { DevLoginButton } from '@/components/debug/DevLoginButton'
+import { getUserRole, getRoleRedirectPath } from '@/lib/auth/auth-helpers'
 
 // Simple form validation
 const validateEmail = (email: string) => {
@@ -106,14 +108,10 @@ function LoginContent() {
       }
 
 
-      // Step 2: Get user role directly (simplified auth check)
-      const { data: userData, error: roleError } = await supabase
-        .from('users')
-        .select('role_id')
-        .eq('id', loginResult.user.id)
-        .single()
-
-      const userRole = userData?.role_id || 0
+      // Step 2: Get user role (optimized with fallback)
+      console.log('[AUTH-DEBUG] Getting user role for:', loginResult.user.id)
+      const userRole = await getUserRole(loginResult.user)
+      console.log('[AUTH-DEBUG] User role resolved:', userRole)
 
       // Show success message
       setSuccessMessage('Login successful! Redirecting...')
@@ -124,16 +122,9 @@ function LoginContent() {
       if (nextUrl) {
         router.push(decodeURIComponent(nextUrl))
       } else {
-        // Redirect based on role
-        if (userRole === 1) {
-          router.push('/admin')
-        } else if (userRole === 2) {
-          router.push('/business/dashboard')
-        } else if (userRole === 3) {
-          router.push('/customer/dashboard')
-        } else {
-          router.push('/')
-        }
+        // Redirect based on role using helper
+        const redirectPath = getRoleRedirectPath(userRole, '/')
+        router.push(redirectPath)
       }
 
 
@@ -271,6 +262,9 @@ function LoginContent() {
                 </Link>
               </p>
             </div>
+
+            {/* Development Login Button */}
+            <DevLoginButton />
           </div>
         </div>
 
