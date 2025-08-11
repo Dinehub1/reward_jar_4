@@ -20,10 +20,34 @@ export async function GET(
     const { data: customerCard, error: cardError } = await adminClient
       .from('customer_cards')
       .select(`
-        *,
-        stamp_card:stamp_cards(*),
-        membership_card:membership_cards(*),
-        customer:customers(*)
+        id,
+        stamp_card_id,
+        membership_card_id,
+        current_stamps,
+        sessions_used,
+        stamp_card:stamp_cards(
+          id,
+          name,
+          card_color,
+          icon_emoji,
+          total_stamps,
+          reward_description,
+          business_id
+        ),
+        membership_card:membership_cards(
+          id,
+          name,
+          card_color,
+          icon_emoji,
+          total_sessions,
+          cost,
+          business_id
+        ),
+        customer:customers(
+          id,
+          name,
+          email
+        )
       `)
       .eq('id', customerCardId)
       .single();

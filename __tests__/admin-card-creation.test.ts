@@ -7,13 +7,12 @@
  */
 
 // No need to import Jest globals - they're available globally
-import { createClient } from '@supabase/supabase-js'
+import { createAdminClient } from '@/lib/supabase/admin-client'
+import { setupCanonicalFixtures, cleanupCanonicalFixtures, CANONICAL_BUSINESS_FIXTURE } from './fixtures/canonical-fixtures'
+import { createBusiness, cleanupBusiness } from './factories/business-factory'
 
 // Test configuration
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const supabase = createAdminClient()
 
 // Test data constants
 const TEST_ADMIN_USER = {
@@ -76,7 +75,12 @@ describe('Admin Card Creation Tests', () => {
     ], { onConflict: 'id' })
     
     // Create test business
-    await supabase.from('businesses').upsert(TEST_BUSINESS, { onConflict: 'id' })
+    const { data: businessResult, error: businessError } = await supabase.from('businesses').upsert(TEST_BUSINESS, { onConflict: 'id' })
+    if (businessError) {
+      console.error('Failed to create test business:', businessError)
+    } else {
+      console.log('Test business created:', businessResult)
+    }
   })
 
   afterEach(async () => {

@@ -37,21 +37,39 @@ export async function GET(
     const customerCardId = resolvedParams.customerCardId
 
 
-    // Get customer card with unified schema
+    // Get customer card with unified schema - include FK columns
     const { data: customerCard, error } = await supabase
       .from('customer_cards')
       .select(`
         id,
+        stamp_card_id,
+        membership_card_id,
+        current_stamps,
+        sessions_used,
         stamp_cards (
           id,
+          name,
+          card_color,
+          icon_emoji,
+          total_stamps,
+          reward_description,
           businesses (
+            id,
             name,
+            description
           )
         ),
         membership_cards (
           id,
+          name,
+          card_color,
+          icon_emoji,
+          total_sessions,
+          cost,
           businesses (
+            id,
             name,
+            description
           )
         )
       `)
@@ -65,8 +83,7 @@ export async function GET(
       )
     }
 
-
-    // Determine card type from unified schema
+    // Determine card type from unified schema using FK columns
     const isStampCard = customerCard.stamp_card_id !== null
     const isMembershipCard = customerCard.membership_card_id !== null
 
@@ -77,16 +94,16 @@ export async function GET(
       )
     }
 
-    // Get card data based on type
+    // Get card data based on type - now accessing plural table joins
     let cardData: any
     let businessData: any
 
     if (isStampCard) {
-      cardData = customerCard.stamp_cards
-      businessData = cardData?.businesses
+      cardData = customerCard.stamp_cards?.[0] // plural table, take first result
+      businessData = cardData?.businesses?.[0]
     } else {
-      cardData = customerCard.membership_cards
-      businessData = cardData?.businesses
+      cardData = customerCard.membership_cards?.[0] // plural table, take first result
+      businessData = cardData?.businesses?.[0]
     }
 
     if (!cardData) {
