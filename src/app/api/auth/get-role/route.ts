@@ -24,6 +24,8 @@ export interface GetRoleResponse {
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse<GetRoleResponse>> {
+  const startTime = Date.now()
+  
   try {
     const body: GetRoleRequest = await request.json()
     
@@ -34,15 +36,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<GetRoleRe
       }, { status: 400 })
     }
 
-    // Create server client to validate the token
+    // Fast token validation without session creation
     const serverClient = await createServerClient()
-    
-    // Validate the access token by setting it and getting user
-    await serverClient.auth.setSession({
-      access_token: body.accessToken,
-      refresh_token: '' // Not needed for validation
-    })
-
     const { data: { user }, error: userError } = await serverClient.auth.getUser(body.accessToken)
     
     if (userError || !user) {
@@ -90,14 +85,23 @@ export async function POST(request: NextRequest): Promise<NextResponse<GetRoleRe
       console.warn(`[AUTH-API] SLOW ROLE LOOKUP: ${queryTime}ms for user ${user.id}`)
     }
 
+    const totalTime = Date.now() - startTime
+    console.log(`[AUTH-API] Complete auth flow: ${totalTime}ms (query: ${queryTime}ms)`)
+
     return NextResponse.json({
       success: true,
       role,
       userId: user.id
+    }, {
+      headers: {
+        'Cache-Control': 'private, max-age=300', // Cache for 5 minutes
+        'X-Response-Time': `${totalTime}ms`
+      }
     })
 
   } catch (error: any) {
-    console.error('[AUTH-API] Unexpected error:', error)
+    const totalTime = Date.now() - startTime
+    console.error(`[AUTH-API] Error after ${totalTime}ms:`, error)
     return NextResponse.json({
       success: false,
       error: error.message === 'Role lookup timeout' 

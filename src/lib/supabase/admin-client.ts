@@ -25,7 +25,15 @@ import { getServiceRoleKey } from '@/lib/env'
  * - User-facing operations
  */
 
+// Cache the admin client to avoid repeated initialization
+let cachedAdminClient: ReturnType<typeof createClient<Database>> | null = null
+
 export function createAdminClient() {
+  // Return cached client if available (performance optimization)
+  if (cachedAdminClient) {
+    return cachedAdminClient
+  }
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   
   if (!supabaseUrl) {
@@ -36,7 +44,7 @@ export function createAdminClient() {
   // This will handle all validation and security checks
   const serviceRoleKey = getServiceRoleKey()
   
-  return createClient<Database>(supabaseUrl, serviceRoleKey, {
+  const client = createClient<Database>(supabaseUrl, serviceRoleKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false
@@ -46,30 +54,30 @@ export function createAdminClient() {
         'x-client-info': 'rewardjar-admin',
         'x-admin-client': 'true'
       },
-      // Enhanced fetch configuration with increased timeout
+      // Optimized fetch configuration
       fetch: (url: RequestInfo | URL, init?: RequestInit) => {
         const enhancedInit: RequestInit = {
           ...init,
-          // Increase timeout to 30 seconds for admin operations
-          signal: AbortSignal.timeout(30000)
+          // Faster timeout for better performance
+          signal: AbortSignal.timeout(10000), // Reduced from 30s to 10s
+          // Connection pooling
+          keepalive: true
         }
         
-        
         return fetch(url, enhancedInit).catch(error => {
-          // Log admin client fetch errors for debugging
+          // Simplified error logging for performance
           if (process.env.NODE_ENV === 'development') {
-            console.error('Admin client fetch error:', {
-              url: url.toString(),
-              error: error.message,
-              code: error.code,
-              cause: error.cause
-            })
+            console.error(`Admin client error: ${error.message}`)
           }
           throw error
         })
       }
     }
   })
+
+  // Cache the client for reuse
+  cachedAdminClient = client
+  return client
 }
 
 /**

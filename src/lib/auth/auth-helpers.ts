@@ -51,12 +51,27 @@ export async function getUserRole(user: any): Promise<number> {
   }
 }
 
+// Simple in-memory cache for role lookups (client-side only)
+const roleCache = new Map<string, { role: number; timestamp: number }>()
+const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+
 /**
  * 🔐 SECURE: Get user role directly with access token
  * This is the preferred method for client components after authentication
+ * Includes client-side caching for performance
  */
 export async function getUserRoleWithToken(accessToken: string): Promise<number> {
   try {
+    // Check cache first (client-side performance optimization)
+    const cacheKey = accessToken.substring(0, 32) // Use partial token as cache key
+    const cached = roleCache.get(cacheKey)
+    const now = Date.now()
+    
+    if (cached && (now - cached.timestamp) < CACHE_DURATION) {
+      console.log('[AUTH-HELPERS] Role cache hit - instant response')
+      return cached.role
+    }
+
     const startTime = Date.now()
     console.log('[AUTH-HELPERS] Calling secure API for role lookup with token')
 
@@ -64,6 +79,7 @@ export async function getUserRoleWithToken(accessToken: string): Promise<number>
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache', // Force fresh request to server
       },
       body: JSON.stringify({
         accessToken
@@ -80,7 +96,19 @@ export async function getUserRoleWithToken(accessToken: string): Promise<number>
       return 0
     }
 
-    return result.role || 0
+    const role = result.role || 0
+    
+    // Cache the result for future requests
+    roleCache.set(cacheKey, { role, timestamp: now })
+    
+    // Clean up old cache entries
+    if (roleCache.size > 10) {
+      const oldEntries = Array.from(roleCache.entries())
+        .filter(([, value]) => (now - value.timestamp) > CACHE_DURATION)
+      oldEntries.forEach(([key]) => roleCache.delete(key))
+    }
+
+    return role
   } catch (error) {
     console.error('[AUTH-HELPERS] API role lookup exception:', error)
     return 0

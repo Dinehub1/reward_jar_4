@@ -33,23 +33,32 @@ export async function getAuthContext(): Promise<MCPResponse<MCPAuthContext & { u
     // Get user role directly from database (MCP is server-side)
     // 🔐 SECURITY: MCP layer can safely use createAdminClient() as it's server-only
     const supabase = createAdminClient()
+    const startTime = Date.now()
     console.log('[MCP-AUTH] Getting user role for:', user.id)
     
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('role_id')
-      .eq('id', user.id)
-      .single()
+    // Optimized query with faster timeout
+    const { data: userData, error: userError } = await Promise.race([
+      supabase
+        .from('users')
+        .select('role_id')
+        .eq('id', user.id)
+        .single(),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('MCP auth timeout')), 2000)
+      )
+    ]) as any
+    
+    const queryTime = Date.now() - startTime
     
     if (userError) {
-      console.error('[MCP-AUTH] Role lookup failed:', userError)
+      console.error(`[MCP-AUTH] Role lookup failed after ${queryTime}ms:`, userError)
       return {
         success: false,
         error: 'Failed to get user role'
       }
     }
     
-    console.log('[MCP-AUTH] User role resolved:', userData.role_id)
+    console.log(`[MCP-AUTH] User role resolved: ${userData.role_id} (${queryTime}ms)`)
     
     // Get business ID if user is a business owner
     let businessId: string | undefined

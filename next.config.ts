@@ -17,8 +17,23 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  
+  // Performance optimizations
+  compress: true, // Enable gzip compression
+  poweredByHeader: false, // Remove X-Powered-By header
+  
   experimental: {
-    // No experimental features enabled
+    // Performance improvements
+    optimizePackageImports: ['@supabase/supabase-js', 'lucide-react'],
+    turbo: {
+      // Faster builds in development
+      rules: {
+        '*.svg': {
+          loaders: ['@svgr/webpack'],
+          as: '*.js',
+        },
+      },
+    },
   },
   images: {
     remotePatterns: [
