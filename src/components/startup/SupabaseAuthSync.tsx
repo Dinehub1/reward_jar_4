@@ -38,8 +38,13 @@ export default function SupabaseAuthSync() {
         return
       }
 
-      // Debounce rapid token refresh events
+      // Debounce rapid token refresh events and limit redundant calls
       debounceTimeoutRef.current = setTimeout(() => {
+        // Additional redundancy check
+        if (lastEventRef.current === event && event === 'TOKEN_REFRESHED') {
+          return // Skip redundant token refresh
+        }
+
         fetch('/api/auth/callback', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -50,7 +55,7 @@ export default function SupabaseAuthSync() {
         })
         
         lastEventRef.current = event
-      }, event === 'TOKEN_REFRESHED' ? 1000 : 0) // 1s debounce for token refresh, immediate for others
+      }, event === 'TOKEN_REFRESHED' ? 2000 : event === 'SIGNED_IN' ? 0 : 500) // 2s debounce for token refresh, immediate for sign-in, 500ms for others
     }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(syncAuthState)
