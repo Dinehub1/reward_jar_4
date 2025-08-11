@@ -269,7 +269,6 @@ export default function BusinessProfilePage() {
         })
 
         if (!response.ok) {
-          console.error('Error loading business:', response.status)
           setError('Failed to load business profile')
           return
         }
@@ -277,7 +276,6 @@ export default function BusinessProfilePage() {
         const result = await response.json()
 
         if (!result.success) {
-          console.error('Error loading business:', result.error)
           setError(result.error || 'Failed to load business profile')
           return
         }
@@ -300,7 +298,6 @@ export default function BusinessProfilePage() {
         }
 
       } catch (err) {
-        console.error('Auth check error:', err)
         router.push('/auth/login')
       } finally {
         setIsLoading(false)
@@ -345,7 +342,6 @@ export default function BusinessProfilePage() {
 
       return { success: true, data: result.data }
     } catch (error) {
-      console.error('MCP update error:', error)
       throw error
     }
   }
@@ -386,10 +382,8 @@ export default function BusinessProfilePage() {
             .getPublicUrl(fileName)
 
           logoUrl = urlData.publicUrl
-          console.log('✅ Logo uploaded successfully:', logoUrl)
 
         } catch (uploadErr) {
-          console.error('Logo upload error:', uploadErr)
           setError('Failed to upload logo. Please try again.')
           setIsSubmitting(false)
           return
@@ -408,7 +402,6 @@ export default function BusinessProfilePage() {
       }, 2000)
 
     } catch (err) {
-      console.error('Profile update error:', err)
       setError(err instanceof Error ? err.message : 'Failed to update profile. Please try again.')
     } finally {
       setIsSubmitting(false)

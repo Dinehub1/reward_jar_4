@@ -143,7 +143,7 @@ interface WalletPassFrameProps {
   className?: string
 }
 
-export const WalletPassFrame: React.FC<WalletPassFrameProps> = ({
+export function WalletPassFrame({ 
   children,
   walletType,
   cardColor = designTokens.colors.primary[600],
@@ -151,7 +151,7 @@ export const WalletPassFrame: React.FC<WalletPassFrameProps> = ({
   screenshotMode = false,
   isDarkMode = false,
   className = ''
-}) => {
+ }: WalletPassFrameProps) {
   // Platform-specific frame styles using design tokens
   const getFrameStyles = () => {
     const baseStyles = `
@@ -230,13 +230,13 @@ interface BackPageContentProps {
   isDarkMode?: boolean
 }
 
-export const BackPageContent: React.FC<BackPageContentProps> = ({
+export function BackPageContent({ 
   cardData,
   walletType,
   onToggleBack,
   screenshotMode = false,
   isDarkMode = false
-}) => {
+ }: BackPageContentProps) {
   const getBackgroundStyles = () => {
     switch (walletType) {
       case 'apple':

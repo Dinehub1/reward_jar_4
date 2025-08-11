@@ -97,7 +97,6 @@ export default function AdminAlerts() {
         setAlertStats(stats)
         setError(null)
       } catch (err) {
-        console.error('Failed to fetch alerts:', err)
         setError(err instanceof Error ? err.message : 'Failed to fetch alerts')
       } finally {
         setLoading(false)

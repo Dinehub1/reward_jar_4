@@ -129,7 +129,6 @@ export async function GET(
     })
 
   } catch (error) {
-    console.error('Error generating PWA manifest:', error)
     
     // Return minimal fallback manifest
     const fallbackManifest = {

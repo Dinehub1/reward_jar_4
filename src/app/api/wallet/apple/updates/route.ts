@@ -15,13 +15,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { passTypeIdentifier, serialNumber } = body
 
-    console.log('Apple Wallet update request:', { passTypeIdentifier, serialNumber })
 
     // Validate authentication token (should match customer card ID)
     const authToken = request.headers.get('Authorization')?.replace('ApplePass ', '')
     
     if (!authToken || authToken !== serialNumber) {
-      console.error('Invalid auth token for Apple Wallet update')
       return NextResponse.json({ error: 'Invalid authentication token' }, { status: 401 })
     }
 
@@ -55,7 +53,6 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error || !customerCard) {
-      console.error('Customer card not found for Apple Wallet update:', error)
       return NextResponse.json({ error: 'Pass not found' }, { status: 404 })
     }
 
@@ -68,7 +65,6 @@ export async function POST(request: NextRequest) {
       const lastUpdateTime = new Date(customerCard.updated_at)
       
       if (lastUpdateTime <= lastSyncTime) {
-        console.log('Pass not modified since last sync, returning 304')
         return new NextResponse(null, { status: 304 })
       }
     }
@@ -144,7 +140,6 @@ export async function POST(request: NextRequest) {
 
     // Check if Apple Wallet certificates are configured
     if (!process.env.APPLE_CERT_BASE64 || !process.env.APPLE_KEY_BASE64) {
-      console.error('Apple Wallet certificates not configured')
       return NextResponse.json(
         { error: 'Apple Wallet not configured' },
         { status: 503 }
@@ -183,7 +178,6 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error in Apple Wallet update endpoint:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -239,7 +233,6 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error checking Apple Wallet updates:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

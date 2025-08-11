@@ -241,9 +241,19 @@ export interface Database {
           business_id: string
           name: string
           membership_type: string
+          membership_mode: string // 'sessions' | 'discount'
           total_sessions: number
           cost: number
           duration_days: number | null
+          discount_type: string | null // 'percent' | 'amount'
+          discount_value: number | null
+          min_spend_cents: number | null
+          stackable: boolean | null
+          max_uses_per_day: number | null
+          max_uses_per_week: number | null
+          validity_windows: any | null
+          eligible_categories: string[] | null
+          eligible_skus: string[] | null
           status: string
           created_at: string
           updated_at: string
@@ -253,9 +263,19 @@ export interface Database {
           business_id: string
           name: string
           membership_type?: string
+          membership_mode?: string // 'sessions' | 'discount'
           total_sessions: number
           cost: number
           duration_days?: number | null
+          discount_type?: string | null
+          discount_value?: number | null
+          min_spend_cents?: number | null
+          stackable?: boolean | null
+          max_uses_per_day?: number | null
+          max_uses_per_week?: number | null
+          validity_windows?: any | null
+          eligible_categories?: string[] | null
+          eligible_skus?: string[] | null
           status?: string
           created_at?: string
           updated_at?: string
@@ -265,9 +285,19 @@ export interface Database {
           business_id?: string
           name?: string
           membership_type?: string
+          membership_mode?: string // 'sessions' | 'discount'
           total_sessions?: number
           cost?: number
           duration_days?: number | null
+          discount_type?: string | null
+          discount_value?: number | null
+          min_spend_cents?: number | null
+          stackable?: boolean | null
+          max_uses_per_day?: number | null
+          max_uses_per_week?: number | null
+          validity_windows?: any | null
+          eligible_categories?: string[] | null
+          eligible_skus?: string[] | null
           status?: string
           created_at?: string
           updated_at?: string

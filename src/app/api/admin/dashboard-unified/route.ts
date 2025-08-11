@@ -47,7 +47,6 @@ interface UnifiedDashboardData {
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now()
-  console.log('🎯 UNIFIED ADMIN DASHBOARD - Starting comprehensive data fetch...')
   
   try {
     // Authentication check
@@ -55,7 +54,6 @@ export async function GET(request: NextRequest) {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     
     if (authError || !user) {
-      console.log('❌ UNIFIED API: Authentication failed:', authError?.message)
       return NextResponse.json(
         { success: false, error: 'Authentication required' } as ApiResponse<never>,
         { status: 401 }
@@ -71,7 +69,6 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (userError || userData?.role_id !== 1) {
-      console.log('❌ UNIFIED API: Access denied, user role:', userData?.role_id)
       return NextResponse.json(
         { success: false, error: 'Admin access required' } as ApiResponse<never>,
         { status: 403 }
@@ -83,7 +80,6 @@ export async function GET(request: NextRequest) {
     const section = url.searchParams.get('section')
     const includeDetails = url.searchParams.get('details') === 'true'
 
-    console.log('📋 UNIFIED API: Request params:', { section, includeDetails })
 
     // Execute all database queries in parallel for optimal performance
     const [
@@ -224,7 +220,6 @@ export async function GET(request: NextRequest) {
     ].filter(Boolean)
 
     if (errors.length > 0) {
-      console.error('❌ UNIFIED API: Database errors detected:', errors)
       return NextResponse.json(
         { 
           success: false, 
@@ -342,7 +337,6 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    console.log('✅ UNIFIED API: Data compiled successfully:', {
       businesses: businesses.length,
       customers: customers.length,
       customerCards: customerCards.length,
@@ -361,7 +355,6 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('💥 UNIFIED API: Critical error:', error)
     
     return NextResponse.json({
       success: false,
@@ -382,7 +375,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { action, table, recordId } = body
 
-    console.log('🔄 UNIFIED API: Cache invalidation triggered:', { action, table, recordId })
 
     // In a production environment, this would trigger:
     // 1. Redis cache invalidation
@@ -396,7 +388,6 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('❌ UNIFIED API: Cache invalidation failed:', error)
     return NextResponse.json({
       success: false,
       error: 'Cache invalidation failed'

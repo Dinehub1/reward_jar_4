@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
+import ClientDate from '@/components/shared/ClientDate'
 
 interface AdminLayoutProps {
   children: React.ReactNode
@@ -14,8 +15,6 @@ async function checkAdminAccess() {
   // This allows you to see the data without login issues
   // In production, you'd restore proper authentication
   
-  console.log('🧪 ADMIN ACCESS - Development mode: bypassing authentication')
-  console.log('✅ ADMIN ACCESS - Allowing access for testing purposes')
   
   return { id: 'dev-admin-user', email: 'dev-admin@rewardjar.com' }
 }
@@ -131,7 +130,7 @@ function AdminHeader() {
             <span className="text-muted-foreground">System Operational</span>
           </div>
           <div className="text-sm text-muted-foreground">
-            {new Date().toLocaleDateString()}
+            <ClientDate format="date" />
           </div>
           <ThemeToggle />
         </div>

@@ -57,7 +57,6 @@ export default function CustomerLayout({ children }: CustomerLayoutProps) {
 
         setUser(session.user)
       } catch (error) {
-        console.error('Auth check failed:', error)
         router.push('/auth/login?role=customer')
       } finally {
         setLoading(false)
@@ -84,7 +83,6 @@ export default function CustomerLayout({ children }: CustomerLayoutProps) {
       await adminSignOut()
       router.push('/')
     } catch (error) {
-      console.error('Sign out failed:', error)
       // Fallback to direct supabase sign out
       await supabase.auth.signOut()
       router.push('/')

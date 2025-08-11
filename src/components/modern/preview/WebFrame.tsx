@@ -57,12 +57,12 @@ const getBrowserColors = (browser: WebFrameProps['browser']) => {
   }
 }
 
-export const WebFrame: React.FC<WebFrameProps> = ({ 
+export function WebFrame({  
   children, 
   browser = 'chrome',
   url = 'https://rewardjar.xyz/card/preview',
   className = ''
-}) => {
+ }: WebFrameProps) {
   const [isLoading, setIsLoading] = useState(false)
   const colors = getBrowserColors(browser)
   
@@ -273,17 +273,17 @@ export const WebFrame: React.FC<WebFrameProps> = ({
 }
 
 // Enhanced version with interactive features
-export const InteractiveWebFrame: React.FC<WebFrameProps & {
-  onDeviceInteraction?: () => void
-  showReflection?: boolean
-}> = ({ 
+export function InteractiveWebFrame({ 
   children, 
   browser = 'chrome',
   url,
   className = '',
   onDeviceInteraction,
   showReflection = true
-}) => {
+}: WebFrameProps & {
+  onDeviceInteraction?: () => void
+  showReflection?: boolean
+}) {
   return (
     <motion.div
       whileHover={{ scale: 1.01 }}

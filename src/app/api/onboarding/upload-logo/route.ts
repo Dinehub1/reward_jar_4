@@ -9,7 +9,6 @@ import { createAdminClient } from '@/lib/supabase/admin-client'
  */
 export async function POST(request: NextRequest) {
   try {
-    console.log('🖼️ LOGO UPLOAD API - Starting logo upload process')
 
     // Get the uploaded file from FormData
     const formData = await request.formData()
@@ -17,7 +16,6 @@ export async function POST(request: NextRequest) {
     const userId = formData.get('userId') as string
 
     if (!file) {
-      console.error('❌ LOGO UPLOAD API - No file provided')
       return NextResponse.json(
         { success: false, error: 'No file provided' },
         { status: 400 }
@@ -25,7 +23,6 @@ export async function POST(request: NextRequest) {
     }
 
     if (!userId) {
-      console.error('❌ LOGO UPLOAD API - No user ID provided')
       return NextResponse.json(
         { success: false, error: 'User ID required' },
         { status: 400 }
@@ -34,7 +31,6 @@ export async function POST(request: NextRequest) {
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      console.error('❌ LOGO UPLOAD API - Invalid file type:', file.type)
       return NextResponse.json(
         { success: false, error: 'Please upload an image file (PNG, JPG, etc.)' },
         { status: 400 }
@@ -43,14 +39,12 @@ export async function POST(request: NextRequest) {
 
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      console.error('❌ LOGO UPLOAD API - File too large:', file.size)
       return NextResponse.json(
         { success: false, error: 'Logo file must be smaller than 5MB' },
         { status: 400 }
       )
     }
 
-    console.log('✅ LOGO UPLOAD API - File validation passed:', {
       name: file.name,
       type: file.type,
       size: file.size
@@ -63,7 +57,6 @@ export async function POST(request: NextRequest) {
     const fileExt = file.name.split('.').pop()
     const fileName = `${userId}-${Date.now()}.${fileExt}`
     
-    console.log('📁 LOGO UPLOAD API - Generated filename:', fileName)
 
     // Convert File to ArrayBuffer for upload
     const fileBuffer = await file.arrayBuffer()
@@ -79,11 +72,9 @@ export async function POST(request: NextRequest) {
       })
 
     if (uploadError) {
-      console.error('❌ LOGO UPLOAD API - Storage upload failed:', uploadError)
       
       // Check if bucket exists, if not create it
       if (uploadError.message.includes('Bucket not found')) {
-        console.log('🪣 LOGO UPLOAD API - Attempting to create business-logos bucket')
         
         const { error: bucketError } = await supabase.storage
           .createBucket('business-logos', {
@@ -93,7 +84,6 @@ export async function POST(request: NextRequest) {
           })
 
         if (bucketError) {
-          console.error('❌ LOGO UPLOAD API - Failed to create bucket:', bucketError)
           return NextResponse.json(
             { success: false, error: 'Storage configuration error. Please contact support.' },
             { status: 500 }
@@ -110,14 +100,12 @@ export async function POST(request: NextRequest) {
           })
 
         if (retryUploadError) {
-          console.error('❌ LOGO UPLOAD API - Retry upload failed:', retryUploadError)
           return NextResponse.json(
             { success: false, error: 'Failed to upload logo after bucket creation' },
             { status: 500 }
           )
         }
 
-        console.log('✅ LOGO UPLOAD API - Retry upload successful:', retryUploadData)
       } else {
         return NextResponse.json(
           { success: false, error: `Upload failed: ${uploadError.message}` },
@@ -126,14 +114,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log('✅ LOGO UPLOAD API - Upload successful:', uploadData)
 
     // Get public URL
     const { data: { publicUrl } } = supabase.storage
       .from('business-logos')
       .getPublicUrl(fileName)
 
-    console.log('🔗 LOGO UPLOAD API - Public URL generated:', publicUrl)
 
     return NextResponse.json({
       success: true,
@@ -147,7 +133,6 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('❌ LOGO UPLOAD API - Unexpected error:', error)
     return NextResponse.json(
       { success: false, error: 'Internal server error during logo upload' },
       { status: 500 }

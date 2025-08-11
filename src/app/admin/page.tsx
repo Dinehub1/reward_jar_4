@@ -14,6 +14,7 @@ import { BusinessCreationDialog } from '@/components/admin/BusinessCreationDialo
 import { RefreshCw, Database, Activity, FileText, Zap, AlertTriangle, Plus, CreditCard, Building2, Eye, Bell } from 'lucide-react'
 import React from 'react'
 import type { AdminStats, Business } from '@/lib/supabase/types'
+import { PageErrorBoundary, ComponentErrorBoundary } from '@/components/shared/ErrorBoundary'
 
 // Icons for the dashboard
 const icons = {
@@ -27,7 +28,6 @@ const icons = {
 
 // Dashboard Cards Component
 function DashboardCards({ stats }: { stats: AdminStats }) {
-  console.log('🎯 DASHBOARD CARDS - Rendering with stats:', stats)
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -101,7 +101,6 @@ function BusinessesTable({ businesses, onRefresh }: { businesses: Business[], on
   // Defensive programming: Ensure businesses is always an array
   const safeBusinesses = Array.isArray(businesses) ? businesses : []
 
-  console.log('🏢 BUSINESSES TABLE - Rendering with businesses:', safeBusinesses.length)
 
   const filteredBusinesses = safeBusinesses.filter(business => {
     if (!business) return false
@@ -113,7 +112,6 @@ function BusinessesTable({ businesses, onRefresh }: { businesses: Business[], on
       
       return name.includes(search) || email.includes(search)
     } catch (filterError) {
-      console.warn('Error filtering business:', business?.id, filterError)
       return false
     }
   })
@@ -147,7 +145,6 @@ function BusinessesTable({ businesses, onRefresh }: { businesses: Business[], on
         <div className="space-y-4">
           {filteredBusinesses.slice(0, 5).map((business) => {
             if (!business?.id) {
-              console.warn('Business without ID found:', business)
               return null
             }
             
@@ -241,7 +238,6 @@ function QuickActionsPanel({ onRefreshAll }: { onRefreshAll: () => Promise<void>
       addResult(`✅ ${action} completed successfully`)
     } catch (error) {
       addResult(`❌ ${action} failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
-      console.error(`${action} failed:`, error)
     } finally {
       setIsPerformingAction(false)
     }
@@ -363,8 +359,7 @@ function QuickActionsPanel({ onRefreshAll }: { onRefreshAll: () => Promise<void>
 }
 
 // Main Admin Dashboard Page
-export default function AdminDashboard() {
-  console.log('🚀 ADMIN DASHBOARD - Main component rendering...')
+function AdminDashboardContent() {
   
   // Tab state management
   const [activeTab, setActiveTab] = useState<'overview' | 'quick-actions'>('overview')
@@ -413,12 +408,10 @@ export default function AdminDashboard() {
     
     setRefreshing(true)
     setRefreshError(null)
-    console.log('🔄 Starting unified data refresh...')
     
     try {
       await refetchUnified()
       setLastRefresh(new Date())
-      console.log('✅ Unified data refresh completed successfully')
       
       // ✅ ADMIN NOTIFICATION: Notify about successful cleanup/refresh
       adminNotifications.cleanupComplete(
@@ -428,7 +421,6 @@ export default function AdminDashboard() {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
       setRefreshError(errorMessage)
-      console.error('❌ Unified data refresh failed:', error)
       
       // ✅ ADMIN NOTIFICATION: Notify about refresh failures
       adminNotifications.systemError(
@@ -555,7 +547,7 @@ export default function AdminDashboard() {
             <CardContent className="pt-0">
               <div className="space-y-2 max-h-32 overflow-y-auto">
                 {adminEvents.slice(0, 3).map(event => (
-                  <div key={event.id} className="flex items-start gap-3 p-2 rounded-lg bg-white/60 dark:bg-gray-800/60">
+                  <div key={event.id} className="flex items-start gap-3 p-2 rounded-lg bg-card/70 dark:bg-card/70">
                     <div className={`mt-1 ${
                       event.severity === 'critical' ? 'text-red-500' :
                       event.severity === 'error' ? 'text-red-400' :
@@ -744,5 +736,13 @@ export default function AdminDashboard() {
         </div>
       </PageTransition>
     </AdminLayoutClient>
+  )
+}
+
+export default function AdminDashboard() {
+  return (
+    <PageErrorBoundary>
+      <AdminDashboardContent />
+    </PageErrorBoundary>
   )
 } 

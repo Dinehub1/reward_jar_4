@@ -19,7 +19,7 @@ export interface MCPUser {
  * Get auth context from server session
  * This is the main function API routes should use to get user context
  */
-export async function getAuthContext(): Promise<MCPResponse<MCPAuthContext>> {
+export async function getAuthContext(): Promise<MCPResponse<MCPAuthContext & { userEmail?: string }>> {
   try {
     const { user, error } = await getServerUser()
     
@@ -62,7 +62,8 @@ export async function getAuthContext(): Promise<MCPResponse<MCPAuthContext>> {
       data: {
         userId: user.id,
         userRole: userData.role_id,
-        businessId
+        businessId,
+        userEmail: user.email || undefined
       }
     }
     

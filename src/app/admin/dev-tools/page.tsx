@@ -286,6 +286,40 @@ export default function DevToolsPage() {
     message: string
     details?: any
   }>>([])
+  const [walletCustomerCardId, setWalletCustomerCardId] = useState<string>("")
+
+  const openInNewTab = (url: string) => {
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
+
+  const testGoogleWallet = async () => {
+    if (!walletCustomerCardId) return
+    const res = await fetch(`/api/wallet/google/${walletCustomerCardId}`, { method: 'GET' })
+    const html = await res.text()
+    const blob = new Blob([html], { type: 'text/html' })
+    const link = URL.createObjectURL(blob)
+    openInNewTab(link)
+  }
+
+  const testAppleWallet = async () => {
+    if (!walletCustomerCardId) return
+    const res = await fetch(`/api/wallet/apple/${walletCustomerCardId}`, { method: 'GET' })
+    if (res.headers.get('content-type')?.includes('application/vnd.apple.pkpass')) {
+      const blob = await res.blob()
+      const link = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = link
+      a.download = `card-${walletCustomerCardId}.pkpass`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+    } else {
+      const data = await res.text()
+      const blob = new Blob([data], { type: 'text/html' })
+      const link = URL.createObjectURL(blob)
+      openInNewTab(link)
+    }
+  }
   
   const toggleDebugPanel = (toolId: string) => {
     setExpandedDebugPanels(prev => {
@@ -541,7 +575,6 @@ export default function DevToolsPage() {
           document.body.removeChild(iframe)
             }
           } catch (cleanupError) {
-            console.warn('Failed to cleanup iframe:', cleanupError)
           }
 
         } catch (deepAnalysisError) {
@@ -1195,7 +1228,7 @@ export default function DevToolsPage() {
         )}
 
         {/* Quick Actions */}
-        <Card>
+        <Card className="border-border/50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Zap className="h-5 w-5" />
@@ -1257,6 +1290,34 @@ export default function DevToolsPage() {
                 Run Health Checks
               </Button>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Wallet Testing */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5" />
+              Wallet Testing
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+              <div>
+                <label className="text-sm text-muted-foreground">Customer Card ID</label>
+                <input
+                  value={walletCustomerCardId}
+                  onChange={(e)=>setWalletCustomerCardId(e.target.value)}
+                  placeholder="uuid..."
+                  className="mt-1 w-full h-10 px-3 rounded-md border border-input bg-background text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+              </div>
+              <Button variant="outline" onClick={testGoogleWallet} className="w-full">Generate Google Wallet</Button>
+              <Button variant="outline" onClick={testAppleWallet} className="w-full">Generate Apple Wallet</Button>
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">
+              Use an existing `customer_cards.id` from dev DB. Google flow opens a Save page; Apple downloads a .pkpass when certs are configured, otherwise shows an HTML preview. Follow official pre‑launch checks for Google Wallet [link](https://developers.google.com/wallet/generic/test-and-go-live/prelaunch-testing) and test Apple Wallet in Sandbox [link](https://developer.apple.com/apple-pay/sandbox-testing/).
+            </p>
           </CardContent>
         </Card>
 

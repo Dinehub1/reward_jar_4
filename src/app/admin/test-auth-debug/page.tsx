@@ -81,7 +81,6 @@ export default function TestAuthDebugPage() {
 
       setAuthTests(mockAuthTests)
     } catch (error: unknown) {
-      console.error('Error loading auth debug data:', error)
     } finally {
       setIsLoading(false)
     }

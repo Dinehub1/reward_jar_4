@@ -139,7 +139,6 @@ export default function BusinessDetailsPage({
     const result = await response.json()
       setBusiness(result.data)
     } catch (error) {
-      console.error('Error fetching business:', error)
     }
   }, [businessId, router])
 
@@ -151,7 +150,6 @@ export default function BusinessDetailsPage({
         setStats(result.data)
       }
     } catch (error) {
-      console.error('Error fetching stats:', error)
     }
   }, [businessId])
 
@@ -368,7 +366,7 @@ export default function BusinessDetailsPage({
           <Tabs defaultValue="overview" className="space-y-4">
             <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="cards">Cards</TabsTrigger>
+            <TabsTrigger value="cards">Cards</TabsTrigger>
               <TabsTrigger value="customers">Customers</TabsTrigger>
               <TabsTrigger value="analytics">Analytics</TabsTrigger>
               <TabsTrigger value="activity">Activity</TabsTrigger>

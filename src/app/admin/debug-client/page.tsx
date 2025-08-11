@@ -139,13 +139,11 @@ export default function ClientDebugPage() {
 
     // Capture console errors
     const originalError = console.error
-    console.error = (...args) => {
       setConsoleErrors(prev => [...prev, args.join(' ')])
       originalError.apply(console, args)
     }
 
     return () => {
-      console.error = originalError
     }
   }, [])
 

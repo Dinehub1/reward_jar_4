@@ -45,7 +45,6 @@ interface CustomerCard {
 }
 
 export async function POST(request: NextRequest) {
-  console.log('🔄 WALLET QUEUE PROCESSOR - Starting batch update processing...')
   
   try {
     // Admin authentication check
@@ -77,7 +76,6 @@ export async function POST(request: NextRequest) {
       .limit(50)
 
     if (updatesError) {
-      console.error('❌ Error fetching pending updates:', updatesError)
       return NextResponse.json(
         { error: 'Failed to fetch pending updates' },
         { status: 500 }
@@ -85,7 +83,6 @@ export async function POST(request: NextRequest) {
     }
 
     if (!pendingUpdates || pendingUpdates.length === 0) {
-      console.log('✅ No pending wallet updates found')
       return NextResponse.json({
         success: true,
         message: 'No pending updates to process',
@@ -93,7 +90,6 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    console.log(`📦 Found ${pendingUpdates.length} pending wallet updates`)
 
     let processedCount = 0
     let failedCount = 0
@@ -102,7 +98,6 @@ export async function POST(request: NextRequest) {
     // Process each update
     for (const update of pendingUpdates as WalletUpdate[]) {
       try {
-        console.log(`🔄 Processing update ${update.id} - Type: ${update.update_type}`)
         
         // Get customer card details with relationships
         const { data: customerCard, error: cardError } = await supabase
@@ -125,7 +120,6 @@ export async function POST(request: NextRequest) {
           .single()
 
         if (cardError || !customerCard) {
-          console.error(`❌ Customer card not found: ${update.customer_card_id}`)
           await markUpdateFailed(supabase, update.id, 'Customer card not found')
           failedCount++
           continue
@@ -138,7 +132,6 @@ export async function POST(request: NextRequest) {
         const isMembershipCard = card.membership_card_id !== null
 
         if (!isStampCard && !isMembershipCard) {
-          console.error(`❌ Invalid card type for ${update.customer_card_id}`)
           await markUpdateFailed(supabase, update.id, 'Invalid card type')
           failedCount++
           continue
@@ -147,7 +140,6 @@ export async function POST(request: NextRequest) {
         // Process based on wallet type
         const walletType = card.wallet_type
         if (!walletType) {
-          console.log(`⚠️ No wallet type set for card ${update.customer_card_id}, skipping`)
           await markUpdateProcessed(supabase, update.id)
           processedCount++
           continue
@@ -166,7 +158,6 @@ export async function POST(request: NextRequest) {
             updateResult = await processPWAWalletUpdate(card, update, isStampCard)
             break
           default:
-            console.error(`❌ Unknown wallet type: ${walletType}`)
             await markUpdateFailed(supabase, update.id, `Unknown wallet type: ${walletType}`)
             failedCount++
             continue
@@ -175,11 +166,9 @@ export async function POST(request: NextRequest) {
         if (updateResult?.success) {
           await markUpdateProcessed(supabase, update.id)
           processedCount++
-          console.log(`✅ Successfully processed ${update.update_type} for ${walletType} wallet`)
         } else {
           await markUpdateFailed(supabase, update.id, updateResult?.error || 'Unknown error')
           failedCount++
-          console.error(`❌ Failed to process ${update.update_type} for ${walletType} wallet:`, updateResult?.error)
         }
 
         results.push({
@@ -192,7 +181,6 @@ export async function POST(request: NextRequest) {
         })
 
       } catch (error) {
-        console.error(`❌ Error processing update ${update.id}:`, error)
         await markUpdateFailed(supabase, update.id, error instanceof Error ? error.message : 'Unknown error')
         failedCount++
       }
@@ -211,16 +199,10 @@ export async function POST(request: NextRequest) {
             timestamp: new Date().toISOString()
           })
         })
-        console.log('✅ Admin dashboard notified of wallet sync completion')
       } catch (error) {
-        console.warn('⚠️ Failed to notify admin dashboard:', error)
       }
     }
 
-    console.log(`🎯 WALLET QUEUE PROCESSING COMPLETE`)
-    console.log(`   ✅ Processed: ${processedCount}`)
-    console.log(`   ❌ Failed: ${failedCount}`)
-    console.log(`   📊 Total: ${pendingUpdates.length}`)
 
     return NextResponse.json({
       success: true,
@@ -232,7 +214,6 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('❌ WALLET QUEUE PROCESSOR ERROR:', error)
     return NextResponse.json(
       { 
         error: 'Internal server error',
@@ -276,7 +257,6 @@ async function processAppleWalletUpdate(
   isStampCard: boolean
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    console.log(`🍎 Processing Apple Wallet update for card ${card.id}`)
     
     // For Apple Wallet, we need to regenerate the PKPass file
     // This would typically involve:
@@ -302,13 +282,11 @@ async function processAppleWalletUpdate(
     // 2. Send push notification to Apple's servers
     // 3. Update the pass on the user's device
     
-    console.log('🍎 Apple Wallet pass data prepared:', passData)
     
     // For now, we'll simulate success
     return { success: true }
     
   } catch (error) {
-    console.error('🍎 Apple Wallet update error:', error)
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Apple Wallet update failed' 
@@ -323,7 +301,6 @@ async function processGoogleWalletUpdate(
   isStampCard: boolean
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    console.log(`🤖 Processing Google Wallet update for card ${card.id}`)
     
     // For Google Wallet, we need to update the object via Google's API
     const objectData = {
@@ -352,7 +329,6 @@ async function processGoogleWalletUpdate(
       }
     }
 
-    console.log('🤖 Google Wallet object data prepared:', objectData)
     
     // In a real implementation, you would:
     // 1. Call Google Wallet API to update the object
@@ -361,7 +337,6 @@ async function processGoogleWalletUpdate(
     return { success: true }
     
   } catch (error) {
-    console.error('🤖 Google Wallet update error:', error)
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Google Wallet update failed' 
@@ -376,7 +351,6 @@ async function processPWAWalletUpdate(
   isStampCard: boolean
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    console.log(`🌐 Processing PWA Wallet update for card ${card.id}`)
     
     // For PWA, the update is handled when the user next opens the PWA
     // We can optionally send a web push notification
@@ -392,7 +366,6 @@ async function processPWAWalletUpdate(
       timestamp: new Date().toISOString()
     }
 
-    console.log('🌐 PWA Wallet update data prepared:', updateData)
     
     // In a real implementation, you could:
     // 1. Send web push notification
@@ -402,7 +375,6 @@ async function processPWAWalletUpdate(
     return { success: true }
     
   } catch (error) {
-    console.error('🌐 PWA Wallet update error:', error)
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'PWA Wallet update failed' 
@@ -461,7 +433,6 @@ export async function GET(request: NextRequest) {
     })
     
   } catch (error) {
-    console.error('Error fetching queue stats:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

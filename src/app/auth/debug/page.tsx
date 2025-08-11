@@ -32,18 +32,13 @@ export default function AuthDebugPage() {
       setLoading(true)
       setError(null)
 
-      console.log('=== AUTH DEBUG START ===')
 
       // Check session
       const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-      console.log('Session:', session)
-      console.log('Session Error:', sessionError)
       setSession(session)
 
       // Check user
       const { data: { user }, error: userError } = await supabase.auth.getUser()
-      console.log('User:', user)
-      console.log('User Error:', userError)
       setUser(user)
 
       if (!user) {
@@ -58,8 +53,6 @@ export default function AuthDebugPage() {
         .eq('id', user.id)
         .single()
 
-      console.log('User Data from users table:', userData)
-      console.log('User Data Error:', userDataError)
       setUserData(userData)
 
       if (userDataError) {
@@ -75,8 +68,6 @@ export default function AuthDebugPage() {
           .eq('owner_id', user.id)
           .single()
 
-        console.log('Business Data:', businessData)
-        console.log('Business Error:', businessError)
         setBusinessData(businessData)
 
         if (businessError) {
@@ -84,10 +75,8 @@ export default function AuthDebugPage() {
         }
       }
 
-      console.log('=== AUTH DEBUG END ===')
 
     } catch (err) {
-      console.error('Debug error:', err)
       setError(err instanceof Error ? err.message : 'Unknown error')
     } finally {
       setLoading(false)

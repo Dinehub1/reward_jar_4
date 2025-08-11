@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { useAuth } from '@/lib/hooks/use-admin-auth'
 import BusinessLayout from '@/components/layouts/BusinessLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -32,6 +33,7 @@ import {
   Edit
 } from 'lucide-react'
 import ManagerModeToggle from '@/components/business/ManagerModeToggle'
+import { QRScanner } from '@/components/business/QRScanner'
 
 // Import card templates from admin section for consistency
 const CARD_TEMPLATES = [
@@ -161,11 +163,12 @@ function BusinessDashboardContent() {
   const [session, setSession] = useState<any>(null)
   const [business, setBusiness] = useState<any>(null)
   const [showSuccessMessage, setShowSuccessMessage] = useState(false)
-  const [canCreateCards, setCanCreateCards] = useState(true) // Business users can create cards by default
+  const [canCreateCards, setCanCreateCards] = useState(false) // Enforced: Business users cannot create cards
   
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
+  const { user, isLoading: authLoading } = useAuth()
 
   // Check for success message from onboarding
   useEffect(() => {
@@ -177,46 +180,41 @@ function BusinessDashboardContent() {
     }
   }, [searchParams])
 
+  // Hydration-safe auth guard: wait for client auth to load before redirecting
   useEffect(() => {
-    const checkAuth = async () => {
+    const run = async () => {
       try {
         setLoading(true)
         setError(null)
-        
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-        
-        if (sessionError || !session?.user) {
-          console.log('No session found, redirecting to login')
+        if (authLoading) return
+        if (!user) {
+          // no user after hydration -> redirect
           router.push('/auth/login')
           return
         }
-        
-        // Check business role
+        // Verify business role
         const { data: userData, error: userError } = await supabase
           .from('users')
           .select('role_id')
-          .eq('id', session.user.id)
+          .eq('id', user.id)
           .single()
-
         if (userError || !userData || userData.role_id !== 2) {
-          console.error('User is not a business user:', userData?.role_id)
           router.push('/auth/login?error=unauthorized')
           return
         }
-
-        console.log('Business user authenticated:', session.user.id)
+        // Fetch data
+        const { data: { session } } = await supabase.auth.getSession()
         setSession(session)
-        await fetchDashboardData(session.user.id)
-        
+        await fetchDashboardData(user.id)
       } catch (err) {
-        console.error('Authentication check failed:', err)
         setError('Authentication failed. Please try logging in again.')
-        setTimeout(() => router.push('/auth/login'), 2000)
+        setTimeout(() => router.push('/auth/login'), 1200)
+      } finally {
+        setLoading(false)
       }
     }
-
-    checkAuth()
-  }, [router, supabase])
+    run()
+  }, [authLoading, user, router, supabase])
 
   const fetchDashboardData = useCallback(async (userId: string) => {
     try {
@@ -231,7 +229,6 @@ function BusinessDashboardContent() {
         .single()
 
       if (businessError && businessError.code !== 'PGRST116') {
-        console.error('Business lookup error:', businessError.message)
         setError('Failed to load business data')
         return
       }
@@ -365,7 +362,6 @@ function BusinessDashboardContent() {
       })
 
     } catch (error) {
-      console.error('Error fetching dashboard data:', error)
       setError('Failed to load dashboard data. Please try refreshing the page.')
     } finally {
       setLoading(false)
@@ -642,14 +638,12 @@ function BusinessDashboardContent() {
                     <CreditCard className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-semibold mb-2">No Cards Yet</h3>
                     <p className="text-gray-600 mb-4">Create your first loyalty card to get started</p>
-                    {canCreateCards && (
-                      <Link href="/business/stamp-cards">
-                        <Button>
-                          <Plus className="h-4 w-4 mr-2" />
-                          Create Your First Card
-                        </Button>
-                      </Link>
-                    )}
+                    <Link href="/business/no-access">
+                      <Button>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Request New Card (Admin‑Only)
+                      </Button>
+                    </Link>
                   </div>
                 )}
               </CardContent>
@@ -664,14 +658,24 @@ function BusinessDashboardContent() {
                 <CardTitle>Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {canCreateCards && (
-                  <Link href="/business/stamp-cards">
-                    <Button className="w-full justify-start" variant="outline">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Create New Card
-                    </Button>
-                  </Link>
+                {business?.id && (
+                  <QRScanner 
+                    businessId={business.id}
+                    onScanSuccess={(result) => {
+                      // Refresh dashboard data after successful scan
+                      if (user?.id) {
+                        fetchDashboardData(user.id)
+                      }
+                    }}
+                    className="w-full justify-start"
+                  />
                 )}
+                <Link href="/business/no-access">
+                  <Button className="w-full justify-start" variant="outline">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Request New Card (Admin‑Only)
+                  </Button>
+                </Link>
                 <Link href="/business/analytics">
                   <Button className="w-full justify-start" variant="outline">
                     <BarChart3 className="h-4 w-4 mr-2" />

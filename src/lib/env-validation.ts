@@ -178,14 +178,11 @@ export function validateEnvVarsOrThrow(env?: Record<string, string | undefined>)
   
   // Log warnings even on success
   if (result.warnings.length > 0) {
-    console.warn('⚠️ Environment validation warnings:')
-    result.warnings.forEach(warning => console.warn(warning))
+    result.warnings.forEach(warning => )
   }
   
   // Log success summary
   const { core, apple, google, optional } = result.summary
-  console.log('✅ Environment validation passed')
-  console.log(`📊 Configuration: Core (${core.present}/${core.required}), Apple (${apple.present}/${apple.required}), Google (${google.present}/${google.required}), Optional (${optional.present}/${optional.total})`)
 }
 
 /**

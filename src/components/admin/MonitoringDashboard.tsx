@@ -76,7 +76,6 @@ export default function MonitoringDashboard() {
         calculateMetrics(analyticsData)
       }
     } catch (error) {
-      console.error('Failed to fetch analytics data:', error)
     } finally {
       setLoading(false)
     }

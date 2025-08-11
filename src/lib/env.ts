@@ -23,13 +23,17 @@ export const APPLE_CERT_BASE64 = process.env.APPLE_CERT_BASE64
 export const APPLE_KEY_BASE64 = process.env.APPLE_KEY_BASE64
 export const APPLE_WWDR_BASE64 = process.env.APPLE_WWDR_BASE64
 export const APPLE_CERT_PASSWORD = process.env.APPLE_CERT_PASSWORD
-export const APPLE_TEAM_IDENTIFIER = process.env.APPLE_TEAM_IDENTIFIER!
-export const APPLE_PASS_TYPE_IDENTIFIER = process.env.APPLE_PASS_TYPE_IDENTIFIER!
+export const APPLE_TEAM_IDENTIFIER = process.env.APPLE_TEAM_IDENTIFIER || process.env.APPLE_TEAM_ID
+export const APPLE_PASS_TYPE_IDENTIFIER = process.env.APPLE_PASS_TYPE_IDENTIFIER || process.env.APPLE_PASS_TYPE_ID
 
 // Google Wallet Variables
 export const GOOGLE_SERVICE_ACCOUNT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
 export const GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY
+export const GOOGLE_SERVICE_ACCOUNT_JSON = process.env.GOOGLE_SERVICE_ACCOUNT_JSON
 export const GOOGLE_CLASS_ID = process.env.GOOGLE_CLASS_ID
+export const GOOGLE_WALLET_CLASS_SUFFIX = process.env.GOOGLE_WALLET_CLASS_SUFFIX
+export const GOOGLE_WALLET_CLASS_SUFFIX_STAMP = process.env.GOOGLE_WALLET_CLASS_SUFFIX_STAMP
+export const GOOGLE_WALLET_CLASS_SUFFIX_MEMBERSHIP = process.env.GOOGLE_WALLET_CLASS_SUFFIX_MEMBERSHIP
 
 // Security & Analytics Variables (Optional)
 export const API_KEY = process.env.API_KEY
@@ -52,7 +56,6 @@ export function validateEnvironmentVariables() {
   const missing = Object.entries(required).filter(([_, value]) => !value)
   
   if (missing.length > 0) {
-    console.error('Missing required environment variables:', missing.map(([key]) => key))
     throw new Error(`Missing required environment variables: ${missing.map(([key]) => key).join(', ')}`)
   }
 
@@ -76,7 +79,6 @@ export function validateAdminEnvironmentVariables() {
   const missing = Object.entries(required).filter(([_, value]) => !value)
   
   if (missing.length > 0) {
-    console.error('Missing required admin environment variables:', missing.map(([key]) => key))
     throw new Error(`Missing required admin environment variables: ${missing.map(([key]) => key).join(', ')}`)
   }
 
@@ -90,18 +92,16 @@ export function isAppleWalletConfigured(): boolean {
     APPLE_KEY_BASE64 &&
     APPLE_WWDR_BASE64 &&
     APPLE_CERT_PASSWORD &&
-    APPLE_TEAM_IDENTIFIER &&
-    APPLE_PASS_TYPE_IDENTIFIER
+    (APPLE_TEAM_IDENTIFIER) &&
+    (APPLE_PASS_TYPE_IDENTIFIER)
   )
 }
 
 // Check if Google Wallet is fully configured
 export function isGoogleWalletConfigured(): boolean {
-  return !!(
-    GOOGLE_SERVICE_ACCOUNT_EMAIL &&
-    GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY &&
-    GOOGLE_CLASS_ID
-  )
+  const hasCreds = !!(GOOGLE_SERVICE_ACCOUNT_EMAIL && GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY) || !!GOOGLE_SERVICE_ACCOUNT_JSON
+  const hasClass = !!(GOOGLE_CLASS_ID || GOOGLE_WALLET_CLASS_SUFFIX || GOOGLE_WALLET_CLASS_SUFFIX_STAMP || GOOGLE_WALLET_CLASS_SUFFIX_MEMBERSHIP)
+  return hasCreds && hasClass
 }
 
 // Get wallet availability status
@@ -148,11 +148,6 @@ export const getServiceRoleKey = (): string => {
   if (!serviceRoleKey) {
     // Enhanced error message for development
     if (process.env.NODE_ENV === 'development') {
-      console.error('🚨 MISSING ENVIRONMENT VARIABLE: SUPABASE_SERVICE_ROLE_KEY')
-      console.error('💡 Add SUPABASE_SERVICE_ROLE_KEY to your .env.local file')
-      console.error('📁 Create .env.local in your project root if it doesn\'t exist')
-      console.error('📖 See doc/doc2/3_SUPABASE_SETUP.md for setup instructions')
-      console.error('🔗 Get your service role key from: https://supabase.com/dashboard/project/[project-id]/settings/api')
     }
     
     throw new Error('💡 Missing SUPABASE_SERVICE_ROLE_KEY in .env.local - Required for admin operations')
@@ -186,7 +181,8 @@ export const getEnvironmentStatus = () => {
     hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
     hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     hasServiceRoleKey: isClient ? null : isServiceRoleKeyConfigured(), // null on client for security
-    walletAvailability: getWalletAvailability(),
+    // For client safety, do not compute walletAvailability from client env
+    walletAvailability: isClient ? { apple: false, google: false, pwa: true } : getWalletAvailability(),
     baseUrl: getBaseUrl(),
   }
 }
@@ -198,7 +194,6 @@ export function getAppleWalletBaseUrl(): string {
   
   // Apple Wallet requires HTTPS and rejects localhost/IP addresses
   if (baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1') || baseUrl.includes('192.168.') || baseUrl.includes('10.0.')) {
-    console.warn('⚠️  Apple Wallet webServiceURL cannot use localhost/IP addresses. Using production domain instead.')
     return PRODUCTION_DOMAIN
   }
   

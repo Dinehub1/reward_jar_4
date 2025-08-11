@@ -98,7 +98,6 @@ export async function GET(request: NextRequest) {
       .in('id', DEMO_CARDS.map(card => card.id))
 
     if (checkError) {
-      console.error('Error checking existing cards:', checkError)
     }
 
     const existingCardIds = existingCards?.map(card => card.id) || []
@@ -113,7 +112,6 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error in dev-seed GET:', error)
     return NextResponse.json({
       success: false,
       error: 'Failed to check demo cards'
@@ -227,22 +225,24 @@ export async function POST(request: NextRequest) {
       .from('customers')
       .upsert(demoCustomer, { onConflict: 'id' })
 
-    // Generate customer cards
+    // Generate customer cards (match current DB schema: either stamp_card_id OR membership_card_id)
     const customerCards = cardsToGenerate.map(card => ({
       id: card.id,
       customer_id: demoCustomer.id,
-      stamp_card_id: card.id,
-      current_stamps: card.current_stamps || 0,
-      membership_type: card.membership_type,
-      total_sessions: card.total_sessions,
-      sessions_used: card.sessions_used || 0,
-      cost: card.cost,
-      expiry_date: card.expiry_days 
+      // Set exactly one reference depending on subtype
+      stamp_card_id: card.membership_type === 'loyalty' ? card.id : null,
+      membership_card_id: card.membership_type === 'membership' ? card.id : null,
+      // Progress fields per subtype
+      current_stamps: card.membership_type === 'loyalty' ? (card.current_stamps || 0) : null,
+      sessions_used: card.membership_type === 'membership' ? (card.sessions_used || 0) : null,
+      // Optional expiry for memberships
+      expiry_date: card.expiry_days
         ? new Date(Date.now() + card.expiry_days * 24 * 60 * 60 * 1000).toISOString()
         : null,
+      // Wallet info
       wallet_type: 'pwa',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     }))
 
     const { data: createdCards, error: createError } = await supabase
@@ -285,7 +285,6 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error generating demo cards:', error)
     return NextResponse.json({
       success: false,
       error: 'Failed to generate demo cards',

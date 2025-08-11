@@ -45,7 +45,6 @@ export async function GET() {
     } as ApiResponse<typeof businessResult.data>)
 
   } catch (error) {
-    console.error('Business profile GET error:', error)
     return NextResponse.json(
       { success: false, error: 'Internal server error' } as ApiResponse<never>,
       { status: 500 }
@@ -106,7 +105,6 @@ export async function PUT(request: NextRequest) {
     } as ApiResponse<typeof updateResult.data>)
 
   } catch (error) {
-    console.error('Business profile PUT error:', error)
     return NextResponse.json(
       { success: false, error: 'Internal server error' } as ApiResponse<never>,
       { status: 500 }

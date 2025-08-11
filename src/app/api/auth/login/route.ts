@@ -19,7 +19,6 @@ export async function POST(request: NextRequest) {
       } as ApiResponse<null>, { status: 400 })
     }
 
-    console.log('🔐 LOGIN API - Attempting login for:', email)
 
     const supabase = await createServerClient()
     
@@ -30,7 +29,6 @@ export async function POST(request: NextRequest) {
     })
 
     if (error) {
-      console.error('🔐 LOGIN API - Auth error:', error)
       return NextResponse.json({
         success: false,
         error: error.message
@@ -44,7 +42,6 @@ export async function POST(request: NextRequest) {
       } as ApiResponse<null>, { status: 401 })
     }
 
-    console.log('🔐 LOGIN API - Login successful for user:', data.user.id)
 
     // Get user role from database
     const { data: userData, error: userError } = await supabase
@@ -56,7 +53,6 @@ export async function POST(request: NextRequest) {
     const userRole = userData?.role_id || 3 // Default to customer
     const isAdmin = userRole === 1
 
-    console.log('🔐 LOGIN API - User role:', userRole, 'isAdmin:', isAdmin)
 
     return NextResponse.json({
       success: true,
@@ -81,7 +77,6 @@ export async function POST(request: NextRequest) {
     }>)
 
   } catch (error) {
-    console.error('🔐 LOGIN API - Server error:', error)
     return NextResponse.json({
       success: false,
       error: 'Internal server error'

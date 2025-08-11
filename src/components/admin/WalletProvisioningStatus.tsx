@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Apple, Chrome, Globe, Check, X, RefreshCw, Smartphone } from 'lucide-react'
 import { adminNotifications } from '@/lib/admin-events'
+import ClientDate from '@/components/shared/ClientDate'
 
 interface WalletStatus {
   type: 'apple' | 'google' | 'pwa'
@@ -49,7 +50,6 @@ export function WalletProvisioningStatus({
         setWalletStatuses(data.statuses || walletStatuses)
       }
     } catch (error) {
-      console.error('Failed to check wallet statuses:', error)
       // ✅ ADMIN NOTIFICATION: Notify about wallet status check failures
       adminNotifications.walletFailure(
         cardId,
@@ -75,7 +75,6 @@ export function WalletProvisioningStatus({
         throw new Error(`Provisioning failed: ${errorText}`)
       }
     } catch (error) {
-      console.error('Wallet provisioning failed:', error)
       // ✅ ADMIN NOTIFICATION: Notify about wallet provisioning failures
       adminNotifications.walletFailure(
         cardId,
@@ -166,7 +165,7 @@ export function WalletProvisioningStatus({
                 )}
                 {wallet.lastUpdated && (
                   <p className="text-xs text-gray-500">
-                    Updated: {new Date(wallet.lastUpdated).toLocaleString()}
+                    Updated: <ClientDate format="datetime" />
                   </p>
                 )}
               </div>

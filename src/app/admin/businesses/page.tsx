@@ -71,7 +71,6 @@ export default function BusinessesPage() {
         weekAgo.setDate(weekAgo.getDate() - 7)
         return new Date(b.created_at) > weekAgo
       } catch (dateError) {
-        console.warn('Invalid date format for business:', b?.id, dateError)
         return false
       }
     }).length || 0
@@ -83,16 +82,13 @@ export default function BusinessesPage() {
     
     setIsRefreshing(true)
     setRefreshError(null)
-    console.log('🔄 Refreshing businesses data...')
     
     try {
       await refetch()
       setLastRefresh(new Date())
-      console.log('✅ Businesses data refreshed successfully')
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to refresh data'
       setRefreshError(errorMessage)
-      console.error('❌ Failed to refresh businesses data:', error)
     } finally {
       setIsRefreshing(false)
     }
@@ -104,7 +100,6 @@ export default function BusinessesPage() {
 
     const interval = setInterval(() => {
       if (!loading && !isRefreshing) {
-        console.log('🔄 Auto-refreshing businesses data...')
         handleRefresh()
       }
     }, 300000) // Auto-refresh every 5 minutes
@@ -443,7 +438,6 @@ function BusinessesTable({ businesses, onBusinessUpdated }: { businesses: Busine
       
       return name.includes(search) || email.includes(search)
     } catch (filterError) {
-      console.warn('Error filtering business:', business?.id, filterError)
       return false
     }
   })
@@ -478,7 +472,6 @@ function BusinessesTable({ businesses, onBusinessUpdated }: { businesses: Busine
             <tbody>
               {filteredBusinesses.map((business) => {
                 if (!business?.id) {
-                  console.warn('Business without ID found:', business)
                   return null
                 }
                 

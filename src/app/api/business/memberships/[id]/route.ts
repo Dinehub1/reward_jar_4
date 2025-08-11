@@ -78,7 +78,6 @@ export async function GET(
     } as ApiResponse<typeof membershipWithStats>)
 
   } catch (error) {
-    console.error('Business membership detail GET error:', error)
     return NextResponse.json(
       { success: false, error: 'Internal server error' } as ApiResponse<never>,
       { status: 500 }

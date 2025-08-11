@@ -50,7 +50,6 @@ export async function createServerClient() {
             try {
               return cookieStore.get(name)?.value
             } catch (error) {
-              console.warn('Failed to get cookie:', name, error)
               return undefined
             }
           },
@@ -59,7 +58,6 @@ export async function createServerClient() {
               cookieStore.set(name, value, options)
             } catch (error) {
               // Handle cookie setting errors gracefully
-              console.warn('Failed to set cookie:', name, error)
             }
           },
           remove(name: string, options: any) {
@@ -67,7 +65,6 @@ export async function createServerClient() {
               cookieStore.delete(name)
             } catch (error) {
               // Handle cookie deletion errors gracefully
-              console.warn('Failed to remove cookie:', name, error)
             }
           },
         },
@@ -80,7 +77,6 @@ export async function createServerClient() {
       }
     )
   } catch (error) {
-    console.error('🚨 SERVER CLIENT ERROR: Failed to create server client:', error)
     throw error
   }
 }

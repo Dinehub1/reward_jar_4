@@ -3,7 +3,6 @@ import { createAdminClient } from '@/lib/supabase/admin-client'
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('📊 ADMIN API - Starting report generation...')
     
     const supabase = createAdminClient()
     
@@ -39,9 +38,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Log report generation to admin logs (skipped - requires valid admin user ID)
-    console.log('📊 Report generation logged - admin logging skipped (requires user authentication)')
 
-    console.log('✅ Report generation completed successfully')
 
     return NextResponse.json({
       success: true,
@@ -51,7 +48,6 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('💥 ADMIN API - Report generation error:', error)
     return NextResponse.json(
       { 
         error: 'Internal server error during report generation',

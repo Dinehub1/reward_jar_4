@@ -94,7 +94,6 @@ export async function POST(request: NextRequest) {
     
     // Cleanup existing test data if requested
     if (cleanup) {
-      console.log('🧹 Cleaning up test membership data...')
       
       // Delete test customer cards (membership type)
       const { error: cleanupError } = await supabase
@@ -104,7 +103,6 @@ export async function POST(request: NextRequest) {
         .like('customers.name', '%Test%')
         
       if (cleanupError) {
-        console.warn('Cleanup warning:', cleanupError)
       }
       
       return NextResponse.json({
@@ -143,7 +141,6 @@ export async function POST(request: NextRequest) {
 
           if (!businesses) {
             const error = 'No businesses found in database'
-            console.error(error)
             errors.push({ scenario: scenarioKey, iteration: i + 1, error })
             continue
           }
@@ -165,7 +162,6 @@ export async function POST(request: NextRequest) {
 
           if (gymStampError || !gymStampCard) {
             const error = `Failed to create gym stamp card: ${gymStampError?.message}`
-            console.error(error)
             errors.push({ scenario: scenarioKey, iteration: i + 1, error })
             continue
           }
@@ -178,7 +174,6 @@ export async function POST(request: NextRequest) {
             
           if (!availableCustomers || availableCustomers.length === 0) {
             const error = 'No customers found in database'
-            console.error(error)
             errors.push({ scenario: scenarioKey, iteration: i + 1, error })
             continue
           }
@@ -216,7 +211,6 @@ export async function POST(request: NextRequest) {
               .single()
               
             if (cardError) {
-              console.error('Membership card creation error:', cardError)
               continue
             }
             
@@ -228,7 +222,6 @@ export async function POST(request: NextRequest) {
           const expiryDate = new Date()
           expiryDate.setDate(expiryDate.getDate() + 365) // 1 year from now
           
-          console.log(`Attempting to create customer card with:`, {
             customerCardId,
             customerId,
             stampCardId: gymStampCard.id,
@@ -256,12 +249,10 @@ export async function POST(request: NextRequest) {
             
           if (customerCardError) {
             const errorDetail = `Customer card creation failed: ${customerCardError.message} | Code: ${customerCardError.code} | Details: ${customerCardError.details}`
-            console.error(errorDetail)
             errors.push({ scenario: scenarioKey, iteration: i + 1, error: errorDetail, supabaseError: customerCardError })
             continue
           }
           
-          console.log(`✅ Created customer card: ${customerCard.id}`)
           
           // Skip session usage creation for now to isolate the issue
           /*
@@ -285,10 +276,7 @@ export async function POST(request: NextRequest) {
               .insert(sessionHistory)
               
             if (historyError) {
-              console.warn('Session history creation warning:', historyError)
-              console.warn('History error details:', historyError.details)
             } else {
-              console.log(`✅ Created ${sessionHistory.length} session usage records`)
             }
           }
           */
@@ -328,18 +316,15 @@ export async function POST(request: NextRequest) {
             }
           })
           
-          console.log(`✅ Created membership scenario: ${scenarioKey} #${i + 1}`)
           
         } catch (error) {
           const errorDetail = `Error creating scenario ${scenarioKey} #${i + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`
-          console.error(errorDetail)
           errors.push({ scenario: scenarioKey, iteration: i + 1, error: errorDetail, originalError: error })
           // Continue with next scenario instead of breaking
         }
       }
     }
     
-    console.log(`✅ Created ${results.length} test membership cards`)
     
     return NextResponse.json({
       success: true,
@@ -352,7 +337,6 @@ export async function POST(request: NextRequest) {
     })
     
   } catch (error) {
-    console.error('Error in membership test data generation:', error)
     return NextResponse.json(
       { 
         error: 'Failed to generate membership test data',
@@ -390,7 +374,6 @@ export async function GET() {
       .limit(50)
       
     if (error) {
-      console.error('Error fetching test memberships:', error)
       return NextResponse.json(
         { error: 'Failed to fetch test memberships' },
         { status: 500 }
@@ -442,7 +425,6 @@ export async function GET() {
     })
     
   } catch (error) {
-    console.error('Error fetching membership test data:', error)
     return NextResponse.json(
       { error: 'Failed to fetch membership test data' },
       { status: 500 }

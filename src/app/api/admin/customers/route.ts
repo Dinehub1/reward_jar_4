@@ -24,7 +24,6 @@ export async function GET(request: NextRequest) {
     const search = url.searchParams.get('search')
     const detailed = url.searchParams.get('detailed') === 'true'
     
-    console.log('👥 ADMIN CUSTOMERS API - Fetching customers:', {
       page,
       limit,
       search,
@@ -94,14 +93,12 @@ export async function GET(request: NextRequest) {
       .range(offset, offset + limit - 1)
 
     if (error) {
-      console.error('💥 ADMIN CUSTOMERS API - Database error:', error)
       return NextResponse.json(
         { success: false, error: 'Failed to fetch customers' } as ApiResponse<never>,
         { status: 500 }
       )
     }
 
-    console.log('✅ ADMIN CUSTOMERS API - Successfully fetched:', customers?.length || 0, 'customers')
 
     // Return paginated response if pagination was requested
     if (url.searchParams.has('page')) {
@@ -129,7 +126,6 @@ export async function GET(request: NextRequest) {
     } as ApiResponse<Customer[]>)
 
   } catch (error) {
-    console.error('💥 ADMIN CUSTOMERS API - Unexpected error:', error)
     return NextResponse.json(
       { success: false, error: 'Internal server error' } as ApiResponse<never>,
       { status: 500 }
@@ -147,7 +143,6 @@ export async function POST(request: NextRequest) {
     const supabase = createAdminClient()
     const body = await request.json()
     
-    console.log('👥 ADMIN CUSTOMERS API - Creating customer:', body)
 
     // Validate required fields
     const { name, email, user_id } = body
@@ -171,14 +166,12 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error('💥 ADMIN CUSTOMERS API - Create error:', error)
       return NextResponse.json(
         { success: false, error: 'Failed to create customer' } as ApiResponse<never>,
         { status: 500 }
       )
     }
 
-    console.log('✅ ADMIN CUSTOMERS API - Customer created:', customer.id)
 
     return NextResponse.json({
       success: true,
@@ -187,7 +180,6 @@ export async function POST(request: NextRequest) {
     } as ApiResponse<Customer>)
 
   } catch (error) {
-    console.error('💥 ADMIN CUSTOMERS API - Unexpected error:', error)
     return NextResponse.json(
       { success: false, error: 'Internal server error' } as ApiResponse<never>,
       { status: 500 }

@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin-client'
 
 export async function GET(request: NextRequest) {
-  console.log('🎯 ADMIN CARDS DATA - Fetching card templates...')
   
   try {
     // Create a direct Supabase client with the environment variables
@@ -13,7 +12,6 @@ export async function GET(request: NextRequest) {
       .from('stamp_cards')
       .select('*', { count: 'exact', head: true })
     
-    console.log('📊 Stamp cards count check:', { count: stampCardCount, error: countError })
     
     // Fetch stamp cards without inner joins
     const { data: stampCards, error: stampError } = await supabase
@@ -29,14 +27,12 @@ export async function GET(request: NextRequest) {
       `)
       .order('created_at', { ascending: false })
     
-    console.log('📊 Stamp cards fetch:', { count: stampCards?.length, error: stampError })
     
     // Fetch businesses separately
     const { data: businesses, error: businessError } = await supabase
       .from('businesses')
       .select('id, name')
     
-    console.log('📊 Businesses fetch:', { count: businesses?.length, error: businessError })
     
     // Fetch membership cards without inner joins
     const { data: membershipCards, error: membershipError } = await supabase
@@ -53,7 +49,6 @@ export async function GET(request: NextRequest) {
       `)
       .order('created_at', { ascending: false })
     
-    console.log('📊 Membership cards fetch:', { count: membershipCards?.length, error: membershipError })
     
     // Fetch customer cards for counts
     const { data: customerCards, error: customerError } = await supabase
@@ -67,14 +62,12 @@ export async function GET(request: NextRequest) {
         sessions_used
       `)
     
-    console.log('📊 Customer cards fetch:', { count: customerCards?.length, error: customerError })
     
     // Fetch customers separately
     const { data: customers, error: customersError } = await supabase
       .from('customers')
       .select('id, name, email')
     
-    console.log('📊 Customers fetch:', { count: customers?.length, error: customersError })
     
     // Create business lookup map
     const businessMap = new Map()
@@ -149,12 +142,10 @@ export async function GET(request: NextRequest) {
       }
     }
     
-    console.log('✅ ADMIN CARDS DATA - Success:', result.debug.rawCounts)
     
     return NextResponse.json(result)
     
   } catch (error) {
-    console.error('❌ ADMIN CARDS DATA - Error:', error)
     return NextResponse.json(
       { 
         success: false, 

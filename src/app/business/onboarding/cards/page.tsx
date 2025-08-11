@@ -39,13 +39,11 @@ export default function BusinessCardsIntroPage() {
           .single()
 
         if (error) {
-          console.error('Error loading business:', error)
           return
         }
 
         setBusiness(businessData)
       } catch (err) {
-        console.error('Auth check error:', err)
         router.push('/auth/login')
       } finally {
         setIsLoading(false)
@@ -56,11 +54,7 @@ export default function BusinessCardsIntroPage() {
   }, [router, supabase])
 
   const handleCreateCard = () => {
-    if (selectedCardType === 'stamp') {
-      router.push('/admin/cards/new?type=stamp')
-    } else if (selectedCardType === 'membership') {
-      router.push('/admin/cards/new?type=membership')
-    }
+    router.push('/business/no-access')
   }
 
   const skipToDashboard = () => {
@@ -115,9 +109,9 @@ export default function BusinessCardsIntroPage() {
 
         {/* Card Type Selection */}
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 text-center mb-2">Choose Your Loyalty Card Type</h2>
+          <h2 className="text-2xl font-bold text-gray-900 text-center mb-2">Cards are Admin‑Managed</h2>
           <p className="text-gray-600 text-center mb-8">
-            Select the best fit for your business model and customer engagement strategy
+            Card creation is handled by RewardJar Admins. You can review options below and request a new card.
           </p>
 
           <div className="grid md:grid-cols-2 gap-6">

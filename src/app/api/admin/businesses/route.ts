@@ -16,7 +16,6 @@ export async function GET(request: NextRequest) {
     // Verify user authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
-      console.log('❌ Admin API: Authentication failed:', authError?.message)
       return NextResponse.json(
         { success: false, error: 'Authentication required' } as ApiResponse<never>,
         { status: 401 }
@@ -32,7 +31,6 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (userError || userData?.role_id !== 1) {
-      console.log('❌ Admin API: Access denied, user role:', userData?.role_id)
       return NextResponse.json(
         { success: false, error: 'Admin access required' } as ApiResponse<never>,
         { status: 403 }
@@ -61,7 +59,6 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
 
     if (error) {
-      console.error('❌ Admin API: Error fetching businesses:', error)
       return NextResponse.json(
         { success: false, error: 'Failed to fetch businesses' } as ApiResponse<never>,
         { status: 500 }
@@ -87,7 +84,6 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    console.log('✅ Admin API: Fetched businesses with card counts successfully:', businessesWithCounts?.length)
 
     return NextResponse.json({
       success: true,
@@ -96,7 +92,6 @@ export async function GET(request: NextRequest) {
     } as ApiResponse<typeof businessesWithCounts>)
 
   } catch (error) {
-    console.error('❌ Admin API: Error in businesses fetch:', error)
     return NextResponse.json(
       { success: false, error: 'Internal server error' } as ApiResponse<never>,
       { status: 500 }
@@ -123,7 +118,6 @@ export async function POST(request: NextRequest) {
       logo_url
     } = body
 
-    console.log('🔍 Admin API: Creating business:', { name, contact_email, owner_id })
 
     // Use server client to authenticate the user
     const supabase = await createServerClient()
@@ -131,7 +125,6 @@ export async function POST(request: NextRequest) {
     // Verify user authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
-      console.log('❌ Admin API: Authentication failed:', authError?.message)
       return NextResponse.json(
         { success: false, error: 'Authentication required' } as ApiResponse<never>,
         { status: 401 }
@@ -147,7 +140,6 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (userError || userData?.role_id !== 1) {
-      console.log('❌ Admin API: Access denied, user role:', userData?.role_id)
       return NextResponse.json(
         { success: false, error: 'Admin access required' } as ApiResponse<never>,
         { status: 403 }
@@ -196,14 +188,12 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error('❌ Admin API: Error saving business:', error)
       return NextResponse.json(
         { success: false, error: 'Failed to save business: ' + error.message } as ApiResponse<never>,
         { status: 500 }
       )
     }
 
-    console.log('✅ Admin API: Business saved successfully:', savedBusiness)
 
     return NextResponse.json({
       success: true,
@@ -212,7 +202,6 @@ export async function POST(request: NextRequest) {
     } as ApiResponse<typeof savedBusiness>)
 
   } catch (error) {
-    console.error('❌ Admin API: Error in business creation:', error)
     return NextResponse.json(
       { success: false, error: 'Internal server error' } as ApiResponse<never>,
       { status: 500 }

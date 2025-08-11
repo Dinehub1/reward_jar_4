@@ -11,7 +11,7 @@ export interface CardPresentationalProps {
   progressPercent?: number // 0-100; optional demo control
 }
 
-export const CardPresentational: React.FC<CardPresentationalProps> = ({ data, platform, progressPercent }) => {
+export function CardPresentational({ data, platform, progressPercent }: CardPresentationalProps) {
   const isStamp = data.cardType === 'stamp'
   const maxValue = isStamp ? (data.stampsRequired || 10) : (data.totalSessions || 10)
   const pct = Math.max(0, Math.min(100, progressPercent ?? 40))
@@ -22,9 +22,12 @@ export const CardPresentational: React.FC<CardPresentationalProps> = ({ data, pl
     return `linear-gradient(135deg, ${color}CC, ${color})`
   }, [data.cardColor])
 
-  // Approximate Apple Wallet pass size inside 375px device width
-  // Apple: ~86% width; Google/PWA slightly wider
-  const wrapperWidthClass = platform === 'apple' ? 'w-[86%] max-w-[360px]' : 'w-[90%] max-w-[380px]'
+  // Platform-specific sizing nuances
+  const wrapperWidthClass = platform === 'apple'
+    ? 'w-[86%] max-w-[360px] rounded-3xl'
+    : platform === 'google'
+    ? 'w-[92%] max-w-[390px] rounded-xl'
+    : 'w-[90%] max-w-[380px] rounded-2xl'
 
   // Stamp grid metrics
   const rewardsAvailable = isStamp ? Math.floor(currentValue / (maxValue || 1)) : 0
@@ -34,7 +37,7 @@ export const CardPresentational: React.FC<CardPresentationalProps> = ({ data, pl
     : `${currentValue}/${maxValue} sessions`
 
   return (
-    <div className={`mx-auto mt-6 mb-4 ${wrapperWidthClass} rounded-3xl p-0 shadow-xl border bg-white overflow-hidden`}>
+    <div className={`mx-auto mt-6 mb-4 ${wrapperWidthClass} p-0 shadow-xl border bg-white overflow-hidden`}>
       {/* Top strip / header */}
       <div className="px-4 py-3" style={{ background: gradient }}>
         <div className="flex items-center justify-between text-white/90">
@@ -72,7 +75,7 @@ export const CardPresentational: React.FC<CardPresentationalProps> = ({ data, pl
             return (
               <div className="mb-3">
                 <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
-                  {cells.map((filled, idx) => (
+                  {cells.map((filled, idx) {
                     <div key={idx} className={`aspect-square rounded-xl border flex items-center justify-center text-gray-400 ${filled ? 'bg-gray-200 border-gray-300' : 'bg-white border-gray-200'}`}>
                       <span className={`text-lg ${filled ? 'opacity-70' : 'opacity-40'}`}>{data.iconEmoji}</span>
                     </div>

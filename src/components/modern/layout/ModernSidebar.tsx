@@ -75,12 +75,12 @@ const menuItems: MenuItem[] = [
 ]
 
 // Modern Navigation Item Component
-const NavItem: React.FC<{ 
+function NavItem({ item, collapsed, isActive, index }: { 
   item: MenuItem
   collapsed: boolean
   isActive: boolean
   index: number
-}> = ({ item, collapsed, isActive, index }) => {
+}) {
   const [isHovered, setIsHovered] = useState(false)
   
   return (
@@ -101,12 +101,13 @@ const NavItem: React.FC<{
         onHoverEnd={() => setIsHovered(false)}
       >
         <Link
+          prefetch={false}
           href={item.href}
           className={`
             flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 group relative
             ${isActive 
-              ? 'bg-gradient-to-r from-blue-500/10 to-purple-500/10 text-blue-600 border-l-4 border-blue-500' 
-              : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
+              ? 'bg-accent/20 text-foreground border-l-4 border-primary' 
+              : 'text-muted-foreground hover:text-foreground hover:bg-accent/20'
             }
           `}
         >
@@ -114,7 +115,7 @@ const NavItem: React.FC<{
             animate={{ rotate: isHovered ? 5 : 0 }}
             transition={{ duration: 0.2 }}
           >
-            <item.icon className={`w-5 h-5 ${isActive ? 'text-blue-500' : ''}`} />
+            <item.icon className={`w-5 h-5 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
           </motion.div>
           
           <AnimatePresence mode="wait">
@@ -167,7 +168,7 @@ const NavItem: React.FC<{
 }
 
 // Main Modern Sidebar Component
-export const ModernSidebar: React.FC<ModernSidebarProps> = ({ className = '' }) => {
+export function ModernSidebar({ className = '' }: ModernSidebarProps) {
   const [collapsed, setCollapsed] = useState(false)
   const pathname = usePathname()
 
@@ -180,11 +181,9 @@ export const ModernSidebar: React.FC<ModernSidebarProps> = ({ className = '' }) 
         ease: designTokens.animation.easing.inOut 
       }}
       className={`
-        relative min-h-screen border-r border-slate-700/50 ${className}
+        relative min-h-screen border-r border-border/50 ${className}
+        bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60
       `}
-      style={{
-        background: 'linear-gradient(180deg, #1e293b 0%, #0f172a 100%)'
-      }}
     >
       {/* Gradient Overlay */}
       <div 
@@ -192,6 +191,7 @@ export const ModernSidebar: React.FC<ModernSidebarProps> = ({ className = '' }) 
         style={{
           background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)'
         }}
+        aria-hidden
       />
       
       {/* Header Section */}

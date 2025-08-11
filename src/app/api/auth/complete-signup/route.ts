@@ -18,10 +18,6 @@ export async function POST(request: NextRequest) {
   try {
     const data: SignupData = await request.json()
 
-    console.log('=== API COMPLETE SIGNUP START ===')
-    console.log('User ID:', data.userId)
-    console.log('Email:', data.email)
-    console.log('Business Name:', data.businessName)
 
     // Validate required fields
     if (!data.userId || !data.email) {
@@ -34,17 +30,14 @@ export async function POST(request: NextRequest) {
     // Validate UUID format
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
     if (!uuidRegex.test(data.userId)) {
-      console.error('Invalid UUID format:', data.userId)
       return NextResponse.json(
         { error: 'Invalid user ID format' },
         { status: 400 }
       )
     }
 
-    console.log('✅ UUID validation passed')
 
     // Step 1: Check if user already exists
-    console.log('Step 1: Checking if user already exists...')
     const supabase = await getSupabaseServiceRole()
     const { data: existingUser, error: checkUserError } = await supabase
       .from('users')
@@ -53,7 +46,6 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (checkUserError && checkUserError.code !== 'PGRST116') {
-      console.error('Error checking existing user:', checkUserError)
       return NextResponse.json(
         { error: `Database error: ${checkUserError.message}` },
         { status: 500 }
@@ -61,10 +53,8 @@ export async function POST(request: NextRequest) {
     }
 
     if (existingUser) {
-      console.log('User already exists:', existingUser)
     } else {
       // Create user profile
-      console.log('Step 2: Creating user profile...')
       const { error: userError } = await supabase
         .from('users')
         .insert({
@@ -74,10 +64,6 @@ export async function POST(request: NextRequest) {
         })
 
       if (userError) {
-        console.error('User creation error:', userError)
-        console.error('Error code:', userError.code)
-        console.error('Error details:', userError.details)
-        console.error('Error hint:', userError.hint)
         
         return NextResponse.json(
           { 
@@ -88,11 +74,9 @@ export async function POST(request: NextRequest) {
           { status: 500 }
         )
       }
-      console.log('✅ User profile created successfully')
     }
 
     // Step 3: Check if business already exists
-    console.log('Step 3: Checking if business already exists...')
     const { data: existingBusiness, error: checkBusinessError } = await supabase
       .from('businesses')
       .select('id, name, owner_id')
@@ -100,7 +84,6 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (checkBusinessError && checkBusinessError.code !== 'PGRST116') {
-      console.error('Error checking existing business:', checkBusinessError)
       return NextResponse.json(
         { error: `Database error: ${checkBusinessError.message}` },
         { status: 500 }
@@ -108,10 +91,8 @@ export async function POST(request: NextRequest) {
     }
 
     if (existingBusiness) {
-      console.log('Business already exists:', existingBusiness)
     } else {
       // Create business profile
-      console.log('Step 4: Creating business profile...')
       const businessData = {
         name: data.businessName || data.email.split('@')[0],
         description: null,
@@ -120,17 +101,12 @@ export async function POST(request: NextRequest) {
         status: 'active' as const
       }
 
-      console.log('Business data to insert:', businessData)
 
       const { error: businessError } = await supabase
         .from('businesses')
         .insert(businessData)
 
       if (businessError) {
-        console.error('Business creation error:', businessError)
-        console.error('Error code:', businessError.code)
-        console.error('Error details:', businessError.details)
-        console.error('Error hint:', businessError.hint)
         
         return NextResponse.json(
           { 
@@ -141,10 +117,8 @@ export async function POST(request: NextRequest) {
           { status: 500 }
         )
       }
-      console.log('✅ Business profile created successfully')
     }
 
-    console.log('=== API COMPLETE SIGNUP SUCCESS ===')
 
     return NextResponse.json({
       success: true,
@@ -155,7 +129,6 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Complete signup API error:', error)
     
     return NextResponse.json(
       { 

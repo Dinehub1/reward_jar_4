@@ -191,7 +191,6 @@ export default function BusinessAnalytics() {
       setMembershipAnalytics(mockMembershipAnalytics)
 
     } catch (err) {
-      console.error('Error fetching analytics:', err)
       setError(err instanceof Error ? err.message : 'Failed to load analytics')
       } finally {
         setLoading(false)

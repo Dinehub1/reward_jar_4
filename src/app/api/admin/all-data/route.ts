@@ -14,10 +14,8 @@ async function retryOperation<T>(
       return await operation()
     } catch (error) {
       lastError = error as Error
-      console.warn(`❌ Attempt ${attempt}/${maxRetries} failed:`, error)
       
       if (attempt < maxRetries) {
-        console.log(`⏳ Retrying in ${delay}ms...`)
         await new Promise(resolve => setTimeout(resolve, delay))
         delay *= 2 // Exponential backoff
       }
@@ -28,7 +26,6 @@ async function retryOperation<T>(
 }
 
 export async function GET(request: NextRequest) {
-  console.log('🎯 ADMIN ALL DATA - Fetching comprehensive admin data from Supabase...')
   
   try {
     const supabase = createAdminClient()
@@ -60,9 +57,7 @@ export async function GET(request: NextRequest) {
       }
       
       businesses = await retryOperation(businessesOperation)
-      console.log('🏢 ADMIN ALL DATA - Businesses fetched:', businesses.length)
     } catch (businessError) {
-      console.error('❌ Error fetching businesses:', businessError)
       // Continue with empty array - don't fail the entire request
     }
 
@@ -79,7 +74,6 @@ export async function GET(request: NextRequest) {
       .limit(10)
     
     if (customerError) {
-      console.error('❌ Error fetching customers:', customerError)
     }
 
     // Process customers to match expected interface
@@ -170,7 +164,6 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    console.log('✅ ADMIN ALL DATA - Success:', {
       businesses: businesses?.length || 0,
       customers: processedCustomers.length,
       alerts: alerts.length
@@ -179,7 +172,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(result)
 
   } catch (error) {
-    console.error('❌ ADMIN ALL DATA - Error:', error)
     return NextResponse.json(
       { 
         success: false, 

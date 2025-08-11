@@ -34,7 +34,6 @@ export async function GET(request: NextRequest) {
   const startTime = Date.now()
 
   try {
-    console.log('🧪 ARCHITECTURE TEST - Starting comprehensive test suite...')
 
     // Test 1: Environment Health Check
     try {
@@ -166,7 +165,6 @@ export async function GET(request: NextRequest) {
       status: passedTests === testResults.length ? 'ALL_PASS' : 'SOME_FAILURES'
     }
 
-    console.log('✅ ARCHITECTURE TEST - Test suite completed:', summary)
 
     return NextResponse.json({
       success: true,
@@ -180,7 +178,6 @@ export async function GET(request: NextRequest) {
     } as ApiResponse<any>)
 
   } catch (error) {
-    console.error('💥 ARCHITECTURE TEST - Test suite failed:', error)
     
     return NextResponse.json({
       success: false,

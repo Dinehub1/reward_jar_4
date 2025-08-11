@@ -58,7 +58,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         const loyaltyObj = createLoyaltyObject({ ids, current: 0, total: uiPayload.stampsRequired || 10, objectDisplayId: 'TEMPLATE-PREVIEW', displayName: uiPayload.cardName })
         pass_payload = { apple, google: { loyaltyObject: loyaltyObj } }
       } catch (e) {
-        console.warn('Snapshot build failed (non-fatal):', e)
       }
     }
 
@@ -79,7 +78,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           metadata: { template_id: id, version: nextVersion }
         })
       } catch (e) {
-        console.warn('template_published event insert failed (non-fatal):', e)
       }
       const { error: uErr } = await supabase
         .from('card_template_versions')
@@ -91,7 +89,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     return NextResponse.json({ success: true, data: version })
   } catch (error) {
-    console.error('Template Version POST error:', error)
     return NextResponse.json({ success: false, error: 'Failed to create version' }, { status: 500 })
   }
 }

@@ -9,7 +9,7 @@
  * 2. MCP functions use createAdminClient() for admin operations
  * 3. MCP functions use createServerClient() for user operations  
  * 4. MCP functions return standardized responses
- * 5. NO console.log() in production MCP code
+ * 5. NO in production MCP code
  */
 
 export * from './businesses'

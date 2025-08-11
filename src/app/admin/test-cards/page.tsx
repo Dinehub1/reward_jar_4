@@ -161,7 +161,6 @@ export default function TestCardsPage() {
       setCardTests(mockCardTests)
       setWalletTests(mockWalletTests)
     } catch (error) {
-      console.error('Error loading test data:', error)
     } finally {
       setIsLoading(false)
     }

@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     const timestamp = new Date().toISOString()
     const errors: string[] = []
 
-    // Check Apple Wallet configuration
+    // Check Apple Wallet configuration (support both Base64 certs and legacy key-id envs)
     const appleStatus: WalletHealthStatus = {
       service: 'apple',
       status: 'healthy',
@@ -46,16 +46,17 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-      const requiredEnvVars = [
-        'APPLE_TEAM_ID',
-        'APPLE_PASS_TYPE_ID', 
-        'APPLE_KEY_ID',
-        'APPLE_PRIVATE_KEY'
-      ]
+      const hasBase64 = !!(process.env.APPLE_CERT_BASE64 && process.env.APPLE_KEY_BASE64 && process.env.APPLE_WWDR_BASE64)
+      const hasLegacy = !!(process.env.APPLE_TEAM_ID && process.env.APPLE_PASS_TYPE_ID && process.env.APPLE_KEY_ID && process.env.APPLE_PRIVATE_KEY)
 
-      const missingVars = requiredEnvVars.filter(varName => !process.env[varName])
-      
-      if (missingVars.length === 0) {
+      if (hasBase64) {
+        appleStatus.configured = true
+        appleStatus.details = {
+          cert_base64: process.env.APPLE_CERT_BASE64 ? 'configured' : 'missing',
+          key_base64: process.env.APPLE_KEY_BASE64 ? 'configured' : 'missing',
+          wwdr_base64: process.env.APPLE_WWDR_BASE64 ? 'configured' : 'missing'
+        }
+      } else if (hasLegacy) {
         appleStatus.configured = true
         appleStatus.details = {
           teamId: process.env.APPLE_TEAM_ID ? 'configured' : 'missing',
@@ -65,14 +66,26 @@ export async function GET(request: NextRequest) {
         }
       } else {
         appleStatus.status = 'unhealthy'
-        appleStatus.errors = [`Missing environment variables: ${missingVars.join(', ')}`]
+        const missing: string[] = []
+        if (!hasBase64) {
+          if (!process.env.APPLE_CERT_BASE64) missing.push('APPLE_CERT_BASE64')
+          if (!process.env.APPLE_KEY_BASE64) missing.push('APPLE_KEY_BASE64')
+          if (!process.env.APPLE_WWDR_BASE64) missing.push('APPLE_WWDR_BASE64')
+        }
+        if (!hasLegacy) {
+          if (!process.env.APPLE_TEAM_ID) missing.push('APPLE_TEAM_ID')
+          if (!process.env.APPLE_PASS_TYPE_ID) missing.push('APPLE_PASS_TYPE_ID')
+          if (!process.env.APPLE_KEY_ID) missing.push('APPLE_KEY_ID')
+          if (!process.env.APPLE_PRIVATE_KEY) missing.push('APPLE_PRIVATE_KEY')
+        }
+        appleStatus.errors = [`Missing environment variables (either Base64 set or Legacy set): ${Array.from(new Set(missing)).join(', ')}`]
       }
     } catch (error) {
       appleStatus.status = 'unhealthy'
       appleStatus.errors = [`Configuration check failed: ${error}`]
     }
 
-    // Check Google Wallet configuration  
+    // Check Google Wallet configuration (support file path or JSON env)
     const googleStatus: WalletHealthStatus = {
       service: 'google',
       status: 'healthy',
@@ -83,24 +96,34 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-      const requiredEnvVars = [
-        'GOOGLE_APPLICATION_CREDENTIALS',
-        'GOOGLE_WALLET_ISSUER_ID',
-        'GOOGLE_WALLET_CLASS_SUFFIX'
-      ]
+      const hasCredsPath = !!process.env.GOOGLE_APPLICATION_CREDENTIALS
+      const hasCredsJson = !!process.env.GOOGLE_SERVICE_ACCOUNT_JSON
+      const hasIssuer = !!(process.env.GOOGLE_WALLET_ISSUER_ID || process.env.GOOGLE_ISSUER_ID)
+      const hasAnySuffix = !!(
+        process.env.GOOGLE_WALLET_CLASS_SUFFIX ||
+        process.env.GOOGLE_WALLET_CLASS_SUFFIX_STAMP ||
+        process.env.GOOGLE_WALLET_CLASS_SUFFIX_MEMBERSHIP
+      )
 
-      const missingVars = requiredEnvVars.filter(varName => !process.env[varName])
-      
-      if (missingVars.length === 0) {
+      if ((hasCredsPath || hasCredsJson) && hasIssuer && hasAnySuffix) {
         googleStatus.configured = true
         googleStatus.details = {
-          credentials: process.env.GOOGLE_APPLICATION_CREDENTIALS ? 'configured' : 'missing',
-          issuerId: process.env.GOOGLE_WALLET_ISSUER_ID ? 'configured' : 'missing',
-          classSuffix: process.env.GOOGLE_WALLET_CLASS_SUFFIX ? 'configured' : 'missing'
+          credentials: hasCredsPath || hasCredsJson ? 'configured' : 'missing',
+          issuerId: hasIssuer ? 'configured' : 'missing',
+          classSuffix: hasAnySuffix ? 'configured' : 'missing'
         }
       } else {
         googleStatus.status = 'unhealthy'
-        googleStatus.errors = [`Missing environment variables: ${missingVars.join(', ')}`]
+        const missing: string[] = []
+        if (!hasCredsPath && !hasCredsJson) missing.push('GOOGLE_APPLICATION_CREDENTIALS or GOOGLE_SERVICE_ACCOUNT_JSON')
+        if (!hasIssuer) missing.push('GOOGLE_WALLET_ISSUER_ID or GOOGLE_ISSUER_ID')
+        if (!hasAnySuffix) missing.push('GOOGLE_WALLET_CLASS_SUFFIX[_STAMP|_MEMBERSHIP]')
+        googleStatus.errors = [`Missing environment variables: ${missing.join(', ')}`]
+        googleStatus.details = {
+          credentials: hasCredsPath || hasCredsJson ? 'configured' : 'missing',
+          issuerId: hasIssuer ? 'configured' : 'missing',
+          classSuffix: hasAnySuffix ? 'configured' : 'missing'
+        }
       }
     } catch (error) {
       googleStatus.status = 'unhealthy'
@@ -160,7 +183,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(response, { status: statusCode })
 
   } catch (error) {
-    console.error('💥 WALLET HEALTH CHECK ERROR:', error)
     
     return NextResponse.json({
       status: 'unhealthy',

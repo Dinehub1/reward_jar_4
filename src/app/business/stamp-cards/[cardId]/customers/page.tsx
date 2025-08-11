@@ -118,7 +118,6 @@ export default function StampCardCustomersPage() {
           .order('created_at', { ascending: false })
 
         if (customerError) {
-          console.error('Error fetching customers:', customerError)
           setError('Failed to load customers')
           return
         }
@@ -141,7 +140,6 @@ export default function StampCardCustomersPage() {
           setFilteredCustomers(formattedCustomers)
         }
       } catch (err) {
-        console.error('Error fetching data:', err)
         setError('Something went wrong. Please try again.')
       } finally {
         setLoading(false)

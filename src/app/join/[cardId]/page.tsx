@@ -59,7 +59,6 @@ export default function JoinCardPage() {
   useEffect(() => {
     async function initialize() {
       try {
-        console.log('🔍 Loading card information for cardId:', cardId)
         
         // Detect device
         const userAgent = navigator.userAgent
@@ -76,7 +75,6 @@ export default function JoinCardPage() {
         // Load card information
         const supabase = createClient()
         
-        console.log('📊 Searching for stamp card with ID:', cardId)
         
         // Try stamp cards first
         const { data: stampCard, error: stampError } = await supabase
@@ -92,10 +90,8 @@ export default function JoinCardPage() {
           .eq('status', 'active')
           .single()
 
-        console.log('📊 Stamp card query result:', { stampCard, stampError })
 
         if (stampCard) {
-          console.log('✅ Found stamp card:', stampCard.name)
           setCardInfo({
             id: stampCard.id,
             name: stampCard.name,
@@ -108,7 +104,6 @@ export default function JoinCardPage() {
           return
         }
 
-        console.log('📊 Searching for membership card with ID:', cardId)
 
         // Try membership cards
         const { data: membershipCard, error: membershipError } = await supabase
@@ -125,10 +120,8 @@ export default function JoinCardPage() {
           .eq('status', 'active')
           .single()
 
-        console.log('📊 Membership card query result:', { membershipCard, membershipError })
 
         if (membershipCard) {
-          console.log('✅ Found membership card:', membershipCard.name)
           setCardInfo({
             id: membershipCard.id,
             name: membershipCard.name,
@@ -143,10 +136,8 @@ export default function JoinCardPage() {
           return
         }
 
-        console.log('❌ No card found with ID:', cardId)
         setError('Card not found or inactive')
       } catch (err) {
-        console.error('❌ Error loading card:', err)
         setError('Failed to load card information')
       } finally {
         setIsLoading(false)
@@ -219,7 +210,6 @@ export default function JoinCardPage() {
         setStep(4) // Move to wallet selection for new users
       }
     } catch (err) {
-      console.error('Registration error:', err)
       const errorMessage = err instanceof Error ? err.message : 'Unknown error'
       setError(`Failed to register for card: ${errorMessage}. Please try again.`)
     } finally {
@@ -263,7 +253,6 @@ export default function JoinCardPage() {
         setStep(5)
       }
     } catch (error) {
-      console.error(`Error adding to ${walletType} wallet:`, error)
       setError(`Failed to add to ${walletType} wallet. Please try again.`)
     }
   }

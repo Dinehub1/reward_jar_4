@@ -20,7 +20,6 @@ export async function GET() {
     if (error) throw error
     return NextResponse.json({ success: true, data: (data || []) as CardTemplate[] })
   } catch (error) {
-    console.error('Templates GET error:', error)
     return NextResponse.json({ success: true, data: [] })
   }
 }
@@ -74,7 +73,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, data: { template, version } as { template: CardTemplate; version: CardTemplateVersion } })
   } catch (error) {
-    console.error('Templates POST error:', error)
     return NextResponse.json({ success: false, error: 'Failed to create template' }, { status: 500 })
   }
 }

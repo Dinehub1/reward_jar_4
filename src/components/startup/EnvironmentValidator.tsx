@@ -55,14 +55,10 @@ export function EnvironmentValidator({ children }: EnvironmentValidatorProps) {
 
       // Log environment status in development
       if (process.env.NODE_ENV === 'development') {
-        console.log('🔍 CLIENT ENVIRONMENT VALIDATION:')
-        console.log(`✅ Core Variables: ${clientErrors.length === 0 ? 'VALID' : 'MISSING'}`)
         if (result.warnings.length > 0) {
-          console.warn('⚠️ Environment warnings:', result.warnings)
         }
       }
     } catch (error) {
-      console.error('Environment validation failed:', error)
       setValidationState({
         isValid: false,
         isLoading: false,
@@ -124,7 +120,6 @@ export function EnvironmentValidator({ children }: EnvironmentValidatorProps) {
 
   // Show warnings in development (non-blocking)
   if (process.env.NODE_ENV === 'development' && validationState.warnings.length > 0) {
-    console.warn('⚠️ Environment warnings (non-blocking):', validationState.warnings)
   }
 
   // Environment is valid, render children

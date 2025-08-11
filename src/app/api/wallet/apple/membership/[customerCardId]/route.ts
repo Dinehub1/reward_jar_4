@@ -230,7 +230,6 @@ export async function GET(
     })
     
   } catch (error) {
-    console.error('Error generating Apple Wallet membership pass:', error)
     return NextResponse.json(
       { 
         error: 'Failed to generate membership pass',
@@ -410,10 +409,12 @@ function generateMembershipHTML(
             alert('PKPass generation not yet implemented. This is a preview.');
         }
         
-        // Auto-refresh every 30 seconds to sync updates
-        setInterval(() => {
+        // Auto-refresh every 30 seconds to sync updates (client-only)
+        if (typeof window !== 'undefined') {
+          setInterval(() => {
             window.location.reload();
-        }, 30000);
+          }, 30000);
+        }
     </script>
 </body>
 </html>

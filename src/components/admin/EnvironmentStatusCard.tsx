@@ -29,17 +29,40 @@ export function EnvironmentStatusCard() {
     try {
       // Get client-side environment status
       const clientStatus = getEnvironmentStatus()
-      
-      // Check server-side status via API
-      const response = await fetch('/api/health/env/simple')
-      const serverStatus = response.ok ? await response.json() : null
-      
+      // Fetch server-side environment health (wallets) and simple service-role check in parallel
+      const [simpleRes, envRes] = await Promise.all([
+        fetch('/api/health/env/simple'),
+        fetch('/api/health/env')
+      ])
+
+      const simple = simpleRes.ok ? await simpleRes.json() : null
+      const env = envRes.ok ? await envRes.json() : null
+
+      // Derive wallet availability from server
+      const appleReady = !!(
+        env?.appleWallet && (
+          env.appleWallet.status === 'ready_for_production' ||
+          (env.appleWallet.configured && env.appleWallet.certificatesValid)
+        )
+      )
+
+      const googleReady = !!(
+        env?.googleWallet && (
+          env.googleWallet.status === 'ready_for_production' ||
+          env.googleWallet.configured
+        )
+      )
+
       setEnvStatus({
         ...clientStatus,
-        hasServiceRoleKey: serverStatus?.hasServiceRoleKey ?? null
+        hasServiceRoleKey: simple?.hasServiceRoleKey ?? null,
+        walletAvailability: {
+          apple: appleReady,
+          google: googleReady,
+          pwa: true
+        }
       })
     } catch (error) {
-      console.error('Failed to check environment status:', error)
       setEnvStatus(getEnvironmentStatus())
     } finally {
       setIsRefreshing(false)
@@ -141,7 +164,7 @@ export function EnvironmentStatusCard() {
                       size="sm"
                       onClick={() => {
                         const envContent = `# Add these to your .env.local file
-${!envStatus.hasSupabaseUrl ? 'NEXT_PUBLIC_SUPABASE_URL=your_supabase_url_here\n' : ''}${!envStatus.hasAnonKey ? 'NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here\n' : ''}${envStatus.hasServiceRoleKey === false ? 'SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here\n' : ''}`
+${!envStatus.hasSupabaseUrl ? 'NEXT_PUBLIC_SUPABASE_URL=your_supabase_url_here\n' : ''}${!envStatus.hasAnonKey ? 'NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here\n' : ''}${envStatus.hasServiceRoleKey === false ? '# SUPABASE_SERVICE_ROLE_KEY=<set on server only, do NOT prefix with NEXT_PUBLIC>\n' : ''}`
                         navigator.clipboard.writeText(envContent)
                       }}
                       className="text-red-700 border-red-300 hover:bg-red-100"

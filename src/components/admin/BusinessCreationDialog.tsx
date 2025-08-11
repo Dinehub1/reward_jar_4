@@ -148,7 +148,6 @@ export function BusinessCreationDialog({ onBusinessCreated }: BusinessCreationDi
         }
       }
     } catch (error) {
-      console.error('Error creating business:', error)
       setErrors({ submit: 'Network error. Please try again.' })
     } finally {
       setLoading(false)

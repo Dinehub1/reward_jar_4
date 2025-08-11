@@ -18,23 +18,17 @@ export function validateServerEnvironment(): void {
     
     // Log success in development
     if (process.env.NODE_ENV === 'development') {
-      console.log('✅ SERVER ENVIRONMENT VALIDATION: All critical variables present')
       
       // Show detailed report in development
       const report = getEnvReport()
-      console.log(report)
     } else {
       // Production: Just log basic success
-      console.log('✅ Environment validation passed')
     }
   } catch (error) {
     // Log the error and re-throw to prevent server startup
-    console.error('🚨 SERVER STARTUP FAILED - Environment validation error:')
-    console.error(error instanceof Error ? error.message : 'Unknown validation error')
     
     // In production, we want to fail fast
     if (process.env.NODE_ENV === 'production') {
-      console.error('🚨 Production deployment blocked due to missing environment variables')
       process.exit(1) // Exit the process to prevent deployment with invalid config
     }
     
@@ -62,12 +56,10 @@ export function validateContextEnvironment(context: string, requiredVars: string
       `🚨 ${context.toUpperCase()} CONTEXT ERROR: Missing required environment variables: ${missing.join(', ')}`
     )
     
-    console.error(error.message)
     throw error
   }
   
   if (process.env.NODE_ENV === 'development') {
-    console.log(`✅ ${context.toUpperCase()} CONTEXT: Environment validation passed`)
   }
 }
 
@@ -123,7 +115,6 @@ export function validateWalletEnvironment(): void {
   }
   
   if (process.env.NODE_ENV === 'development') {
-    console.log(`✅ WALLET ENVIRONMENT: ${appleConfigured ? 'Apple ✅' : 'Apple ❌'} ${googleConfigured ? 'Google ✅' : 'Google ❌'}`)
   }
 }
 

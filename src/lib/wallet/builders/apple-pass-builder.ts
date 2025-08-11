@@ -1,5 +1,7 @@
 // Centralized Apple Wallet pass JSON construction
 // Purpose: Provide a single source of truth for Apple pass JSON used by all Apple wallet routes
+import { formatCurrency, formatDate } from '@/lib/format'
+import { AppleCopy } from '@/lib/wallet/walletCopy'
 
 export type ApplePassInput = {
   customerCardId: string
@@ -14,6 +16,7 @@ export type ApplePassInput = {
     name: string
     description?: string
   }
+  locale?: string
   derived: {
     progressLabel: string
     remainingLabel: string
@@ -78,7 +81,7 @@ export function buildApplePassJson(input: ApplePassInput) {
     secondaryFields: [
       {
         key: 'progress',
-        label: 'Progress',
+        label: AppleCopy.labels.progress,
         value: `${Math.round(derived.progressPercent)}%`,
         textAlignment: 'PKTextAlignmentLeft',
       },
@@ -86,7 +89,7 @@ export function buildApplePassJson(input: ApplePassInput) {
         key: 'remaining',
         label: derived.remainingLabel,
         value: derived.isCompleted
-          ? (isMembershipCard ? 'Complete' : 'Completed!')
+          ? (isMembershipCard ? AppleCopy.status.completedMembership : AppleCopy.status.completedStamp)
           : `${derived.remainingCount} ${isMembershipCard ? 'sessions' : 'stamps'}`,
         textAlignment: 'PKTextAlignmentRight',
       },
@@ -94,23 +97,16 @@ export function buildApplePassJson(input: ApplePassInput) {
     auxiliaryFields: [
       {
         key: 'business',
-        label: 'Business',
+        label: AppleCopy.labels.business,
         value: businessData.name,
         textAlignment: 'PKTextAlignmentLeft',
       },
       ...(isMembershipCard
-        ? [
-            {
-              key: 'cost',
-              label: 'Value',
-              value: `₩${(input.derived.membershipCost ?? 15000).toLocaleString()}`,
-              textAlignment: 'PKTextAlignmentRight',
-            },
-          ]
+        ? []
         : [
             {
               key: 'reward',
-              label: 'Reward',
+              label: AppleCopy.labels.reward,
               value: cardData.reward_description,
               textAlignment: 'PKTextAlignmentRight',
             },
@@ -119,7 +115,7 @@ export function buildApplePassJson(input: ApplePassInput) {
     headerFields: [
       {
         key: 'card_name',
-        label: isMembershipCard ? 'Membership' : 'Stamp Card',
+        label: isMembershipCard ? AppleCopy.labels.membershipHeader : AppleCopy.labels.stampHeader,
         value: cardData.name,
         textAlignment: 'PKTextAlignmentCenter',
       },
@@ -127,9 +123,9 @@ export function buildApplePassJson(input: ApplePassInput) {
     backFields: [
       {
         key: 'description',
-        label: 'About',
+        label: AppleCopy.labels.about,
         value: isMembershipCard
-          ? `Gym membership with ${input.derived.membershipTotalSessions ?? 20} sessions. Value: ₩${(input.derived.membershipCost ?? 15000).toLocaleString()}.`
+          ? `Gym membership with ${input.derived.membershipTotalSessions ?? 20} sessions.`
           : `Collect ${cardData.total_stamps} stamps to earn: ${cardData.reward_description}`,
       },
       {
@@ -138,29 +134,29 @@ export function buildApplePassJson(input: ApplePassInput) {
         value:
           businessData.description ||
           (isMembershipCard
-            ? 'Visit us to use your gym sessions!'
-            : 'Visit us to collect stamps and earn rewards!'),
+            ? AppleCopy.instructions.membership
+            : AppleCopy.instructions.stamp),
       },
       {
         key: 'instructions',
-        label: 'How to Use',
+        label: AppleCopy.labels.howToUse,
         value: isMembershipCard
-          ? 'Show this pass at the gym to mark session usage. Your pass will automatically update when sessions are used.'
-          : 'Show this pass to collect stamps at participating locations. Your pass will automatically update when new stamps are added.',
+          ? AppleCopy.instructions.membership
+          : AppleCopy.instructions.stamp,
       },
       ...((isMembershipCard && input.derived.membershipExpiryDate)
         ? [
             {
               key: 'expiry_info',
-              label: 'Valid Until',
-              value: new Date(input.derived.membershipExpiryDate as string).toLocaleDateString(),
+        label: AppleCopy.labels.expiresOn,
+        value: formatDate(input.derived.membershipExpiryDate as string, input.locale),
             },
           ]
         : []),
       {
         key: 'contact',
-        label: 'Questions?',
-        value: 'Contact the business directly or visit rewardjar.com for support.',
+        label: AppleCopy.labels.questions,
+        value: AppleCopy.support,
       },
     ],
   }

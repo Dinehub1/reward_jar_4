@@ -22,7 +22,6 @@ export async function GET(
   try {
     const { cardId } = await params
 
-    console.log('🔍 Wallet Status API: Checking status for card:', cardId)
 
     // Verify admin access
     const supabase = createAdminClient()
@@ -86,7 +85,6 @@ export async function GET(
       ]
     }
 
-    console.log('✅ Wallet Status retrieved:', statuses)
 
     return NextResponse.json({
       success: true,
@@ -95,7 +93,6 @@ export async function GET(
     } as ApiResponse<{ statuses: WalletStatus[] }>)
 
   } catch (error) {
-    console.error('❌ Wallet Status API Error:', error)
     return NextResponse.json(
       { success: false, error: 'Internal server error' } as ApiResponse<never>,
       { status: 500 }

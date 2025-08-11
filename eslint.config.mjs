@@ -17,6 +17,21 @@ const eslintConfig = [
       "@typescript-eslint/no-empty-object-type": "warn",
       "@typescript-eslint/no-explicit-any": "warn"
     }
+  },
+  {
+    files: ["src/app/api/**/*.{ts,tsx}"],
+    languageOptions: {
+      // Treat API routes as server-only environment
+      globals: {
+        window: "off",
+        document: "off",
+        navigator: "off"
+      }
+    },
+    rules: {
+      // Forbid browser globals in API routes
+      "no-restricted-globals": ["error", "window", "document", "navigator"]
+    }
   }
 ];
 

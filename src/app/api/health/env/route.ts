@@ -92,7 +92,6 @@ function validateBase64Certificate(cert: string): boolean {
 
 export async function GET() {
   try {
-    console.log('🔍 Starting environment validation...')
     
     // Core Application Variables
     const coreVars = {
@@ -104,21 +103,27 @@ export async function GET() {
       NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
     }
 
-    // Google Wallet Variables with enhanced validation
+    // Google Wallet Variables with enhanced validation (support multiple patterns)
     const googleWalletVars = {
       GOOGLE_SERVICE_ACCOUNT_EMAIL: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
       GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY,
+      GOOGLE_SERVICE_ACCOUNT_JSON: process.env.GOOGLE_SERVICE_ACCOUNT_JSON,
+      GOOGLE_APPLICATION_CREDENTIALS: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+      GOOGLE_WALLET_ISSUER_ID: process.env.GOOGLE_WALLET_ISSUER_ID || process.env.GOOGLE_ISSUER_ID,
       GOOGLE_CLASS_ID: process.env.GOOGLE_CLASS_ID,
+      GOOGLE_WALLET_CLASS_SUFFIX: process.env.GOOGLE_WALLET_CLASS_SUFFIX,
+      GOOGLE_WALLET_CLASS_SUFFIX_STAMP: process.env.GOOGLE_WALLET_CLASS_SUFFIX_STAMP,
+      GOOGLE_WALLET_CLASS_SUFFIX_MEMBERSHIP: process.env.GOOGLE_WALLET_CLASS_SUFFIX_MEMBERSHIP,
     }
 
-    // Apple Wallet Variables
+    // Apple Wallet Variables (support legacy aliases)
     const appleWalletVars = {
       APPLE_CERT_BASE64: process.env.APPLE_CERT_BASE64,
       APPLE_KEY_BASE64: process.env.APPLE_KEY_BASE64,
       APPLE_WWDR_BASE64: process.env.APPLE_WWDR_BASE64,
-      APPLE_CERT_PASSWORD: process.env.APPLE_CERT_PASSWORD,
-      APPLE_TEAM_IDENTIFIER: process.env.APPLE_TEAM_IDENTIFIER,
-      APPLE_PASS_TYPE_IDENTIFIER: process.env.APPLE_PASS_TYPE_IDENTIFIER,
+      APPLE_CERT_PASSWORD: process.env.APPLE_CERT_PASSWORD, // may be empty
+      APPLE_TEAM_IDENTIFIER: process.env.APPLE_TEAM_IDENTIFIER || process.env.APPLE_TEAM_ID,
+      APPLE_PASS_TYPE_IDENTIFIER: process.env.APPLE_PASS_TYPE_IDENTIFIER || process.env.APPLE_PASS_TYPE_ID,
     }
 
     // Security & Analytics Variables
@@ -140,58 +145,79 @@ export async function GET() {
       criticalIssues.push('Core application variables incomplete')
     }
 
-    // Enhanced Google Wallet Validation
+    // Enhanced Google Wallet Validation (3 buckets: creds, issuer, class)
     let googleWalletConfigured = 0
     let privateKeyValid = false
     let serviceAccountValid = false
     let classIdValid = false
 
-    if (googleWalletVars.GOOGLE_SERVICE_ACCOUNT_EMAIL) {
+    // Credentials: either email+private key, or JSON, or credentials file path
+    const hasEmailKey = !!(googleWalletVars.GOOGLE_SERVICE_ACCOUNT_EMAIL && googleWalletVars.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY)
+    const hasJson = !!googleWalletVars.GOOGLE_SERVICE_ACCOUNT_JSON
+    const hasCredsPath = !!googleWalletVars.GOOGLE_APPLICATION_CREDENTIALS
+
+    if (hasEmailKey || hasJson || hasCredsPath) {
       googleWalletConfigured++
-      serviceAccountValid = validateEmailFormat(googleWalletVars.GOOGLE_SERVICE_ACCOUNT_EMAIL)
-      if (!serviceAccountValid) {
-        criticalIssues.push('GOOGLE_SERVICE_ACCOUNT_EMAIL has invalid email format')
+      if (hasEmailKey) {
+        serviceAccountValid = validateEmailFormat(googleWalletVars.GOOGLE_SERVICE_ACCOUNT_EMAIL as string)
+        privateKeyValid = validatePEMFormat(googleWalletVars.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY as string, 'PRIVATE')
+        if (!serviceAccountValid) criticalIssues.push('GOOGLE_SERVICE_ACCOUNT_EMAIL has invalid email format')
+        if (!privateKeyValid) {
+          criticalIssues.push('GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY has invalid PEM format')
+          logger.error('Google Wallet private key validation failed', {
+            hasBeginMarker: googleWalletVars.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.includes('-----BEGIN PRIVATE KEY-----'),
+            hasEndMarker: googleWalletVars.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.includes('-----END PRIVATE KEY-----'),
+            hasNewlines: googleWalletVars.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.includes('\n'),
+            length: googleWalletVars.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.length
+          })
+        }
+      } else {
+        // JSON or file path treated as valid credentials holder
+        serviceAccountValid = true
+        privateKeyValid = true
       }
     }
 
-    if (googleWalletVars.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY) {
+    // Issuer
+    const hasIssuer = !!googleWalletVars.GOOGLE_WALLET_ISSUER_ID
+    if (hasIssuer) {
       googleWalletConfigured++
-      privateKeyValid = validatePEMFormat(googleWalletVars.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY, 'PRIVATE')
-      if (!privateKeyValid) {
-        criticalIssues.push('GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY has invalid PEM format')
-        logger.error('Google Wallet private key validation failed', {
-          hasBeginMarker: googleWalletVars.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.includes('-----BEGIN PRIVATE KEY-----'),
-          hasEndMarker: googleWalletVars.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.includes('-----END PRIVATE KEY-----'),
-          hasNewlines: googleWalletVars.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.includes('\n'),
-          length: googleWalletVars.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.length
-        })
-      }
     }
 
+    // Class
     if (googleWalletVars.GOOGLE_CLASS_ID) {
-      googleWalletConfigured++
       classIdValid = validateGoogleClassId(googleWalletVars.GOOGLE_CLASS_ID)
+      googleWalletConfigured++
       if (!classIdValid) {
         criticalIssues.push('GOOGLE_CLASS_ID has invalid format (should be issuer.category.identifier)')
       }
+    } else {
+      const anySuffix = !!(googleWalletVars.GOOGLE_WALLET_CLASS_SUFFIX || googleWalletVars.GOOGLE_WALLET_CLASS_SUFFIX_STAMP || googleWalletVars.GOOGLE_WALLET_CLASS_SUFFIX_MEMBERSHIP)
+      if (anySuffix) {
+        classIdValid = true
+        googleWalletConfigured++
+      }
     }
 
-    const googleWalletStatus = googleWalletConfigured === 3 && privateKeyValid && serviceAccountValid && classIdValid
+    const googleWalletStatus = googleWalletConfigured === 3 && serviceAccountValid && privateKeyValid && classIdValid
       ? 'ready_for_production'
       : googleWalletConfigured > 0
       ? 'needs_configuration'
       : 'not_configured'
 
     // Validate Apple Wallet - optional for Google Wallet deployment
-    const appleConfigured = Object.values(appleWalletVars).filter(Boolean).length
+    // Consider password optional; accept legacy aliases for team/pass type
+    const appleCorePresent = !!(appleWalletVars.APPLE_CERT_BASE64 && appleWalletVars.APPLE_KEY_BASE64 && appleWalletVars.APPLE_WWDR_BASE64)
+    const appleIdsPresent = !!(appleWalletVars.APPLE_TEAM_IDENTIFIER && appleWalletVars.APPLE_PASS_TYPE_IDENTIFIER)
+    const appleConfigured = Number(appleCorePresent) + Number(appleIdsPresent)
     const appleCertificatesValid = validateBase64Certificate(appleWalletVars.APPLE_CERT_BASE64 || '') &&
                                   validateBase64Certificate(appleWalletVars.APPLE_KEY_BASE64 || '') &&
                                   validateBase64Certificate(appleWalletVars.APPLE_WWDR_BASE64 || '')
     
     let appleWalletStatus: string
-    if (appleConfigured === 6 && appleCertificatesValid) {
+    if (appleCorePresent && appleIdsPresent && appleCertificatesValid) {
       appleWalletStatus = 'ready_for_production'
-    } else if (appleConfigured > 0) {
+    } else if (appleCorePresent || appleIdsPresent) {
       appleWalletStatus = 'needs_certificates'
     } else {
       appleWalletStatus = 'optional'
@@ -249,25 +275,34 @@ export async function GET() {
           NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: coreVars.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ? 'configured' : 'missing',
         }
       },
-      googleWallet: {
+       googleWallet: {
         status: googleWalletStatus,
-        configured: googleWalletConfigured === 3,
+         configured: googleWalletConfigured === 3,
         privateKeyValid,
         serviceAccountValid,
         classIdValid,
         variables: {
           configured: `${googleWalletConfigured}/3`,
-          GOOGLE_SERVICE_ACCOUNT_EMAIL: googleWalletVars.GOOGLE_SERVICE_ACCOUNT_EMAIL ? 
-            (serviceAccountValid ? 'valid' : 'invalid_format') : 'missing',
-          GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: googleWalletVars.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY ? 
-            (privateKeyValid ? 'valid_pem_format' : 'invalid_pem_format') : 'missing',
-          GOOGLE_CLASS_ID: googleWalletVars.GOOGLE_CLASS_ID ? 
-            (classIdValid ? 'valid' : 'invalid_format') : 'missing',
+          GOOGLE_SERVICE_ACCOUNT_EMAIL: googleWalletVars.GOOGLE_SERVICE_ACCOUNT_EMAIL
+            ? (serviceAccountValid ? 'valid' : 'invalid_format')
+            : ((hasJson || hasCredsPath) ? 'not_required_with_json_or_file' : 'missing'),
+          GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: googleWalletVars.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY
+            ? (privateKeyValid ? 'valid_pem_format' : 'invalid_pem_format')
+            : ((hasJson || hasCredsPath) ? 'not_required_with_json_or_file' : 'missing'),
+          GOOGLE_SERVICE_ACCOUNT_JSON: googleWalletVars.GOOGLE_SERVICE_ACCOUNT_JSON ? 'configured' : 'optional',
+          GOOGLE_APPLICATION_CREDENTIALS: googleWalletVars.GOOGLE_APPLICATION_CREDENTIALS ? 'configured' : 'optional',
+          GOOGLE_CLASS_ID: googleWalletVars.GOOGLE_CLASS_ID 
+            ? (classIdValid ? 'valid' : 'invalid_format') 
+            : (googleWalletVars.GOOGLE_WALLET_CLASS_SUFFIX || googleWalletVars.GOOGLE_WALLET_CLASS_SUFFIX_STAMP || googleWalletVars.GOOGLE_WALLET_CLASS_SUFFIX_MEMBERSHIP ? 'derived_from_suffix' : 'missing'),
+          GOOGLE_WALLET_ISSUER_ID: googleWalletVars.GOOGLE_WALLET_ISSUER_ID ? 'configured' : 'missing',
+          GOOGLE_WALLET_CLASS_SUFFIX: googleWalletVars.GOOGLE_WALLET_CLASS_SUFFIX ? 'configured' : 'optional',
+          GOOGLE_WALLET_CLASS_SUFFIX_STAMP: googleWalletVars.GOOGLE_WALLET_CLASS_SUFFIX_STAMP ? 'configured' : 'optional',
+          GOOGLE_WALLET_CLASS_SUFFIX_MEMBERSHIP: googleWalletVars.GOOGLE_WALLET_CLASS_SUFFIX_MEMBERSHIP ? 'configured' : 'optional',
         }
       },
       appleWallet: {
         status: appleWalletStatus,
-        configured: appleConfigured === 6,
+         configured: appleCorePresent && appleIdsPresent,
         certificatesValid: appleCertificatesValid,
         required_for_production: false,
         description: appleWalletStatus === 'optional' 
@@ -276,15 +311,15 @@ export async function GET() {
           ? 'Apple Wallet requires production certificates from Apple Developer Portal. Contact Apple Developer Program for certificate generation.'
           : 'Apple Wallet fully configured and ready for production iOS deployment',
         variables: {
-          configured: `${appleConfigured}/6`,
+          configured: `${appleConfigured}/2` ,
           certificates: appleCertificatesValid ? 'valid' : 'invalid_or_missing',
           optional_certificates: [
             'APPLE_CERT_BASE64 (Pass Type ID Certificate)',
             'APPLE_KEY_BASE64 (Private Key)', 
             'APPLE_WWDR_BASE64 (WWDR Certificate)',
-            'APPLE_TEAM_IDENTIFIER (10-character Team ID)',
-            'APPLE_PASS_TYPE_IDENTIFIER (Pass Type from Developer Portal)',
-            'APPLE_CERT_PASSWORD (Certificate password - can be empty string)'
+            'APPLE_TEAM_IDENTIFIER or APPLE_TEAM_ID (10-character Team ID)',
+            'APPLE_PASS_TYPE_IDENTIFIER or APPLE_PASS_TYPE_ID (Pass Type from Developer Portal)',
+            'APPLE_CERT_PASSWORD (Certificate password - optional)'
           ]
         }
       },
@@ -314,7 +349,6 @@ export async function GET() {
       }
     }
 
-    console.log(`✅ Environment validation completed: ${completionPercentage}% (${configuredVariables}/${totalVariables})`)
 
     // Return 200 for successful validation, even if some variables are missing
     // Return 503 only for critical system failures
@@ -325,7 +359,6 @@ export async function GET() {
     return NextResponse.json(result, { status: statusCode })
 
   } catch (error) {
-    console.error('❌ Critical error in environment validation:', error)
     logger.error('Critical error in environment validation', {
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined

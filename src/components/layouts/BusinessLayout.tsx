@@ -9,6 +9,8 @@ import { getAuthStatus } from '@/lib/auth-protection'
 import { useAdminAuth } from '@/lib/hooks/use-admin-auth'
 import { Menu, X, LogOut, User as UserIcon } from 'lucide-react'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
+import ClientDate from '@/components/shared/ClientDate'
+import { ComponentErrorBoundary } from '@/components/shared/ErrorBoundary'
 
 interface BusinessLayoutProps {
   children: React.ReactNode
@@ -29,29 +31,24 @@ export default function BusinessLayout({ children }: BusinessLayoutProps) {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        console.log('BusinessLayout: Starting auth check...')
         setAuthError(null)
 
         // Use the improved auth protection utility
         const authStatus = await getAuthStatus()
 
         if (!authStatus.isAuthenticated) {
-          console.log('BusinessLayout: User not authenticated')
           router.push('/auth/login?error=unauthorized')
           return
         }
 
         if (!authStatus.isBusiness) {
-          console.error('BusinessLayout: User is not a business user, role_id:', authStatus.user?.role_id)
           setAuthError('Access denied: Business account required')
           setTimeout(() => router.push('/'), 2000)
           return
         }
 
-        console.log('BusinessLayout: Auth successful, setting user')
         setUser(authStatus.user as any)
       } catch (error) {
-        console.error('BusinessLayout: Auth check failed:', error)
         setAuthError('Authentication failed')
         setTimeout(() => router.push('/auth/login'), 2000)
       } finally {
@@ -68,7 +65,6 @@ export default function BusinessLayout({ children }: BusinessLayoutProps) {
       await adminSignOut()
       router.push('/auth/login')
     } catch (error) {
-      console.error('Sign out failed:', error)
     }
   }
 
@@ -240,7 +236,7 @@ export default function BusinessLayout({ children }: BusinessLayoutProps) {
               <span className="text-muted-foreground">System Operational</span>
             </div>
             <div className="text-sm text-muted-foreground hidden md:block">
-              {new Date().toLocaleDateString()}
+              <ClientDate format="date" />
             </div>
             
             {/* Profile dropdown for desktop */}
@@ -260,7 +256,9 @@ export default function BusinessLayout({ children }: BusinessLayoutProps) {
 
         {/* Page content */}
         <main className="flex-1">
-          {children}
+          <ComponentErrorBoundary>
+            {children}
+          </ComponentErrorBoundary>
         </main>
       </div>
     </div>

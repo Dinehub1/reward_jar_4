@@ -51,26 +51,22 @@ export function GooglePlacesInput({
         
         // Check if already loaded
         if (googleMapsLoader.isLoaded()) {
-          console.log('✅ Google Maps already loaded')
           setIsLoaded(true)
           setIsLoading(false)
           return
         }
 
-        console.log('🔄 Loading Google Maps API...')
         // Load using singleton loader
         await googleMapsLoader.load()
         
         // Double check that the API is actually available
         if (window.google?.maps?.places?.Autocomplete) {
-          console.log('✅ Google Maps API loaded successfully')
           setIsLoaded(true)
         } else {
           throw new Error('Google Maps Places API not available after loading')
         }
         setIsLoading(false)
       } catch (error) {
-        console.error('❌ Failed to load Google Maps:', error)
         setApiError(error instanceof Error ? error.message : 'Failed to load Google Maps')
         setIsLoading(false)
         setIsLoaded(false)
@@ -87,12 +83,10 @@ export function GooglePlacesInput({
     try {
       // Ensure Google Maps API is fully available
       if (!window.google?.maps?.places?.Autocomplete) {
-        console.error('❌ Google Maps Places API not available for Autocomplete initialization')
         setApiError('Google Maps Places API not available')
         return
       }
 
-      console.log('🔄 Initializing Google Places Autocomplete...')
       
       // Initialize autocomplete
       autocompleteRef.current = new window.google.maps.places.Autocomplete(inputRef.current, {
@@ -105,11 +99,9 @@ export function GooglePlacesInput({
         const place = autocompleteRef.current?.getPlace()
         
         if (!place || !place.geometry?.location) {
-          console.warn('⚠️ No valid place selected')
           return
         }
 
-        console.log('✅ Place selected:', place.name || place.formatted_address)
 
         const result: PlaceResult = {
           address: place.name || place.formatted_address || '',
@@ -124,17 +116,14 @@ export function GooglePlacesInput({
       }
 
       autocompleteRef.current.addListener('place_changed', handlePlaceSelect)
-      console.log('✅ Google Places Autocomplete initialized successfully')
 
       // Cleanup listener
       return () => {
         if (autocompleteRef.current && window.google?.maps?.event) {
           window.google.maps.event.clearInstanceListeners(autocompleteRef.current)
-          console.log('🧹 Cleaned up Google Places Autocomplete listeners')
         }
       }
     } catch (error) {
-      console.error('❌ Error initializing Google Places Autocomplete:', error)
       setApiError('Failed to initialize Google Places Autocomplete')
     }
   }, [isLoaded, disabled, onChange])

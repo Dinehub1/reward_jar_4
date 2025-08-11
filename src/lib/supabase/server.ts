@@ -41,7 +41,6 @@ export async function createServerClient(): Promise<ReturnType<typeof createSupa
             try {
               return cookieStore.get(name)?.value
             } catch (error) {
-              console.warn('Failed to get cookie:', name, error)
               return undefined
             }
           },
@@ -49,14 +48,12 @@ export async function createServerClient(): Promise<ReturnType<typeof createSupa
             try {
               cookieStore.set(name, value, options)
             } catch (error) {
-              console.warn('Failed to set cookie:', name, error)
             }
           },
           remove(name: string, options: any) {
             try {
               cookieStore.delete(name)
             } catch (error) {
-              console.warn('Failed to remove cookie:', name, error)
             }
           },
         },
@@ -69,7 +66,6 @@ export async function createServerClient(): Promise<ReturnType<typeof createSupa
       }
     )
   } catch (error) {
-    console.error('🚨 SERVER CLIENT ERROR: Failed to create server client:', error)
     throw error
   }
 }
@@ -86,13 +82,11 @@ export async function getServerUser() {
     const { data: { user }, error } = await supabase.auth.getUser()
     
     if (error) {
-      console.error('Server auth error:', error)
       return { user: null, error }
     }
     
     return { user, error: null }
   } catch (error) {
-    console.error('Server user fetch error:', error)
     return { user: null, error: error instanceof Error ? error : new Error('Unknown error') }
   }
 }
@@ -107,13 +101,11 @@ export async function getServerSession() {
     const { data: { session }, error } = await supabase.auth.getSession()
     
     if (error) {
-      console.error('Server session error:', error)
       return { session: null, error }
     }
     
     return { session, error: null }
   } catch (error) {
-    console.error('Server session fetch error:', error)
     return { session: null, error: error instanceof Error ? error : new Error('Unknown error') }
   }
 }

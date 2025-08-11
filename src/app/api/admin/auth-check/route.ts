@@ -10,24 +10,21 @@ import type { ApiResponse } from '@/lib/supabase/types'
  */
 export async function GET(request: NextRequest) {
   try {
-    console.log('🔐 ADMIN AUTH CHECK - Using MCP layer for proper role verification')
     
     // Use MCP layer to get authenticated user context
     const authResult = await getAuthContext()
     
     if (!authResult.success || !authResult.data) {
-      console.log('❌ ADMIN AUTH CHECK - No authenticated user:', authResult.error)
       return NextResponse.json({
-        success: true,
-        data: { isAdmin: false },
-        message: authResult.error || 'No active session'
+        success: false,
+        error: authResult.error || 'No active session',
+        data: { isAdmin: false }
       } as ApiResponse<{ isAdmin: boolean }>)
     }
 
     // Check if user has admin role (role_id === 1)
     const isAdmin = authResult.data.userRole === 1
     
-    console.log('🔍 ADMIN AUTH CHECK - Role verification:', {
       userId: authResult.data.userId,
       userRole: authResult.data.userRole,
       isAdmin
@@ -39,6 +36,7 @@ export async function GET(request: NextRequest) {
         isAdmin,
         user: isAdmin ? {
           id: authResult.data.userId,
+          email: authResult.data.userEmail,
           role: authResult.data.userRole
         } : undefined
       },
@@ -46,7 +44,6 @@ export async function GET(request: NextRequest) {
     } as ApiResponse<{ isAdmin: boolean; user?: any }>)
 
   } catch (error) {
-    console.error('❌ ADMIN AUTH CHECK - Error:', error)
     return NextResponse.json({
       success: false,
       error: 'Internal server error',

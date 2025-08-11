@@ -131,7 +131,6 @@ export default function TestCustomerMonitoringPage() {
 
       setCustomerTests(mockCustomerTests)
     } catch (error) {
-      console.error('Error loading test data:', error)
     } finally {
       setIsLoading(false)
     }

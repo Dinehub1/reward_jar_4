@@ -54,12 +54,8 @@ export default function SignupPage() {
     setError(null)
 
     try {
-      console.log('=== SIGNUP PROCESS START ===')
-      console.log('Email:', data.email)
-      console.log('Business Name:', data.businessName)
 
       // Step 1: Create auth user
-      console.log('Step 1: Creating auth user...')
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
@@ -69,7 +65,6 @@ export default function SignupPage() {
       })
 
       if (authError) {
-        console.error('Auth error:', authError)
         throw new Error(`Failed to create account: ${authError.message}`)
       }
 
@@ -77,10 +72,8 @@ export default function SignupPage() {
         throw new Error('Account creation failed - no user returned')
       }
 
-      console.log('Auth user created:', authData.user.id)
 
       // Step 2: Create user profile and business via API route (bypasses RLS)
-      console.log('Step 2: Creating user profile and business via API...')
       
       const profileData = {
         userId: authData.user.id,
@@ -104,31 +97,24 @@ export default function SignupPage() {
         throw new Error(result.error || 'Failed to complete signup')
       }
 
-      console.log('Profile and business created successfully')
 
       // Step 3: Auto sign-in the user
-      console.log('Step 3: Signing in user...')
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: data.email,
         password: data.password
       })
 
       if (signInError) {
-        console.error('Sign in error:', signInError)
         // Don't throw error - user can sign in manually
-        console.log('Auto sign-in failed, redirecting to login...')
         router.push('/auth/login?message=account_created')
         return
       }
 
-      console.log('User signed in successfully')
-      console.log('=== SIGNUP PROCESS COMPLETE ===')
 
       // Redirect to business dashboard
       router.push('/business/dashboard?welcome=true')
 
     } catch (err) {
-      console.error('Signup error:', err)
       setError(err instanceof Error ? err.message : 'Failed to create account')
     } finally {
       setLoading(false)

@@ -84,7 +84,6 @@ function CustomerSignupContent() {
         })
 
       if (userError) {
-        console.error('User creation error:', userError)
         // Continue if user already exists in users table
       }
 
@@ -99,7 +98,6 @@ function CustomerSignupContent() {
         })
 
       if (customerError) {
-        console.error('Customer profile creation error:', customerError)
         // Don't throw here - continue with signup process
       }
 
@@ -121,7 +119,6 @@ function CustomerSignupContent() {
       }
 
     } catch (err) {
-      console.error('Signup error:', err)
       if (err instanceof Error) {
         if (err.message.includes('User already registered')) {
           // Redirect to login with the same next URL

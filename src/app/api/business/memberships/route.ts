@@ -61,7 +61,6 @@ export async function GET(request: NextRequest) {
     } as ApiResponse<typeof cardsResult.data>)
 
   } catch (error) {
-    console.error('Business memberships GET error:', error)
     return NextResponse.json(
       { success: false, error: 'Internal server error' } as ApiResponse<never>,
       { status: 500 }

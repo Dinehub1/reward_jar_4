@@ -1,0 +1,167 @@
+# RewardJar 4.0 - Next.js 15 + Supabase Development Rules
+
+## 🚨 CRITICAL SECURITY RULES
+
+### Supabase Service Role Key Protection
+- NEVER use `createAdminClient()` in client components ('use client')
+- NEVER expose `SUPABASE_SERVICE_ROLE_KEY` to browser/client-side code
+- Admin client ONLY in server components, API routes, or server actions
+- Use SWR hooks (`useAdminBusinesses`, `useAdminStats`, etc.) for client-side data fetching
+
+### Correct Supabase Client Usage Patterns
+```typescript
+// ✅ CORRECT - Client Component (Auth Only)
+'use client'
+import { createClient } from '@/lib/supabase/client'
+// Only for: signIn, signOut, auth state changes
+
+// ✅ CORRECT - Server Component (User Context)
+import { createServerClient } from '@/lib/supabase/server-only'
+// Respects RLS, has user session context
+
+// ✅ CORRECT - API Route (Admin Operations)
+import { createAdminClient } from '@/lib/supabase/admin-client'
+// Bypasses RLS, server-side only
+
+// ✅ CORRECT - Client Data Fetching
+'use client'
+import { useAdminBusinesses } from '@/lib/hooks/use-admin-data'
+// Secure data via SWR hooks
+```
+
+## 🔧 NEXT.JS 15+ REQUIREMENTS
+
+### Route Params Handling
+- In Next.js 15+, `params` is a Promise and must be unwrapped
+- Client components: Use `React.use(params)` to unwrap
+- Server components: Use `await params` to unwrap
+- Always type params as `Promise<{ id: string }>` not `{ id: string }`
+
+```typescript
+// ✅ CORRECT - Client Component
+'use client'
+import { use } from 'react'
+
+export default function Page({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
+}
+
+// ✅ CORRECT - Server Component  
+export default async function Page({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+}
+```
+
+### Auth State Management
+- Always check `isLoading` before rendering auth-dependent content
+- Use loading guards to prevent premature redirects
+- Implement retry logic for session hydration
+- Add minimum loading times to prevent auth state flash
+
+```typescript
+// ✅ CORRECT - Auth Loading Guards
+if (isLoading) {
+  return <LoadingState />
+}
+
+if (requireAuth && isAdmin && !user) {
+  return <LoadingState /> // Wait for complete auth state
+}
+```
+
+## 📊 DATA FETCHING PATTERNS
+
+### Admin Dashboard Data
+- Use centralized SWR hooks for consistent data fetching
+- API routes should use `createAdminClient()` for admin operations
+- Client components fetch data via hooks, never direct database calls
+- Implement proper error boundaries and loading states
+
+### Database Schema Compliance
+- Use unified `customer_cards` table with proper constraints
+- Reference either `stamp_card_id` OR `membership_card_id`, never both
+- Validate card type detection logic in all components
+- Ensure RLS policies allow proper admin access
+
+## 🛡️ SECURITY ENFORCEMENT
+
+### Environment Variables
+- `SUPABASE_SERVICE_ROLE_KEY` must be server-only
+- Never prefix service role key with `NEXT_PUBLIC_`
+- Validate all required environment variables at startup
+- Use `validateEnvVarsOrThrow()` in app initialization
+
+### RLS Policy Requirements
+- Admin users (role_id = 1) must have SELECT policies on all tables
+- Business users (role_id = 2) limited to owned resources
+- Customer users (role_id = 3) limited to personal data
+- Service role bypasses RLS for admin operations only
+
+## 🧪 TESTING REQUIREMENTS
+
+### Component Testing
+- Test params unwrapping in all dynamic routes
+- Verify auth state transitions don't cause redirects
+- Validate data loading with proper error handling
+- Test wallet generation across all platforms
+
+### Security Testing
+- Audit all `createAdminClient()` usage locations
+- Verify no service role keys in client bundles
+- Test RLS policies with different user roles
+- Validate API route authentication
+
+## 📝 CODE QUALITY STANDARDS
+
+### TypeScript Usage
+- Use strict typing for all Supabase responses
+- Define proper interfaces for database entities
+- Type all SWR hooks with expected response shapes
+- Implement proper error type handling
+
+### Error Handling
+- Implement comprehensive error boundaries
+- Log errors with proper context and user information
+- Provide user-friendly error messages
+- Handle network failures gracefully
+
+### Performance Optimization
+- Use SWR with proper caching strategies
+- Implement loading states for all async operations
+- Optimize database queries with proper indexing
+- Use React.memo for expensive components
+
+## 🔄 DEVELOPMENT WORKFLOW
+
+### Pre-Commit Checks
+- Verify no `createAdminClient()` in client components
+- Check all params are properly unwrapped
+- Validate environment variable usage
+- Run linting and type checking
+
+### Code Review Requirements
+- Security review for all Supabase client usage
+- Auth flow validation for new components
+- Database query optimization review
+- Error handling completeness check
+
+## 🚀 DEPLOYMENT READINESS
+
+### Production Checklist
+- All Next.js 15+ patterns implemented correctly
+- Service role key usage audited and secured
+- Auth flows tested end-to-end
+- Database migrations applied and tested
+- Error monitoring configured
+
+### Monitoring Requirements
+- Track auth success/failure rates
+- Monitor database query performance
+- Alert on redirect loop incidents
+- Validate wallet generation success rates
+
+---
+
+**⚠️ VIOLATION OF THESE RULES MAY RESULT IN SECURITY VULNERABILITIES OR PRODUCTION FAILURES**
+
+**✅ FOLLOWING THESE RULES ENSURES SECURE, PERFORMANT, AND MAINTAINABLE CODE**

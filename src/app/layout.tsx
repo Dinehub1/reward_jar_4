@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import SupabaseAuthSync from "@/components/startup/SupabaseAuthSync";
 // import { EnvironmentValidator } from "@/components/startup/EnvironmentValidator";
 // import { validateServerEnvironment } from "@/lib/startup-validation";
 
@@ -21,7 +22,7 @@ export const metadata: Metadata = {
 // try {
 //   validateServerEnvironment()
 // } catch (error) {
-//   console.error('🚨 Server startup blocked due to environment validation failure')
+//   
 //   // Error is logged, but we let the app continue to show the error UI
 // }
 
@@ -33,7 +34,24 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} font-sans antialiased min-h-screen bg-background text-foreground transition-colors duration-300`}>
+        {/* Prevent theme flash: set initial dark class before hydration */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var saved = localStorage.getItem('rewardjar-theme');
+                  var systemDark = (typeof window !== 'undefined' && window.matchMedia) ? window.matchMedia('(prefers-color-scheme: dark)').matches : false;
+                  var isDark = saved === 'dark' || (saved !== 'light' && systemDark);
+                  if (isDark) document.documentElement.classList.add('dark');
+                } catch (_) {}
+              })();
+            `,
+          }}
+        />
         <ThemeProvider defaultTheme="system">
+          {/* Sync Supabase auth state to server cookies to avoid re-login loops */}
+          <SupabaseAuthSync />
           {children}
         </ThemeProvider>
       </body>

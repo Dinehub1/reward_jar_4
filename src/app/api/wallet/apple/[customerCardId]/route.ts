@@ -12,11 +12,7 @@ import fs from 'fs'
 import path from 'path'
 import { promisify } from 'util'
 
-// Helper function to get valid webServiceURL for Apple Wallet
-function getValidWebServiceURL(): string {
-  const baseUrl = getAppleWalletBaseUrl()
-  return `${baseUrl}/api/wallet/apple/updates`
-}
+// Use getAppleWebServiceUrl() from shared helpers for consistency
 
 // Helper function to convert hex to RGB format for Apple Wallet
 function hexToRgb(hex: string): string {
@@ -40,7 +36,6 @@ export async function GET(
     const supabase = createAdminClient()
     const customerCardId = resolvedParams.customerCardId
 
-    console.log('🍎 Generating Apple Wallet for card ID:', customerCardId)
 
     // Get customer card with unified schema
     const { data: customerCard, error } = await supabase
@@ -63,7 +58,9 @@ export async function GET(
           icon_emoji,
           businesses (
             name,
-            description
+            description,
+            currency_code,
+            locale
           )
         ),
         membership_cards (
@@ -75,7 +72,9 @@ export async function GET(
           icon_emoji,
           businesses (
             name,
-            description
+            description,
+            currency_code,
+            locale
           )
         )
       `)
@@ -83,21 +82,18 @@ export async function GET(
       .single()
 
     if (error || !customerCard) {
-      console.error('❌ Customer card not found:', error)
       return NextResponse.json(
         { error: 'Customer card not found' },
         { status: 404 }
       )
     }
 
-    console.log('✅ Fetched customer card:', customerCard)
 
     // Determine card type from unified schema
     const isStampCard = customerCard.stamp_card_id !== null
     const isMembershipCard = customerCard.membership_card_id !== null
 
     if (!isStampCard && !isMembershipCard) {
-      console.error('❌ Invalid customer card: no card type found')
       return NextResponse.json(
         { error: 'Invalid customer card: no card type found' },
         { status: 400 }
@@ -117,7 +113,6 @@ export async function GET(
     }
 
     if (!cardData) {
-      console.error('❌ Card template data missing')
       return NextResponse.json(
         { error: 'Card template not found' },
         { status: 404 }
@@ -179,10 +174,11 @@ export async function GET(
         remainingCount: remaining,
         isCompleted,
         isExpired: isMembershipCard ? (customerCard.expiry_date ? new Date(customerCard.expiry_date) < new Date() : false) : undefined,
-        membershipCost: customerCard.membership_cards?.[0]?.cost,
-        membershipTotalSessions: customerCard.membership_cards?.[0]?.total_sessions,
-        membershipExpiryDate: customerCard.expiry_date ?? null,
+        membershipCost: isMembershipCard ? cardData?.cost : undefined,
+        membershipTotalSessions: isMembershipCard ? cardData?.total_sessions : undefined,
+        membershipExpiryDate: isMembershipCard ? (customerCard.expiry_date ?? null) : undefined,
       },
+      locale: businessData.locale || 'en-IN',
     })
 
     const passData = {
@@ -212,7 +208,7 @@ export async function GET(
       const debugInfo = {
         passData,
         certificatesConfigured: hasAllCertificates,
-        webServiceURL: getValidWebServiceURL(),
+        webServiceURL: getAppleWebServiceUrl(),
         environment: {
           teamIdentifier: !!process.env.APPLE_TEAM_IDENTIFIER,
           passTypeIdentifier: !!process.env.APPLE_PASS_TYPE_IDENTIFIER,
@@ -239,7 +235,6 @@ export async function GET(
         // Validate pass structure before generation
         const validationErrors = validatePKPassStructure(passData)
         if (validationErrors.length > 0) {
-          console.error('❌ PKPass validation failed:', validationErrors)
           return NextResponse.json(
             { 
               error: 'PKPass validation failed',
@@ -251,7 +246,6 @@ export async function GET(
         
         const pkpassBuffer = await generatePKPassShared(passData)
         
-        console.log('✅ PKPass generated successfully:', {
           size: pkpassBuffer.length,
           sizeKB: (pkpassBuffer.length / 1024).toFixed(1)
         })
@@ -273,7 +267,6 @@ export async function GET(
           }
         })
       } catch (error) {
-        console.error('❌ Error generating PKPass:', error)
         return NextResponse.json(
           { 
             error: 'Failed to generate Apple Wallet pass',
@@ -356,8 +349,6 @@ export async function GET(
     })
 
   } catch (error) {
-    console.error('❌ Error generating Apple Wallet pass:', error)
-    console.error('❌ Error details:', {
       message: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined,
       name: error instanceof Error ? error.name : undefined
@@ -394,7 +385,6 @@ export async function POST(
     const url = new URL(request.url)
     const requestedType = url.searchParams.get('type') // 'stamp' or 'membership'
 
-    console.log('🍎 POST: Generating Apple Wallet for card ID:', customerCardId, 'type:', requestedType)
 
     // Check required environment variables
     if (!process.env.APPLE_TEAM_IDENTIFIER) {
@@ -440,7 +430,6 @@ export async function POST(
       .single()
 
     if (error || !customerCard) {
-      console.error('Customer card not found:', error)
       return NextResponse.json(
         { error: 'Customer card not found' },
         { status: 404 }
@@ -458,7 +447,6 @@ export async function POST(
       )
     }
 
-    console.log('📊 Apple Wallet - Customer card data:', {
       id: customerCard.id,
       isStampCard,
       isMembershipCard,
@@ -496,7 +484,6 @@ export async function POST(
       ? 'rgb(16, 185, 129)'  // Green for stamp cards
       : 'rgb(99, 102, 241)'   // Indigo for membership cards
 
-    console.log('🎨 Apple Wallet theme:', { cardType, backgroundColor, filename })
     
     return NextResponse.json(
       { 
@@ -515,7 +502,6 @@ export async function POST(
     )
 
   } catch (error) {
-    console.error('Error generating Apple Wallet pass:', error)
     return NextResponse.json(
       { error: 'Failed to generate Apple Wallet pass' },
       { status: 500 }
@@ -523,305 +509,9 @@ export async function POST(
   }
 }
 
-// Enhanced PKPass generation with proper icons and signature
-async function generatePKPass(passData: Record<string, unknown>): Promise<Buffer> {
-  return new Promise(async (resolve, reject) => {
-    try {
-      console.log('Starting PKPass generation...')
-      
-      const archive = archiver('zip', { 
-        zlib: { level: 9 },
-        forceLocalTime: true
-      })
-      const chunks: Buffer[] = []
-      
-      archive.on('data', (chunk) => chunks.push(chunk))
-      archive.on('end', () => {
-        console.log('PKPass archive created successfully')
-        resolve(Buffer.concat(chunks))
-      })
-      archive.on('error', (error) => {
-        console.error('Archive error:', error)
-        reject(error)
-      })
-      
-      // Generate required icons
-      const icons = await generatePassIcons({}, {})
-      
-      // Create pass.json
-      const passJson = JSON.stringify(passData, null, 2)
-      console.log('Generated pass.json:', passJson.length, 'bytes')
-      
-      // Create manifest with all file hashes
-      const manifest: Record<string, string> = {
-        'pass.json': sha1Hash(Buffer.from(passJson, 'utf8'))
-      }
-      
-      // Add icon hashes to manifest
-      for (const [filename, buffer] of Object.entries(icons)) {
-        manifest[filename] = sha1Hash(buffer)
-      }
-      
-      const manifestJson = JSON.stringify(manifest, null, 2)
-      console.log('Generated manifest.json with', Object.keys(manifest).length, 'files')
-      
-      // Create PKCS#7 signature
-      const signature = await createPKCS7Signature(Buffer.from(manifestJson, 'utf8'))
-      console.log('Generated signature:', signature.length, 'bytes')
-      
-      // Add all files to archive
-      archive.append(passJson, { name: 'pass.json' })
-      archive.append(manifestJson, { name: 'manifest.json' })
-      archive.append(signature, { name: 'signature' })
-      
-      // Add icons to archive
-      for (const [filename, buffer] of Object.entries(icons)) {
-        archive.append(buffer, { name: filename })
-      }
-      
-      console.log('Finalizing PKPass archive...')
-      archive.finalize()
-      
-    } catch (error) {
-      console.error('Error in generatePKPass:', error)
-      reject(error)
-    }
-  })
-}
+// Local generatePKPass removed in favor of shared implementation in `src/lib/wallet/apple-helpers.ts`.
 
-// Generate required pass icons
-async function generatePassIcons(_stampCard: Record<string, unknown>, _business: Record<string, unknown>): Promise<Record<string, Buffer>> {
-  const icons: Record<string, Buffer> = {}
-  
-  try {
-    // Create a simple branded icon using Sharp
-    const baseIcon = await sharp({
-      create: {
-        width: 29,
-        height: 29,
-        channels: 4,
-        background: { r: 16, g: 185, b: 129, alpha: 1 } // green-500
-      }
-    })
-    .png()
-    .toBuffer()
-    
-    const baseLogo = await sharp({
-      create: {
-        width: 160,
-        height: 50,
-        channels: 4,
-        background: { r: 16, g: 185, b: 129, alpha: 1 } // green-500
-      }
-    })
-    .png()
-    .toBuffer()
-    
-    // Required icon sizes for Apple Wallet
-    const iconSizes = [
-      { name: 'icon.png', size: 29 },
-      { name: 'icon@2x.png', size: 58 },
-      { name: 'icon@3x.png', size: 87 }
-    ]
-    
-    const logoSizes = [
-      { name: 'logo.png', width: 160, height: 50 },
-      { name: 'logo@2x.png', width: 320, height: 100 },
-      { name: 'logo@3x.png', width: 480, height: 150 }
-    ]
-    
-    // Generate icons
-    for (const { name, size } of iconSizes) {
-      icons[name] = await sharp(baseIcon)
-        .resize(size, size)
-        .png()
-        .toBuffer()
-    }
-    
-    // Generate logos
-    for (const { name, width, height } of logoSizes) {
-      icons[name] = await sharp(baseLogo)
-        .resize(width, height)
-        .png()
-        .toBuffer()
-    }
-    
-    console.log('Generated', Object.keys(icons).length, 'icon files')
-    return icons
-    
-  } catch (error) {
-    console.error('Error generating icons:', error)
-    // Return minimal icons as fallback - MUST include all required sizes
-    const fallbackIcon = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==', 'base64')
-    return {
-      'icon.png': fallbackIcon,
-      'icon@2x.png': fallbackIcon,
-      'icon@3x.png': fallbackIcon, // CRITICAL for newer iPhones
-      'logo.png': fallbackIcon,
-      'logo@2x.png': fallbackIcon,
-      'logo@3x.png': fallbackIcon
-    }
-  }
-}
-
-// Create proper PKCS#7 signature using openssl command (more reliable than node-forge)
-async function createPKCS7Signature(manifestBuffer: Buffer): Promise<Buffer> {
-  try {
-    // Validate required environment variables
-    if (!process.env.APPLE_CERT_BASE64 || !process.env.APPLE_KEY_BASE64 || !process.env.APPLE_WWDR_BASE64) {
-      throw new Error('Missing Apple certificates in environment variables')
-    }
-    
-    // Use imported modules
-    const execAsync = promisify(exec)
-    
-    console.log('📜 Loading Apple Wallet certificates from environment variables')
-    
-    // Decode certificates from base64 - handle mixed DER/PEM formats
-    const certData = Buffer.from(process.env.APPLE_CERT_BASE64, 'base64')
-    const keyData = Buffer.from(process.env.APPLE_KEY_BASE64, 'base64')
-    const wwdrData = Buffer.from(process.env.APPLE_WWDR_BASE64, 'base64')
-    
-    // Certificate is in DER format, convert to PEM
-    const cert = forge.pki.certificateFromAsn1(forge.asn1.fromDer(certData.toString('binary')))
-    const certPem = forge.pki.certificateToPem(cert)
-    
-    // Private key is already in PEM format
-    const keyPem = keyData.toString('utf8')
-    
-    // WWDR certificate is in DER format, convert to PEM  
-    const wwdrCert = forge.pki.certificateFromAsn1(forge.asn1.fromDer(wwdrData.toString('binary')))
-    const wwdrPem = forge.pki.certificateToPem(wwdrCert)
-    
-    console.log('✅ Successfully loaded certificates from environment variables')
-    
-    console.log('📋 Certificate info:')
-    console.log('  - Subject:', cert.subject.getField('CN').value)
-    console.log('  - Valid from:', cert.validity.notBefore)
-    console.log('  - Valid until:', cert.validity.notAfter)
-    
-    const now = new Date()
-    if (cert.validity.notAfter < now) {
-      throw new Error(`Pass certificate expired on ${cert.validity.notAfter.toISOString()}`)
-    }
-    if (wwdrCert.validity.notAfter < now) {
-      throw new Error(`WWDR certificate expired on ${wwdrCert.validity.notAfter.toISOString()}`)
-    }
-    
-    console.log('Certificate validation passed:', {
-      passExpires: cert.validity.notAfter.toISOString(),
-      wwdrExpires: wwdrCert.validity.notAfter.toISOString()
-    })
-    
-    // Create temporary files for openssl
-    const tmpDir = '/tmp'
-    const manifestFile = path.join(tmpDir, `manifest-${Date.now()}.json`)
-    const certFile = path.join(tmpDir, `cert-${Date.now()}.pem`)
-    const keyFile = path.join(tmpDir, `key-${Date.now()}.pem`)
-    const wwdrFile = path.join(tmpDir, `wwdr-${Date.now()}.pem`)
-    const signatureFile = path.join(tmpDir, `signature-${Date.now()}.der`)
-    
-    try {
-      // Write files
-      fs.writeFileSync(manifestFile, manifestBuffer)
-      fs.writeFileSync(certFile, certPem)
-      fs.writeFileSync(keyFile, keyPem)
-      fs.writeFileSync(wwdrFile, wwdrPem)
-      
-      // Use openssl to create PKCS#7 signature (Apple's recommended method)
-      // Add -noattr flag to avoid issues with attributes, and ensure proper certificate chain
-      const opensslCommand = `openssl smime -sign -signer "${certFile}" -inkey "${keyFile}" -certfile "${wwdrFile}" -in "${manifestFile}" -out "${signatureFile}" -outform DER -binary -noattr`
-      
-      console.log('Running OpenSSL command for PKCS#7 signature...')
-      await execAsync(opensslCommand)
-      
-      // Read the signature file
-      const signature = fs.readFileSync(signatureFile)
-      
-      console.log('Created PKCS#7 signature using OpenSSL:', signature.length, 'bytes')
-      return signature
-      
-    } finally {
-      // Clean up temporary files
-      const filesToCleanup = [manifestFile, certFile, keyFile, wwdrFile, signatureFile]
-      filesToCleanup.forEach(file => {
-        try {
-          if (fs.existsSync(file)) {
-            fs.unlinkSync(file)
-          }
-        } catch {
-          console.warn('Could not cleanup temp file:', file)
-        }
-      })
-    }
-    
-  } catch (error) {
-    console.error('Error creating PKCS#7 signature:', error)
-    
-    // Fallback to node-forge if OpenSSL fails
-    console.log('Falling back to node-forge signature generation...')
-    return createNodeForgeSignature(manifestBuffer)
-  }
-}
-
-// Fallback node-forge signature generation
-async function createNodeForgeSignature(manifestBuffer: Buffer): Promise<Buffer> {
-  try {
-    // Decode certificates
-    const certPem = Buffer.from(process.env.APPLE_CERT_BASE64!, 'base64').toString('utf8')
-    const keyPem = Buffer.from(process.env.APPLE_KEY_BASE64!, 'base64').toString('utf8')
-    const wwdrPem = Buffer.from(process.env.APPLE_WWDR_BASE64!, 'base64').toString('utf8')
-    
-    // Parse certificates with forge
-    const cert = forge.pki.certificateFromPem(certPem)
-    const key = forge.pki.privateKeyFromPem(keyPem)
-    const wwdrCert = forge.pki.certificateFromPem(wwdrPem)
-    
-    // Create PKCS#7 signature with proper structure
-    const p7 = forge.pkcs7.createSignedData()
-    p7.content = forge.util.createBuffer(manifestBuffer.toString('binary'))
-    
-    p7.addCertificate(cert)
-    p7.addCertificate(wwdrCert)
-    
-    // Create proper message digest
-    const messageDigest = forge.md.sha1.create()
-    messageDigest.update(manifestBuffer.toString('binary'))
-    
-    p7.addSigner({
-      key: key,
-      certificate: cert,
-      digestAlgorithm: forge.pki.oids.sha1,
-      authenticatedAttributes: [{
-        type: '1.2.840.113549.1.9.3', // contentTypes OID
-        value: forge.pki.oids.data
-      }, {
-        type: forge.pki.oids.messageDigest,
-        value: messageDigest.digest().getBytes()
-      }, {
-        type: forge.pki.oids.signingTime,
-        value: new Date()
-      }]
-    })
-    
-    // Sign the data with detached signature
-    p7.sign({ detached: true })
-    
-    // Convert to DER format
-    const derBuffer = forge.asn1.toDer(p7.toAsn1()).getBytes()
-    
-    console.log('Created fallback PKCS#7 signature:', derBuffer.length, 'bytes')
-    return Buffer.from(derBuffer, 'binary')
-    
-  } catch (error) {
-    console.error('Error creating fallback signature:', error)
-    throw error
-  }
-}
-
-function sha1Hash(data: Buffer): string {
-  return crypto.createHash('sha1').update(data).digest('hex')
-}
+// Local PKPass helpers removed; using shared implementations from `src/lib/wallet/apple-helpers.ts`
 
 // Validate PKPass structure
 function validatePKPassStructure(passData: Record<string, unknown>): string[] {

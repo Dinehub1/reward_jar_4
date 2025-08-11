@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useReducer, useCallback } from 'react'
 import type { WalletCardData } from '@/components/modern/wallet/WalletPassFrame'
+import { CriticalErrorBoundary } from '@/components/shared/ErrorBoundary'
 
 // Extended card form data interface
 export interface CardFormData {
@@ -203,7 +204,7 @@ const cardCreationReducer = (state: CardCreationState, action: CardCreationActio
 const CardCreationContext = createContext<CardCreationContextValue | null>(null)
 
 // Provider component
-export const CardCreationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export function CardCreationProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(cardCreationReducer, initialState)
 
   // Actions
@@ -330,9 +331,11 @@ export const CardCreationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   }
 
   return (
-    <CardCreationContext.Provider value={contextValue}>
-      {children}
-    </CardCreationContext.Provider>
+    <CriticalErrorBoundary>
+      <CardCreationContext.Provider value={contextValue}>
+        {children}
+      </CardCreationContext.Provider>
+    </CriticalErrorBoundary>
   )
 }
 

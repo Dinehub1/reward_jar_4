@@ -80,7 +80,6 @@ export async function POST(request: NextRequest) {
         .single()
       
       if (customerError) {
-        console.error('Customer creation failed:', customerError)
         return NextResponse.json({
           success: false,
           error: 'Failed to create customer account. Please try again.'
@@ -133,7 +132,6 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (cardCreateError) {
-      console.error('Customer card creation failed:', cardCreateError)
       return NextResponse.json({
         success: false,
         error: 'Failed to register for card. Please try again.'
@@ -151,7 +149,6 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Card join error:', error)
     return NextResponse.json({
       success: false,
       error: 'Failed to process registration. Please try again.'

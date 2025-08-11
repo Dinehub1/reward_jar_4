@@ -23,7 +23,6 @@ export async function POST(
     
     const { platform = 'all', updateType = 'stamp_update', testMode = false } = body
 
-    console.log('📝 Queuing wallet update:', {
       customerCardId,
       platform,
       updateType,
@@ -40,7 +39,6 @@ export async function POST(
       .single()
 
     if (cardError || !customerCard) {
-      console.error('Customer card not found:', cardError)
       return NextResponse.json(
         { error: 'Customer card not found' },
         { status: 404 }
@@ -71,17 +69,14 @@ export async function POST(
           .single()
 
         if (queueError) {
-          console.error(`Error queuing ${targetPlatform} update:`, queueError)
         } else {
           queuedUpdates.push({
             platform: targetPlatform,
             id: queueEntry.id,
             status: 'queued'
           })
-          console.log(`✅ ${targetPlatform} wallet update queued:`, queueEntry.id)
         }
       } catch (platformError) {
-        console.error(`Error processing ${targetPlatform}:`, platformError)
       }
     }
 
@@ -95,7 +90,6 @@ export async function POST(
     // Optionally trigger immediate processing for test mode
     if (testMode) {
       try {
-        console.log('🔄 Triggering immediate wallet sync for test mode...')
         const processResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/wallet/process-updates`, {
           method: 'POST',
           headers: {
@@ -106,10 +100,8 @@ export async function POST(
         })
         
         if (processResponse.ok) {
-          console.log('✅ Immediate wallet sync triggered')
         }
       } catch (processError) {
-        console.warn('⚠️ Failed to trigger immediate sync:', processError)
       }
     }
 
@@ -131,7 +123,6 @@ export async function POST(
     )
 
   } catch (error) {
-    console.error('❌ Error queuing wallet updates:', error)
     return NextResponse.json(
       { error: 'Failed to queue wallet updates' },
       { status: 500 }

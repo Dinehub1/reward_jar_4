@@ -90,8 +90,6 @@ function LoginContent() {
     setSuccessMessage(null)
 
     try {
-      console.log('=== LOGIN ATTEMPT START ===')
-      console.log('Email:', email)
 
       // Step 1: Attempt login
       const { data: loginResult, error: signInError } = await supabase.auth.signInWithPassword({
@@ -100,7 +98,6 @@ function LoginContent() {
       })
 
       if (signInError) {
-        console.error('Login error:', signInError)
         throw signInError
       }
 
@@ -108,7 +105,6 @@ function LoginContent() {
         throw new Error('No user returned from login')
       }
 
-      console.log('✅ Login successful for user:', loginResult.user.id)
 
       // Step 2: Get user role directly (simplified auth check)
       const { data: userData, error: roleError } = await supabase
@@ -118,7 +114,6 @@ function LoginContent() {
         .single()
 
       const userRole = userData?.role_id || 0
-      console.log('👤 User role:', userRole)
 
       // Show success message
       setSuccessMessage('Login successful! Redirecting...')
@@ -127,29 +122,22 @@ function LoginContent() {
       const nextUrl = searchParams.get('next')
       
       if (nextUrl) {
-        console.log('🔗 Redirecting to next URL:', nextUrl)
         router.push(decodeURIComponent(nextUrl))
       } else {
         // Redirect based on role
         if (userRole === 1) {
-          console.log('🔧 Redirecting to admin dashboard')
           router.push('/admin')
         } else if (userRole === 2) {
-          console.log('🏢 Redirecting to business dashboard')
           router.push('/business/dashboard')
         } else if (userRole === 3) {
-          console.log('👤 Redirecting to customer dashboard')
           router.push('/customer/dashboard')
         } else {
-          console.log('🏠 Redirecting to home (unknown role)')
           router.push('/')
         }
       }
 
-      console.log('=== LOGIN SUCCESSFUL ===')
 
     } catch (err) {
-      console.error('Login error:', err)
       if (err instanceof Error) {
         if (err.message.includes('Invalid login credentials')) {
           setError('Invalid email or password. Please try again.')
@@ -167,13 +155,13 @@ function LoginContent() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <h2 className="mt-6 text-3xl font-bold text-gray-900">
+          <h2 className="mt-6 text-3xl font-bold text-foreground">
             Welcome Back
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
+          <p className="mt-2 text-sm text-muted-foreground">
             Sign in to your RewardJar account
           </p>
         </div>
@@ -205,28 +193,28 @@ function LoginContent() {
           </div>
         )}
 
-        <div className="bg-white shadow rounded-lg">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-medium text-gray-900">Sign In</h3>
-            <p className="mt-1 text-sm text-gray-600">
+        <div className="bg-card text-card-foreground rounded-xl shadow-sm border border-border/60">
+          <div className="px-6 py-4 border-b border-border/60">
+            <h3 className="text-lg font-medium text-foreground">Sign In</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
               Enter your email and password to access your account
             </p>
           </div>
           <div className="px-6 py-6">
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
+                <label htmlFor="email" className="block text-sm font-medium text-foreground">Email</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <span className="text-gray-400">📧</span>
+                    <span className="text-muted-foreground">📧</span>
                   </div>
                   <input
                     id="email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="kukrejajaydeep@gmail.com"
-                    className="pl-10 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    placeholder="you@example.com"
+                    className="pl-10 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring"
                     data-testid="email-input"
                   />
                 </div>
@@ -236,10 +224,10 @@ function LoginContent() {
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
+                <label htmlFor="password" className="block text-sm font-medium text-foreground">Password</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <span className="text-gray-400">🔒</span>
+                    <span className="text-muted-foreground">🔒</span>
                   </div>
                   <input
                     id="password"
@@ -247,7 +235,7 @@ function LoginContent() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="pl-10 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="pl-10 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring"
                     data-testid="password-input"
                   />
                 </div>
@@ -267,18 +255,18 @@ function LoginContent() {
             </form>
 
             <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-muted-foreground">
                 Don&apos;t have an account?{' '}
-                <Link href="/auth/signup" className="text-blue-600 hover:text-blue-500 font-medium">
+                <Link href="/auth/signup" className="text-primary hover:underline font-medium">
                   Sign up as Business
                 </Link>
               </p>
             </div>
 
             <div className="mt-4 text-center">
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-muted-foreground">
                 Looking for customer access?{' '}
-                <Link href="/auth/customer-signup" className="text-green-600 hover:text-green-500 font-medium">
+                <Link href="/auth/customer-signup" className="text-primary hover:underline font-medium">
                   Sign up as Customer
                 </Link>
               </p>
@@ -287,7 +275,7 @@ function LoginContent() {
         </div>
 
         <div className="text-center">
-          <Link href="/" className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700">
+          <Link href="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
             <span className="mr-2">←</span>
             Back to Home
           </Link>

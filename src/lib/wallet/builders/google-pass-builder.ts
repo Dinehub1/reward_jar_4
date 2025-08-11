@@ -6,9 +6,20 @@ export interface GoogleWalletIds {
   objectId: string
 }
 
-export function buildGoogleIds(customerCardId: string, issuerIdFromEnv?: string): GoogleWalletIds {
+export function buildGoogleIds(
+  customerCardId: string,
+  issuerIdFromEnv?: string,
+  isMembershipCard?: boolean
+): GoogleWalletIds {
   const issuerId = issuerIdFromEnv || process.env.GOOGLE_ISSUER_ID || '3388000000022940702'
-  const classId = `${issuerId}.loyalty.rewardjar_v3`
+  const fallbackSuffix = isMembershipCard ? 'rewardjar_membership_1' : 'rewardjar_stamp_1'
+  const suffix = (
+    isMembershipCard
+      ? process.env.GOOGLE_WALLET_CLASS_SUFFIX_MEMBERSHIP
+      : process.env.GOOGLE_WALLET_CLASS_SUFFIX_STAMP
+  ) || process.env.GOOGLE_WALLET_CLASS_SUFFIX || fallbackSuffix
+
+  const classId = `${issuerId}.${suffix}`
   const objectId = `${classId}.${customerCardId.replace(/-/g, '')}`
   return { issuerId, classId, objectId }
 }
@@ -28,6 +39,7 @@ export interface LoyaltyObject {
     value: string
     alternateText?: string
   }
+  textModulesData?: { header: string; body: string }[]
 }
 
 export function createLoyaltyObject(params: {
@@ -36,14 +48,16 @@ export function createLoyaltyObject(params: {
   total: number
   displayName?: string
   objectDisplayId: string
+  label?: string
+  textModulesData?: { header: string; body: string }[]
 }): LoyaltyObject {
-  const { ids, current, total, displayName, objectDisplayId } = params
+  const { ids, current, total, displayName, objectDisplayId, label, textModulesData } = params
   return {
     id: ids.objectId,
     classId: ids.classId,
     state: 'ACTIVE',
     loyaltyPoints: {
-      label: 'Points',
+      label: label || 'Points',
       balance: { string: `${current}/${total}` },
     },
     accountName: displayName || 'Guest User',
@@ -53,6 +67,7 @@ export function createLoyaltyObject(params: {
       value: objectDisplayId,
       alternateText: objectDisplayId.substring(0, 20),
     },
+    ...(textModulesData && textModulesData.length ? { textModulesData } : {}),
   }
 }
 

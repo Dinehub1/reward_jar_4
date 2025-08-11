@@ -21,7 +21,6 @@ export async function GET(request: NextRequest) {
       timestamp
     })
   } catch (error) {
-    console.error('Simple API test error:', error)
     return NextResponse.json(
       { 
         success: false, 
@@ -56,7 +55,6 @@ export async function POST(request: NextRequest) {
       timestamp
     })
   } catch (error) {
-    console.error('Simple POST API test error:', error)
     return NextResponse.json(
       { 
         success: false, 

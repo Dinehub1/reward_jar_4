@@ -114,7 +114,6 @@ export default function BusinessOnboardingPage() {
 
       setLoading(false)
     } catch (err) {
-      console.error('Auth check failed:', err)
       router.push('/auth/login?redirect=/onboarding/business')
     }
   }
@@ -225,7 +224,6 @@ export default function BusinessOnboardingPage() {
       // Upload logo if provided using secure API endpoint
       let logoUrl = null
       if (formData.logoFile) {
-        console.log('🖼️ BUSINESS ONBOARDING - Starting logo upload via API')
         
         const logoFormData = new FormData()
         logoFormData.append('logo', formData.logoFile)
@@ -239,13 +237,11 @@ export default function BusinessOnboardingPage() {
         const uploadResult = await uploadResponse.json()
 
         if (!uploadResult.success) {
-          console.error('❌ BUSINESS ONBOARDING - Logo upload failed:', uploadResult.error)
           setError(`Failed to upload logo: ${uploadResult.error}`)
           return
         }
 
         logoUrl = uploadResult.data.publicUrl
-        console.log('✅ BUSINESS ONBOARDING - Logo uploaded successfully:', logoUrl)
       }
 
       // Create business record
@@ -269,7 +265,6 @@ export default function BusinessOnboardingPage() {
         .single()
 
       if (businessError) {
-        console.error('Business creation failed:', businessError)
         setError('Failed to create business profile. Please try again.')
         return
       }
@@ -281,17 +276,14 @@ export default function BusinessOnboardingPage() {
         .eq('id', user.id)
 
       if (roleError) {
-        console.error('Role update failed:', roleError)
         // Don't fail the whole process for role update
       }
 
-      console.log('✅ Business created successfully:', business)
 
       // Redirect to dashboard with success message
               router.push('/business/dashboard?success=business_created&business_id=' + business.id)
 
     } catch (err) {
-      console.error('Submission error:', err)
       setError('An unexpected error occurred. Please try again.')
     } finally {
       setSubmitting(false)

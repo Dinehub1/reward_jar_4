@@ -64,12 +64,6 @@ export function ThemeProvider({ children, defaultTheme = 'system' }: ThemeProvid
 
       // Save to localStorage
       localStorage.setItem('rewardjar-theme', theme)
-
-      console.log('🌓 THEME - Updated:', {
-        theme,
-        isDark: shouldBeDark,
-        systemPreference: window.matchMedia('(prefers-color-scheme: dark)').matches
-      })
     }
 
     updateTheme()

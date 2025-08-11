@@ -26,7 +26,6 @@ export async function GET(
     ])
 
     if (stampError || membershipError) {
-      console.error('Database error fetching cards:', { stampError, membershipError })
       return NextResponse.json(
         { success: false, error: 'Failed to fetch business cards' },
         { status: 500 }
@@ -66,7 +65,6 @@ export async function GET(
     const { data: customerCards, error: customerError } = await customerCardsQuery
 
     if (customerError) {
-      console.error('Database error fetching customer cards:', { customerError })
       return NextResponse.json(
         { success: false, error: 'Failed to fetch customer cards' },
         { status: 500 }
@@ -118,7 +116,6 @@ export async function GET(
     })
 
   } catch (error) {
-    console.error('Business stats API error:', error)
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

@@ -10,7 +10,6 @@ interface AddStampRequest {
 }
 
 export async function POST(request: NextRequest) {
-  console.log('🎯 STAMP/SESSION ADD - Processing request...')
   
   try {
     const body = await request.json() as AddStampRequest
@@ -62,7 +61,6 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (cardError || !customerCard) {
-      console.error('❌ Customer card not found:', customerCardId)
       return NextResponse.json(
         { error: 'Customer card not found' },
         { status: 404 }
@@ -74,14 +72,12 @@ export async function POST(request: NextRequest) {
     const isMembershipCard = customerCard.membership_card_id !== null
 
     if (!isStampCard && !isMembershipCard) {
-      console.error('❌ Invalid card type - neither stamp nor membership card')
       return NextResponse.json(
         { error: 'Invalid card type' },
         { status: 400 }
       )
     }
 
-    console.log(`📝 Processing ${isStampCard ? 'stamp' : 'session'} addition for card ${customerCardId}`)
 
     let updateResult
     let updateType: 'stamp_update' | 'session_update' | 'reward_complete' = isStampCard ? 'stamp_update' : 'session_update'
@@ -139,7 +135,6 @@ export async function POST(request: NextRequest) {
         .eq('id', customerCardId)
 
       if (updateError) {
-        console.error('❌ Error updating stamp count:', updateError)
         return NextResponse.json(
           { error: 'Failed to update stamp count' },
           { status: 500 }
@@ -171,7 +166,6 @@ export async function POST(request: NextRequest) {
           : `Stamp added! ${newStampCount}/${totalStamps} stamps collected.`
       }
 
-      console.log(`✅ Stamp added: ${newStampCount}/${totalStamps} ${isComplete ? '(COMPLETE!)' : ''}`)
 
       // Emit card_events: stamp_given; optionally purchase when billAmount provided
       try {
@@ -195,7 +189,6 @@ export async function POST(request: NextRequest) {
           })
         }
       } catch (e) {
-        console.warn('card_events insert failed (non-fatal):', e)
       }
 
     } else {
@@ -238,7 +231,6 @@ export async function POST(request: NextRequest) {
         .eq('id', customerCardId)
 
       if (updateError) {
-        console.error('❌ Error updating session count:', updateError)
         return NextResponse.json(
           { error: 'Failed to update session count' },
           { status: 500 }
@@ -267,7 +259,6 @@ export async function POST(request: NextRequest) {
         message: `Session marked! ${sessionsRemaining} sessions remaining.`
       }
 
-      console.log(`✅ Session marked: ${newSessionCount}/${totalSessions} (${sessionsRemaining} remaining)`)
 
       // Emit card_events: session_marked
       try {
@@ -277,7 +268,6 @@ export async function POST(request: NextRequest) {
           metadata: { business_id: businessId || membershipCard.business_id, marked_by: markedBy, notes }
         })
       } catch (e) {
-        console.warn('card_events insert failed (non-fatal):', e)
       }
     }
 
@@ -309,10 +299,8 @@ export async function POST(request: NextRequest) {
       }])
 
     if (queueError) {
-      console.error('⚠️ Warning: Failed to add to wallet update queue:', queueError)
       // Don't fail the request if queue update fails
     } else {
-      console.log(`📤 Added ${updateType} to wallet update queue`)
     }
 
     // Trigger wallet queue processing (fire and forget)
@@ -324,7 +312,6 @@ export async function POST(request: NextRequest) {
           'Content-Type': 'application/json'
         }
       }).catch(error => {
-        console.error('⚠️ Warning: Failed to trigger wallet queue processing:', error)
       })
     }
 
@@ -335,7 +322,6 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('❌ STAMP/SESSION ADD ERROR:', error)
     return NextResponse.json(
       { 
         error: 'Internal server error',
@@ -420,7 +406,6 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error fetching card status:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

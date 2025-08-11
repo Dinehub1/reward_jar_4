@@ -30,7 +30,6 @@ export async function HEAD() {
       }
     })
   } catch (error) {
-    console.error('Cards API health check error:', error)
     return new NextResponse(null, { status: 500 })
   }
 }
@@ -53,7 +52,6 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(parseInt(url.searchParams.get('limit') || '20'), 100)
     const offset = (page - 1) * limit
 
-    console.log('🎫 ADMIN CARDS API - Fetching cards:', {
       businessId,
       cardType,
       status,
@@ -86,7 +84,6 @@ export async function GET(request: NextRequest) {
         .order('created_at', { ascending: false })
 
       if (stampError) {
-        console.error('💥 ADMIN CARDS API - Stamp cards error:', stampError)
       } else {
         stampCards = stampData || []
       }
@@ -114,7 +111,6 @@ export async function GET(request: NextRequest) {
         .order('created_at', { ascending: false })
 
       if (membershipError) {
-        console.error('💥 ADMIN CARDS API - Membership cards error:', membershipError)
       } else {
         membershipCards = membershipData || []
       }
@@ -142,7 +138,6 @@ export async function GET(request: NextRequest) {
     } as ApiResponse<any[]>)
 
   } catch (error) {
-    console.error('💥 ADMIN CARDS API - GET error:', error)
     return NextResponse.json(
       { success: false, error: 'Failed to fetch cards' } as ApiResponse<never>,
       { status: 500 }
@@ -198,7 +193,6 @@ export async function POST(request: NextRequest) {
       min_bill_amount
     } = body
 
-    console.log('🔍 Admin API: Creating card:', { 
       cardName: cardName || name, 
       businessId: businessId || business_id, 
       stampsRequired: stampsRequired || values?.total_stamps 
@@ -210,7 +204,6 @@ export async function POST(request: NextRequest) {
     // Verify user authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
-      console.log('❌ Admin API: Authentication failed:', authError?.message)
       return NextResponse.json(
         { success: false, error: 'Authentication required' } as ApiResponse<never>,
         { status: 401 }
@@ -226,7 +219,6 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (userError || userData?.role_id !== 1) {
-      console.log('❌ Admin API: Access denied, user role:', userData?.role_id)
       return NextResponse.json(
         { success: false, error: 'Admin access required' } as ApiResponse<never>,
         { status: 403 }
@@ -278,14 +270,12 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (error) {
-        console.error('❌ Admin API: Error saving card:', error)
         return NextResponse.json(
           { success: false, error: 'Failed to save card: ' + error.message } as ApiResponse<never>,
           { status: 500 }
         )
       }
 
-      console.log('✅ Admin API: Card saved successfully:', savedCard)
 
       // Add to wallet update queue for provisioning
       try {
@@ -304,9 +294,7 @@ export async function POST(request: NextRequest) {
             failed: false
           }])
           
-        console.log('✅ Admin API: Added to wallet update queue')
       } catch (queueError) {
-        console.warn('⚠️ Admin API: Failed to add to wallet queue (non-critical):', queueError)
       }
 
       return NextResponse.json({
@@ -341,13 +329,22 @@ export async function POST(request: NextRequest) {
         total_sessions: values?.total_sessions,
         cost: values?.cost,
         duration_days: values?.duration_days,
-        membership_type: values?.tier?.toLowerCase() || 'bronze'
+        membership_type: values?.tier?.toLowerCase() || 'bronze',
+        membership_mode: values?.membership_mode || 'sessions',
+        discount_type: values?.discountType || null,
+        discount_value: values?.discountValue || null,
+        min_spend_cents: values?.minSpendCents || null,
+        stackable: values?.stackable ?? null,
+        max_uses_per_day: values?.maxUsesPerDay || null,
+        max_uses_per_week: values?.maxUsesPerWeek || null,
+        validity_windows: values?.validityWindows || null,
+        eligible_categories: values?.eligibleCategories || null,
+        eligible_skus: values?.eligibleSkus || null,
       })
     }
 
     const tableName = card_type === 'stamp' ? 'stamp_cards' : 'membership_cards'
     
-    console.log(`💾 Admin API: Saving ${card_type} card to ${tableName}:`, cardPayload)
     
     const { data: savedCard, error } = await adminClient
       .from(tableName)
@@ -356,14 +353,12 @@ export async function POST(request: NextRequest) {
       .single()
 
       if (error) {
-      console.error('❌ Admin API: Error saving card:', error)
         return NextResponse.json(
         { success: false, error: 'Failed to save card' } as ApiResponse<never>,
           { status: 500 }
         )
       }
 
-    console.log('✅ Admin API: Card saved successfully:', savedCard)
 
     // Add to wallet update queue for initial setup
     try {
@@ -382,9 +377,7 @@ export async function POST(request: NextRequest) {
           failed: false
         }])
         
-      console.log('✅ Admin API: Added to wallet update queue')
     } catch (queueError) {
-      console.warn('⚠️ Admin API: Failed to add to wallet queue (non-critical):', queueError)
       // Don't fail the card creation for queue issues
     }
 
@@ -395,7 +388,6 @@ export async function POST(request: NextRequest) {
     } as ApiResponse<typeof savedCard>)
 
   } catch (error) {
-    console.error('❌ Admin API: Error in card creation:', error)
     return NextResponse.json(
       { success: false, error: 'Internal server error' } as ApiResponse<never>,
       { status: 500 }

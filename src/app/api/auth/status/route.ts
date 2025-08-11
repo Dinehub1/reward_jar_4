@@ -22,14 +22,12 @@ export async function HEAD() {
  * by the client components directly.
  */
 export async function GET(request: NextRequest) {
-  console.log('🔍 AUTH STATUS - Simplified endpoint (no server-side session)')
   
   try {
     // Extract authorization header if present
     const authHeader = request.headers.get('authorization')
     
     if (!authHeader) {
-      console.log('AUTH STATUS - No authorization header')
       return NextResponse.json({
         authenticated: false,
         user: null,
@@ -48,7 +46,6 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('AUTH STATUS - Error:', error)
     return NextResponse.json({
       authenticated: false,
       user: null,

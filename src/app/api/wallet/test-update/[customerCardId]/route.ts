@@ -11,7 +11,6 @@ export async function POST(
     const body = await request.json()
     const { updateType = 'auto', simulate = false, notes = null } = body
 
-    console.log('🧪 Processing test-update request:', {
       customerCardId,
       updateType,
       simulate,
@@ -49,7 +48,6 @@ export async function POST(
       .single()
 
     if (error || !customerCard) {
-      console.error('Customer card not found:', error)
       return NextResponse.json(
         { 
           success: false,
@@ -97,7 +95,6 @@ export async function POST(
       actualUpdateType = isMembership ? 'session_update' : 'stamp_update'
     }
 
-    console.log('🔍 Test update analysis:', {
       isMembership,
       membershipType: customerCard.membership_type,
       actualUpdateType,
@@ -195,7 +192,6 @@ export async function POST(
           })
 
         if (sessionError) {
-          console.error('Error recording test session usage:', sessionError)
           return NextResponse.json({
             success: false,
             error: 'Failed to record test session usage'
@@ -212,7 +208,6 @@ export async function POST(
           .eq('id', customerCardId)
 
         if (updateError) {
-          console.error('Error updating test sessions used:', updateError)
           return NextResponse.json({
             success: false,
             error: 'Failed to update test session count'
@@ -262,7 +257,6 @@ export async function POST(
           })
 
         if (sessionError) {
-          console.error('Error recording test stamp usage:', sessionError)
           return NextResponse.json({
             success: false,
             error: 'Failed to record test stamp usage'
@@ -279,7 +273,6 @@ export async function POST(
           .eq('id', customerCardId)
 
         if (updateError) {
-          console.error('Error updating test stamps:', updateError)
           return NextResponse.json({
             success: false,
             error: 'Failed to update test stamp count'
@@ -339,13 +332,10 @@ export async function POST(
           })
 
         if (queueError) {
-          console.warn('Warning: Failed to queue test wallet update:', queueError)
         } else {
-          console.log('✅ Test wallet update queued for real-time synchronization')
           result.walletUpdateQueued = true
         }
       } catch (queueError) {
-        console.warn('Warning: Error queuing test wallet update:', queueError)
       }
     }
 
@@ -359,7 +349,6 @@ export async function POST(
     // Add current wallet type info
     result.currentWalletType = customerCard.wallet_type
     
-    console.log('✅ Test update processed successfully:', result)
 
     return NextResponse.json(result, {
       headers: {
@@ -369,7 +358,6 @@ export async function POST(
     })
 
   } catch (error) {
-    console.error('Error processing test-update request:', error)
     return NextResponse.json(
       { 
         success: false,

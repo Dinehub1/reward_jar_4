@@ -77,7 +77,6 @@ export default function StampCardsPage() {
           setStampCards(cardsWithCounts)
         }
       } catch (error) {
-        console.error('Error fetching stamp cards:', error)
       } finally {
         setLoading(false)
       }
@@ -160,10 +159,10 @@ export default function StampCardsPage() {
             <div>
               <p className="text-gray-600">Create and manage your loyalty cards to engage customers.</p>
             </div>
-            <Link href="/business/stamp-cards/new">
-              <Button className="flex items-center gap-2">
+            <Link href="/business/no-access">
+              <Button className="flex items-center gap-2" variant="outline">
                 <Plus className="h-4 w-4" />
-                Create New Card
+                Request New Card (Admin‑Only)
               </Button>
             </Link>
           </div>

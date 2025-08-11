@@ -21,7 +21,6 @@ export interface AuthResult {
  */
 export async function checkAuth(): Promise<AuthResult> {
   try {
-    console.log('🔍 AUTH CHECK - Using direct client-side authentication')
     
     const supabase = createClient()
     
@@ -29,7 +28,6 @@ export async function checkAuth(): Promise<AuthResult> {
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
     
     if (sessionError) {
-      console.error('Auth: Session error:', sessionError)
       return {
         user: null,
         isAuthenticated: false,
@@ -40,7 +38,6 @@ export async function checkAuth(): Promise<AuthResult> {
     }
 
     if (!session?.user) {
-      console.log('Auth: No authenticated user')
       return {
         user: null,
         isAuthenticated: false,
@@ -50,7 +47,6 @@ export async function checkAuth(): Promise<AuthResult> {
       }
     }
 
-    console.log('Auth: User authenticated:', session.user.id)
 
     // Get user role from database
     const { data: userData, error: roleError } = await supabase
@@ -60,7 +56,6 @@ export async function checkAuth(): Promise<AuthResult> {
       .single()
 
     if (roleError) {
-      console.error('Auth: Role lookup error:', roleError)
       // Return authenticated but without role information
       return {
         user: {
@@ -76,7 +71,6 @@ export async function checkAuth(): Promise<AuthResult> {
     }
 
     const userRole = userData?.role_id || 0
-    console.log('Auth: User role verified:', userRole)
     
     return {
       user: {
@@ -91,7 +85,6 @@ export async function checkAuth(): Promise<AuthResult> {
     }
 
   } catch (error) {
-    console.error('Auth: Check failed:', error)
     return {
       user: null,
       isAuthenticated: false,

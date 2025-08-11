@@ -101,7 +101,6 @@ export default function AdminCardsPage() {
     async function loadCards() {
       setIsLoading(true)
       try {
-        console.log('🔄 ADMIN CARDS - Loading card data via API...')
         
         // Use the unified API endpoint for consistent data (get all data for customer count)
         const response = await fetch('/api/admin/dashboard-unified')
@@ -110,7 +109,6 @@ export default function AdminCardsPage() {
         }
         
         const data = await response.json()
-        console.log('📊 ADMIN CARDS - API Response:', data)
         
         if (data.success === false) {
           throw new Error(data.error || 'Failed to load card data')
@@ -127,7 +125,6 @@ export default function AdminCardsPage() {
           activeCards: unifiedData.stats?.totalCards || 0
         }
         
-        console.log('📊 ADMIN CARDS - Processed data:', {
           stampCards: stampCards.length,
           membershipCards: membershipCards.length,
           stats
@@ -143,14 +140,11 @@ export default function AdminCardsPage() {
           const tJson = await tRes.json()
           setTemplates(tJson?.data || [])
         } catch (e) {
-          console.warn('Templates fetch skipped:', e)
         }
 
       } catch (error) {
-        console.error('❌ ADMIN CARDS - Error loading cards:', error)
         
         // Fallback: create some sample data to show the UI is working
-        console.log('🔄 ADMIN CARDS - Using fallback sample data...')
         
         const sampleStampCards: StampCard[] = [
           {

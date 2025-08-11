@@ -41,7 +41,6 @@ class AdminPerformanceMonitor {
 
     // Log slow queries (>2 seconds)
     if (responseTime > 2000) {
-      console.warn(`🐌 Slow API response detected: ${endpoint} took ${responseTime}ms`)
     }
 
     // Keep only last 100 metrics to prevent memory leaks
@@ -62,7 +61,6 @@ class AdminPerformanceMonitor {
       this.cacheMetrics[type]++
     }
     
-    console.log(`📊 Cache ${type}: ${key}`)
     
     this.metrics.push({
       name: `cache_${type}`,
@@ -85,7 +83,6 @@ class AdminPerformanceMonitor {
 
     // Log slow database queries (>1 second)
     if (queryTime > 1000) {
-      console.warn(`🐌 Slow database query: ${table} took ${queryTime}ms for ${recordCount} records`)
     }
   }
 
@@ -102,7 +99,6 @@ class AdminPerformanceMonitor {
 
     // Log high sync latency (>5 seconds)
     if (latency > 5000) {
-      console.warn(`🐌 High sync latency: ${event} took ${latency}ms`)
     }
   }
 
@@ -177,30 +173,29 @@ export const adminPerformanceMonitor = new AdminPerformanceMonitor()
 /**
  * Performance monitoring decorator for API calls
  */
-export function withPerformanceMonitoring<T>(
+export async function withPerformanceMonitoring<T>(
   operation: () => Promise<T>,
   operationName: string,
   metadata?: Record<string, any>
 ): Promise<T> {
   const startTime = Date.now()
   
-  return operation()
-    .then(result => {
-      const endTime = Date.now()
-      const duration = endTime - startTime
-      
-      adminPerformanceMonitor.recordApiResponseTime(operationName, duration, true)
-      
-      return result
-    })
-    .catch(error => {
-      const endTime = Date.now()
-      const duration = endTime - startTime
-      
-      adminPerformanceMonitor.recordApiResponseTime(operationName, duration, false)
-      
-      throw error
-    })
+  try {
+    const result = await operation()
+    const endTime = Date.now()
+    const duration = endTime - startTime
+    
+    adminPerformanceMonitor.recordApiResponseTime(operationName, duration, true)
+    
+    return result
+  } catch (error) {
+    const endTime = Date.now()
+    const duration = endTime - startTime
+    
+    adminPerformanceMonitor.recordApiResponseTime(operationName, duration, false)
+    
+    throw error
+  }
 }
 
 /**

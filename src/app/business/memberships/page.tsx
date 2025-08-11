@@ -129,7 +129,6 @@ export default function MembershipsPage() {
       setMembershipCards(cardsWithStats)
 
     } catch (err) {
-      console.error('Error fetching membership cards:', err)
       setError(err instanceof Error ? err.message : 'Failed to load membership cards')
     } finally {
       setLoading(false)
@@ -172,7 +171,6 @@ export default function MembershipsPage() {
 
   const generateQRCode = (cardId: string) => {
     // TODO: Implement QR code generation
-    console.log('Generate QR code for membership card:', cardId)
     // This would typically open a modal or navigate to QR generation page
   }
 
@@ -213,7 +211,7 @@ export default function MembershipsPage() {
             <CardContent className="pt-6">
               <div className="text-blue-700">
                 <p className="font-medium">Cards are created and managed by RewardJar Admins.</p>
-                <p className="text-sm mt-1">Contact support if you&apos;d like to update or request a new membership card.</p>
+                <p className="text-sm mt-1">Contact support or use the Request link to ask for a new membership card.</p>
               </div>
             </CardContent>
           </Card>

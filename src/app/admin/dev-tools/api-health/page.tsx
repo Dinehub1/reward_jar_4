@@ -255,7 +255,6 @@ export default function ApiHealthPage() {
 
   const handleCheckAll = async () => {
     setIsRunningAll(true)
-    console.log('🔍 Starting all API health checks...')
     
     try {
       // Reset all endpoints to loading state first
@@ -267,7 +266,6 @@ export default function ApiHealthPage() {
       
       for (let i = 0; i < endpoints.length; i += concurrencyLimit) {
         const chunk = endpoints.slice(i, i + concurrencyLimit)
-        console.log(`🔍 Testing endpoints ${i + 1}-${Math.min(i + concurrencyLimit, endpoints.length)}`)
         
         const chunkResults = await Promise.allSettled(
           chunk.map(endpoint => checkEndpoint(endpoint))
@@ -277,7 +275,6 @@ export default function ApiHealthPage() {
           if (result.status === 'fulfilled') {
             results.push(result.value)
           } else {
-            console.error(`❌ Failed to check ${chunk[index].name}:`, result.reason)
             results.push({
               ...chunk[index],
               status: 'error',
@@ -306,9 +303,7 @@ export default function ApiHealthPage() {
         }
       }
       
-      console.log('✅ All API health checks completed')
     } catch (error) {
-      console.error('❌ Error running all checks:', error)
     } finally {
       setIsRunningAll(false)
     }

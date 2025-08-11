@@ -41,7 +41,6 @@ export const QRCodeDisplay = React.memo<QRCodeDisplayProps>(({
         })
         setQrCodeUrl(url)
       } catch (error) {
-        console.error('Failed to generate QR code:', error)
       }
     }
     if (value) generateQR()

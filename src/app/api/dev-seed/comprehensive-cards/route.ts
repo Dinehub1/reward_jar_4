@@ -19,7 +19,6 @@ interface CustomerData {
 }
 
 export async function POST(request: NextRequest) {
-  console.log('🎯 COMPREHENSIVE CARD GENERATION - Starting diverse test data creation...')
   
   try {
     const supabase = createAdminClient()
@@ -39,7 +38,6 @@ export async function POST(request: NextRequest) {
       throw new Error(`Failed to fetch businesses: ${businessError.message}`)
     }
 
-    console.log(`📊 Found ${businesses?.length} businesses with cards`)
 
     // Generate diverse customers
     const customerNames = [
@@ -67,7 +65,6 @@ export async function POST(request: NextRequest) {
       email_confirm: true // Skip email confirmation for test users
     }))
 
-    console.log(`👥 Creating ${usersToCreate.length} auth users...`)
 
     // Create auth users using admin client
     const createdAuthUsers = []
@@ -80,7 +77,6 @@ export async function POST(request: NextRequest) {
         })
 
         if (authError) {
-          console.warn(`⚠️ Failed to create auth user ${userData.email}:`, authError.message)
           continue
         }
 
@@ -88,12 +84,10 @@ export async function POST(request: NextRequest) {
           createdAuthUsers.push(authUser.user)
         }
       } catch (error) {
-        console.warn(`⚠️ Error creating auth user ${userData.email}:`, error)
         continue
       }
     }
 
-    console.log(`✅ Created ${createdAuthUsers.length} auth users`)
 
     // Insert users into users table with role_id = 3 (customer)
     const usersTableData = createdAuthUsers.map(authUser => ({
@@ -107,7 +101,6 @@ export async function POST(request: NextRequest) {
       .insert(usersTableData)
 
     if (usersError) {
-      console.warn('⚠️ Some users may already exist in users table:', usersError.message)
     }
 
     // Now create customers with proper user_id references
@@ -117,7 +110,6 @@ export async function POST(request: NextRequest) {
       email: authUser.email || ''
     }))
 
-    console.log(`👥 Creating ${customersToCreate.length} customer profiles...`)
 
     const { data: createdCustomers, error: customerError } = await supabase
       .from('customers')
@@ -128,7 +120,6 @@ export async function POST(request: NextRequest) {
       throw new Error(`Failed to create customers: ${customerError.message}`)
     }
 
-    console.log(`✅ Created ${createdCustomers?.length} customers`)
 
     // Now generate customer cards for each business
     const customerCardsToCreate: CustomerCardData[] = []
@@ -142,7 +133,6 @@ export async function POST(request: NextRequest) {
     }
 
     for (const business of businesses!) {
-      console.log(`🏢 Processing ${business.name}...`)
       
       // For each stamp card in this business
       for (const stampCard of business.stamp_cards) {
@@ -172,7 +162,6 @@ export async function POST(request: NextRequest) {
           else cardStats.pwaWallet++
         }
         
-        console.log(`  📮 Generated ${numCustomerCards} customer cards for stamp card: ${stampCard.name}`)
       }
       
       // For each membership card in this business
@@ -209,12 +198,9 @@ export async function POST(request: NextRequest) {
           else cardStats.pwaWallet++
         }
         
-        console.log(`  🎟️ Generated ${numCustomerCards} customer cards for membership card: ${membershipCard.name}`)
       }
     }
 
-    console.log(`🎯 Total customer cards to create: ${customerCardsToCreate.length}`)
-    console.log(`📊 Card distribution:`, cardStats)
 
     // Insert customer cards in batches to avoid overwhelming the database
     const batchSize = 1000
@@ -228,13 +214,11 @@ export async function POST(request: NextRequest) {
         .insert(batch)
       
       if (insertError) {
-        console.error(`❌ Error inserting batch ${Math.floor(i/batchSize) + 1}:`, insertError)
         // Continue with next batch instead of failing completely
         continue
       }
       
       insertedCards += batch.length
-      console.log(`✅ Inserted batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(customerCardsToCreate.length/batchSize)} (${insertedCards}/${customerCardsToCreate.length} cards)`)
     }
 
     // Final verification
@@ -272,13 +256,10 @@ export async function POST(request: NextRequest) {
       }))
     }
 
-    console.log('🎉 COMPREHENSIVE CARD GENERATION COMPLETE!')
-    console.log('📊 Final Results:', result.stats)
 
     return NextResponse.json(result)
 
   } catch (error) {
-    console.error('❌ COMPREHENSIVE CARD GENERATION ERROR:', error)
     return NextResponse.json(
       { 
         success: false, 

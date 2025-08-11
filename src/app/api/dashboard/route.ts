@@ -55,7 +55,6 @@ export async function GET(request: NextRequest) {
     )
 
   } catch (error) {
-    console.error('Dashboard API error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -124,7 +123,6 @@ async function getAdminDashboard(type: string) {
     })
 
   } catch (error) {
-    console.error('Admin dashboard error:', error)
     return NextResponse.json(
       { error: 'Failed to fetch admin dashboard data' },
       { status: 500 }
@@ -193,7 +191,6 @@ async function getBusinessDashboard(userId: string, type: string) {
     })
 
   } catch (error) {
-    console.error('Business dashboard error:', error)
     return NextResponse.json(
       { error: 'Failed to fetch business dashboard data' },
       { status: 500 }

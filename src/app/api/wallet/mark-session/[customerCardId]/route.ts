@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient, getServerUser, getServerSession } from '@/lib/supabase/server'
+import { checkCooldown, getCooldownConfig } from '@/lib/utils/cooldown'
 import validateUUID from 'uuid-validate'
 
 // Mark session or stamp usage via QR scan
@@ -11,9 +12,8 @@ export async function POST(
     const resolvedParams = await params
     const customerCardId = resolvedParams.customerCardId
     const body = await request.json()
-    const { businessId, usageType = 'auto', notes = null } = body
+    const { businessId, usageType = 'auto', notes = null, billAmount, override = false } = body as { businessId?: string, usageType?: string, notes?: string | null, billAmount?: number, override?: boolean }
 
-    console.log('🔄 Processing QR scan mark-session request:', {
       customerCardId,
       businessId,
       usageType,
@@ -21,6 +21,20 @@ export async function POST(
     })
     
     const supabase = await createServerClient()
+    const { user } = await getServerUser()
+    if (!user) {
+      return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 })
+    }
+
+    // Role check for actions: require role_id 2 (business) normally; allow role_id 1 (admin) only if override=true
+    const adminClient = await (await import('@/lib/supabase/admin-client')).createAdminClient()
+    const { data: userRow } = await adminClient.from('users').select('role_id').eq('id', user.id).single()
+    const roleId = userRow?.role_id ?? 0
+    const isAdmin = roleId === 1
+    const isBusiness = roleId === 2
+    if (!(isBusiness || (isAdmin && override === true))) {
+      return NextResponse.json({ success: false, error: 'Insufficient role for action' }, { status: 403 })
+    }
     
     // Get customer card with stamp card details and membership info
     const { data: customerCard, error } = await supabase
@@ -51,7 +65,6 @@ export async function POST(
       .single()
       
     if (error || !customerCard) {
-      console.error('Customer card not found:', error)
       return NextResponse.json(
         { 
           error: 'Customer card not found',
@@ -110,7 +123,19 @@ export async function POST(
       actualUsageType = isMembership ? 'session' : 'stamp'
     }
 
-    console.log('🔍 Card analysis:', {
+    // Check cooldown to prevent rapid repeat actions
+    const cooldownConfig = getCooldownConfig(actualUsageType as 'session' | 'stamp')
+    const cooldownResult = await checkCooldown(customerCardId, cooldownConfig)
+    
+    if (!cooldownResult.allowed) {
+      return NextResponse.json({ 
+        success: false, 
+        error: cooldownResult.error,
+        cooldownMinutes: cooldownResult.cooldownMinutes,
+        lastUsageAt: cooldownResult.lastUsageAt
+      }, { status: 429 })
+    }
+
       isMembership,
       cardType: isMembership ? 'membership' : 'stamp',
       actualUsageType,
@@ -156,13 +181,12 @@ export async function POST(
         .insert({
           customer_card_id: customerCardId,
           business_id: businessData.id,
-          marked_by: null, // QR scan doesn't have a specific user
+          marked_by: user.id,
           usage_type: 'session',
           notes: notes || `QR scan session marking at ${businessData.name}`
         })
 
       if (sessionError) {
-        console.error('Error recording session usage:', sessionError)
         return NextResponse.json({
           success: false,
           error: 'Failed to record session usage'
@@ -179,7 +203,6 @@ export async function POST(
         .eq('id', customerCardId)
 
       if (updateError) {
-        console.error('Error updating sessions used:', updateError)
         return NextResponse.json({
           success: false,
           error: 'Failed to update session count'
@@ -211,10 +234,9 @@ export async function POST(
         await adminClient.from('card_events').insert({
           card_id: customerCardId,
           event_type: 'session_marked',
-          metadata: { business_id: businessData.id, method: 'qr', notes }
+          metadata: { business_id: businessData.id, method: 'qr', notes, staff_id: user.id, override: isAdmin && override === true }
         })
       } catch (e) {
-        console.warn('card_events insert failed (non-fatal):', e)
       }
 
     } else if (!isMembership && actualUsageType === 'stamp') {
@@ -240,13 +262,12 @@ export async function POST(
         .insert({
           customer_card_id: customerCardId,
           business_id: businessData.id,
-          marked_by: null, // QR scan doesn't have a specific user
+          marked_by: user.id,
           usage_type: 'stamp',
           notes: notes || `QR scan stamp collection at ${businessData.name}`
         })
 
       if (sessionError) {
-        console.error('Error recording stamp usage:', sessionError)
         return NextResponse.json({
           success: false,
           error: 'Failed to record stamp usage'
@@ -263,7 +284,6 @@ export async function POST(
       .eq('id', customerCardId)
       
     if (updateError) {
-        console.error('Error updating stamps:', updateError)
         return NextResponse.json({
           success: false,
           error: 'Failed to update stamp count'
@@ -289,16 +309,22 @@ export async function POST(
         result.rewardReady = true
       }
 
-      // Emit card_events: stamp_given
+      // Emit card_events: stamp_given (+ optional purchase when billAmount provided)
       try {
         const adminClient = await (await import('@/lib/supabase/admin-client')).createAdminClient()
         await adminClient.from('card_events').insert({
           card_id: customerCardId,
           event_type: 'stamp_given',
-          metadata: { business_id: businessData.id, method: 'qr', notes }
+          metadata: { business_id: businessData.id, method: 'qr', notes, staff_id: user.id }
         })
+        if (typeof billAmount === 'number' && !Number.isNaN(billAmount) && billAmount > 0) {
+          await adminClient.from('card_events').insert({
+            card_id: customerCardId,
+            event_type: 'purchase',
+            metadata: { business_id: businessData.id, amount_cents: Math.round(billAmount * 100), staff_id: user.id, override: isAdmin && override === true }
+          })
+        }
       } catch (e) {
-        console.warn('card_events insert failed (non-fatal):', e)
       }
 
     } else {
@@ -335,14 +361,11 @@ export async function POST(
         })
 
       if (queueError) {
-        console.warn('Warning: Failed to queue wallet update:', queueError)
         // Don't fail the main request for this
       } else {
-        console.log('✅ Wallet update queued for real-time synchronization')
         result.walletUpdateQueued = true
       }
     } catch (queueError) {
-      console.warn('Warning: Error queuing wallet update:', queueError)
       // Continue without failing
     }
 
@@ -359,13 +382,10 @@ export async function POST(
           metadata: result
         })
       })
-      console.log('✅ Admin dashboard cache invalidation triggered')
     } catch (cacheError) {
-      console.warn('⚠️ Failed to trigger admin cache invalidation:', cacheError)
       // Don't fail the main request for cache issues
     }
 
-    console.log('✅ QR scan processed successfully:', result)
 
     return NextResponse.json(result, {
       headers: {
@@ -376,7 +396,6 @@ export async function POST(
     })
     
   } catch (error) {
-    console.error('Error processing mark-session request:', error)
     return NextResponse.json(
       { 
         success: false,
@@ -424,7 +443,6 @@ export async function GET(
       .limit(50)
       
     if (error) {
-      console.error('Error fetching session history:', error)
       return NextResponse.json(
         { error: 'Failed to fetch session history' },
         { status: 500 }
@@ -438,7 +456,6 @@ export async function GET(
     })
     
   } catch (error) {
-    console.error('Error in session history API:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

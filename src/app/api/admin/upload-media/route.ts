@@ -9,7 +9,6 @@ import { createAdminClient } from '@/lib/supabase/admin-client'
  */
 export async function POST(request: NextRequest) {
   try {
-    console.log('🖼️ MEDIA UPLOAD API - Starting media upload process')
 
     // Get the uploaded file from FormData
     const formData = await request.formData()
@@ -40,7 +39,6 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    console.log('🖼️ MEDIA UPLOAD API - Received file:', {
       name: file.name,
       type: file.type,
       size: file.size,
@@ -65,11 +63,9 @@ export async function POST(request: NextRequest) {
       })
 
     if (uploadError) {
-      console.error('❌ MEDIA UPLOAD API - Supabase upload error:', uploadError)
       
       // Check if bucket exists, if not create it
       if (uploadError.message.includes('Bucket not found')) {
-        console.log(`🪣 MEDIA UPLOAD API - Attempting to create ${bucketName} bucket`)
         
         const { error: bucketError } = await supabase.storage
           .createBucket(bucketName, {
@@ -79,14 +75,12 @@ export async function POST(request: NextRequest) {
           })
 
         if (bucketError) {
-          console.error(`❌ MEDIA UPLOAD API - Failed to create ${bucketName} bucket:`, bucketError)
           return NextResponse.json(
             { success: false, error: 'Storage configuration error. Please contact support.' },
             { status: 500 }
           )
         }
         
-        console.log(`✅ MEDIA UPLOAD API - ${bucketName} bucket created successfully. Please retry upload.`)
         // Instruct client to retry upload after bucket creation
         return NextResponse.json(
           { success: false, error: 'Storage bucket created. Please retry your upload.' },
@@ -105,7 +99,6 @@ export async function POST(request: NextRequest) {
       .from(bucketName)
       .getPublicUrl(fileName)
 
-    console.log('✅ MEDIA UPLOAD API - Media uploaded successfully. Public URL:', publicUrl)
     
     return NextResponse.json({ 
       success: true, 
@@ -118,7 +111,6 @@ export async function POST(request: NextRequest) {
     }, { status: 200 })
 
   } catch (error: any) {
-    console.error('❌ MEDIA UPLOAD API - Unexpected error:', error)
     return NextResponse.json({ 
       success: false, 
       error: error.message || 'Internal server error' 

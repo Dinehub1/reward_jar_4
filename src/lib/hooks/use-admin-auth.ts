@@ -42,7 +42,6 @@ export function useAdminAuth(requireAuth: boolean = true): AdminAuthState & Admi
   const authResolved = useRef(false)
 
   const checkAuth = async () => {
-    console.log('🔍 AUTH HOOK - checkAuth called:', { 
       authResolved: authResolved.current, 
       authCheckInProgress: authCheckInProgress.current,
       requireAuth 
@@ -50,7 +49,6 @@ export function useAdminAuth(requireAuth: boolean = true): AdminAuthState & Admi
     
     // If auth is already resolved or in progress, don't check again
     if (authResolved.current || authCheckInProgress.current) {
-      console.log('🔍 AUTH HOOK - Skipping auth check (already resolved or in progress)')
       return
     }
     
@@ -66,59 +64,11 @@ export function useAdminAuth(requireAuth: boolean = true): AdminAuthState & Admi
     }
     
     authCheckInProgress.current = true
-    console.log('🔍 AUTH HOOK - Starting auth check...')
 
     try {
       setState(prev => ({ ...prev, isLoading: true, error: null }))
 
-      // Proper authentication flow - check session then verify admin role
-      // Starting auth check
-
-      // First check if we have a valid session (client-side auth check)
-      // Add retry logic for session hydration
-      let session = null
-      let attempts = 0
-      const maxAttempts = 3
-      
-      while (!session && attempts < maxAttempts) {
-        const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession()
-        
-        if (sessionError) {
-          console.error('Session error:', sessionError)
-          setState({
-            isAdmin: false,
-            isLoading: false,
-            user: null,
-            error: 'Authentication error'
-          })
-          return
-        }
-        
-        session = currentSession
-        attempts++
-        
-        // If no session on first attempt, wait briefly for hydration
-        if (!session && attempts < maxAttempts) {
-          // No session found, waiting for hydration
-          await new Promise(resolve => setTimeout(resolve, 200 + attempts * 100))
-        }
-      }
-
-      if (!session) {
-        // No session found after all attempts
-        setState({
-          isAdmin: false,
-          isLoading: false,
-          user: null,
-          error: null
-        })
-        return
-      }
-
-      // Session found, checking admin role
-
-      // If we have a session, check admin role via API route
-      // Checking admin role via API
+      // Fast path: ask the server first (cookie-based auth is authoritative)
       const response = await fetch('/api/admin/auth-check', {
         method: 'GET',
         credentials: 'include',
@@ -137,33 +87,31 @@ export function useAdminAuth(requireAuth: boolean = true): AdminAuthState & Admi
 
       const result: ApiResponse<{ isAdmin: boolean; user?: any }> = await response.json()
       // API result processed
-      console.log('🔍 AUTH HOOK - API Result:', result)
 
-      if (!result.success) {
-        console.log('🚨 AUTH HOOK - API Result not successful:', result.error)
-        setState({
-          isAdmin: false,
-          isLoading: false,
-          user: null,
-          error: result.error || 'Authorization failed'
-        })
+      if (result.success && result.data?.isAdmin) {
+        const finalUser = result.data.user ? { id: result.data.user.id, email: result.data.user.email || '' } : null
+        const newState = { isAdmin: true, isLoading: false, user: finalUser, error: null }
+        setState(newState)
+        authResolved.current = true
         return
       }
 
-      const newState = {
-        isAdmin: result.data?.isAdmin || false,
-        isLoading: false,
-        user: result.data?.user || null,
-        error: null
+      // Slow path: not admin per server; confirm session presence to finalize
+      let session: any = null
+      const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession()
+      if (sessionError) {
       }
-      
-      console.log('✅ AUTH HOOK - Setting final auth state:', newState)
-      // Setting final auth state
-      setState(newState)
+      session = currentSession
+      if (!session) {
+        setState({ isAdmin: false, isLoading: false, user: null, error: null })
+        authResolved.current = true
+        return
+      }
+
+      setState({ isAdmin: false, isLoading: false, user: null, error: null })
       authResolved.current = true
 
     } catch (error) {
-      console.error('Auth check error:', error)
       setState({
         isAdmin: false,
         isLoading: false,
@@ -190,7 +138,6 @@ export function useAdminAuth(requireAuth: boolean = true): AdminAuthState & Admi
       authCheckInProgress.current = false
       router.push('/auth/login')
     } catch (error) {
-      console.error('Sign out error:', error)
       setState(prev => ({
         ...prev,
         error: error instanceof Error ? error.message : 'Sign out failed'
@@ -203,28 +150,24 @@ export function useAdminAuth(requireAuth: boolean = true): AdminAuthState & Admi
 const timeoutId: NodeJS.Timeout | null = null
     
     const performAuthCheck = async () => {
-      console.log('🔍 AUTH HOOK - performAuthCheck called:', { 
         authResolved: authResolved.current,
         isMounted 
       })
       
       // Only perform auth check once per component lifecycle
       if (authResolved.current) {
-        console.log('🔍 AUTH HOOK - Auth already resolved, skipping')
         return
       }
       
       try {
         await checkAuth()
       } catch (error) {
-        console.error('🚨 AUTH HOOK - performAuthCheck error:', error)
       }
       
       // Only update state if component is still mounted
       if (!isMounted) return
     }
     
-    console.log('🔍 AUTH HOOK - useEffect triggered, starting performAuthCheck')
     
     // Use immediate execution with a small delay to ensure the component is mounted
     const localTimeoutId = setTimeout(() => {
@@ -236,7 +179,6 @@ const timeoutId: NodeJS.Timeout | null = null
     // Listen for auth state changes (optimized to reduce API calls)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        console.log('🔍 AUTH HOOK - Auth state change:', { event, hasSession: !!session })
         if (!isMounted) return
         
         if (event === 'SIGNED_OUT' || !session) {

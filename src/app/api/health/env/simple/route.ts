@@ -26,7 +26,6 @@ export async function GET() {
       timestamp: new Date().toISOString()
     })
   } catch (error) {
-    console.error('Error checking environment:', error)
     return NextResponse.json({
       status: 'error',
       error: 'Failed to check environment',

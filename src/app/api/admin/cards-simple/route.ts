@@ -14,10 +14,8 @@ async function retryOperation<T>(
       return await operation()
     } catch (error) {
       lastError = error as Error
-      console.warn(`❌ Attempt ${attempt}/${maxRetries} failed:`, error)
       
       if (attempt < maxRetries) {
-        console.log(`⏳ Retrying in ${delay}ms...`)
         await new Promise(resolve => setTimeout(resolve, delay))
         delay *= 2 // Exponential backoff
       }
@@ -28,7 +26,6 @@ async function retryOperation<T>(
 }
 
 export async function GET(request: NextRequest) {
-  console.log('🎯 ADMIN CARDS SIMPLE - Fetching real card data from database...')
   
   try {
     const supabase = createAdminClient()
@@ -38,7 +35,6 @@ export async function GET(request: NextRequest) {
     const businessId = searchParams.get('business_id')
     const cardType = searchParams.get('type') // 'stamp' or 'membership'
     
-    console.log('Query params:', { businessId, cardType })
     
     // Fetch stamp cards with retry logic
     const stampCardsOperation = async () => {
@@ -102,9 +98,7 @@ export async function GET(request: NextRequest) {
     if (!cardType || cardType === 'stamp') {
       try {
         stampCards = await retryOperation(stampCardsOperation)
-        console.log(`✅ Stamp cards fetched successfully: ${stampCards.length}`)
       } catch (stampError) {
-        console.error('❌ Failed to fetch stamp cards after retries:', stampError)
         // Continue with empty array - don't fail the entire request
       }
     }
@@ -113,9 +107,7 @@ export async function GET(request: NextRequest) {
     if (!cardType || cardType === 'membership') {
       try {
         membershipCards = await retryOperation(membershipCardsOperation)
-        console.log(`✅ Membership cards fetched successfully: ${membershipCards.length}`)
       } catch (membershipError) {
-        console.error('❌ Failed to fetch membership cards after retries:', membershipError)
         // Continue with empty array - don't fail the entire request
       }
     }
@@ -152,7 +144,6 @@ export async function GET(request: NextRequest) {
       }
     }
     
-    console.log('✅ ADMIN CARDS SIMPLE - Real data fetched:', {
       stampCards: processedStampCards.length,
       membershipCards: processedMembershipCards.length,
       totalCards: processedStampCards.length + processedMembershipCards.length
@@ -161,7 +152,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(result)
     
   } catch (error) {
-    console.error('❌ ADMIN CARDS SIMPLE - Critical Error:', error)
     
     // Return fallback data instead of failing completely
     const fallbackResult = {
@@ -184,7 +174,6 @@ export async function GET(request: NextRequest) {
       }
     }
     
-    console.log('🔄 ADMIN CARDS SIMPLE - Returning fallback data due to errors')
     
     return NextResponse.json(fallbackResult)
   }

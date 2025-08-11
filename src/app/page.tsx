@@ -56,7 +56,7 @@ export default function HomePage() {
       </section>
 
       {/* Social Proof Strip */}
-      <div className="bg-white/70 dark:bg-slate-900/60 border-y border-gray-100 dark:border-slate-800">
+  <div className="bg-card/80 border-y border-border/60">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="text-sm text-gray-600 dark:text-gray-300">Trusted by businesses across coffee, salon, retail, and fitness</div>
           <div className="hidden md:flex items-center gap-6 opacity-80">

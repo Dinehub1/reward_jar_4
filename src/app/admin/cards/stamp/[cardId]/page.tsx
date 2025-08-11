@@ -141,7 +141,6 @@ export default function AdminStampCardDetailPage({
         .order('created_at', { ascending: false })
 
       if (customersError) {
-        console.error('Error fetching customers:', customersError)
       } else {
         const processedCustomers = (customersData || []).map(customer => ({
           ...customer,
@@ -168,7 +167,6 @@ export default function AdminStampCardDetailPage({
       }
 
     } catch (err) {
-      console.error('Error fetching card details:', err)
       setError(err instanceof Error ? err.message : 'Failed to load card details')
     } finally {
       setLoading(false)

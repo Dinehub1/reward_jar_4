@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin-client'
 
 export async function POST(request: NextRequest) {
-  console.log('🎯 REALISTIC CARD GENERATION - Creating diverse test data...')
   
   try {
     const supabase = createAdminClient()
@@ -31,14 +30,12 @@ export async function POST(request: NextRequest) {
       throw new Error(`Failed to fetch customers: ${customerError.message}`)
     }
 
-    console.log(`📊 Found ${businesses?.length} businesses and ${customers?.length} customers`)
 
     const customerCardsToCreate = []
     const walletTypes: ('apple' | 'google' | 'pwa')[] = ['apple', 'google', 'pwa']
 
     // Generate realistic customer cards for each business
     for (const business of businesses!) {
-      console.log(`🏢 Processing ${business.name}...`)
       
       // For each stamp card, create 5-15 customer cards
       for (const stampCard of business.stamp_cards) {
@@ -57,7 +54,6 @@ export async function POST(request: NextRequest) {
             wallet_pass_id: `${walletType}_${stampCard.id}_${Date.now()}_${i}`
           })
         }
-        console.log(`  📮 Created ${numCards} cards for ${stampCard.name}`)
       }
       
       // For each membership card, create 3-10 customer cards
@@ -83,11 +79,9 @@ export async function POST(request: NextRequest) {
             wallet_pass_id: `${walletType}_${membershipCard.id}_${Date.now()}_${i}`
           })
         }
-        console.log(`  🎟️ Created ${numCards} cards for ${membershipCard.name}`)
       }
     }
 
-    console.log(`🎯 Total customer cards to create: ${customerCardsToCreate.length}`)
 
     // Insert customer cards in smaller batches
     const batchSize = 100
@@ -104,16 +98,13 @@ export async function POST(request: NextRequest) {
           .select('id')
         
         if (insertError) {
-          console.error(`❌ Error inserting batch ${Math.floor(i/batchSize) + 1}:`, insertError.message)
           failedInserts += batch.length
           continue
         }
         
         insertedCards += batch.length
-        console.log(`✅ Inserted batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(customerCardsToCreate.length/batchSize)} (${insertedCards}/${customerCardsToCreate.length} cards)`)
         
       } catch (error) {
-        console.error(`❌ Exception inserting batch ${Math.floor(i/batchSize) + 1}:`, error)
         failedInserts += batch.length
         continue
       }
@@ -176,13 +167,10 @@ export async function POST(request: NextRequest) {
       }))
     }
 
-    console.log('🎉 REALISTIC CARD GENERATION COMPLETE!')
-    console.log('📊 Final Results:', result.stats)
 
     return NextResponse.json(result)
 
   } catch (error) {
-    console.error('❌ REALISTIC CARD GENERATION ERROR:', error)
     return NextResponse.json(
       { 
         success: false, 

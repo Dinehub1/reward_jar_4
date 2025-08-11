@@ -46,11 +46,11 @@ const getFrameColors = (variant: IPhone15FrameProps['variant']) => {
   }
 }
 
-export const IPhone15Frame: React.FC<IPhone15FrameProps> = ({ 
+export function IPhone15Frame({  
   children, 
   variant = 'natural',
   className = ''
-}) => {
+ }: IPhone15FrameProps) {
   const colors = getFrameColors(variant)
   
   return (
@@ -141,16 +141,16 @@ export const IPhone15Frame: React.FC<IPhone15FrameProps> = ({
 }
 
 // Enhanced version with interactive features
-export const InteractiveIPhone15Frame: React.FC<IPhone15FrameProps & {
-  onDeviceInteraction?: () => void
-  showReflection?: boolean
-}> = ({ 
+export function InteractiveIPhone15Frame({ 
   children, 
   variant = 'natural',
   className = '',
   onDeviceInteraction,
   showReflection = true
-}) => {
+}: IPhone15FrameProps & {
+  onDeviceInteraction?: () => void
+  showReflection?: boolean
+}) {
   return (
     <motion.div
       whileHover={{ scale: 1.02 }}

@@ -123,7 +123,6 @@ export async function POST(request: NextRequest) {
     const { cleanup = false, businesses = 2, stampCardsPerBusiness = 1, membershipCardsPerBusiness = 1, customersPerCard = 1 } = body
 
     if (cleanup) {
-      console.log('🧹 Cleaning up admin test data...')
       
       // Delete in reverse dependency order
       await supabase.from('customer_cards').delete().in('id', CUSTOMER_CARDS.map(c => c.id))
@@ -140,14 +139,11 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    console.log('🚀 ADMIN-CARDS API CALLED at', new Date().toISOString())
-    console.log('🎯 Creating admin test data ecosystem...')
 
     // 1. Use existing users from the database or create minimal test data
     // Since users table has foreign key to auth.users, we'll use existing users
     // or create them with a different approach
     
-    console.log('📝 Note: Using existing users or creating test data without auth constraints')
     
     // Try to find existing admin user, or use service role approach
     const { data: existingAdmin } = await supabase
@@ -176,7 +172,6 @@ export async function POST(request: NextRequest) {
     const businessUserId = existingBusiness?.id || BUSINESS_OWNERS[0].id
     const customerUserId = existingCustomer?.id || TEST_CUSTOMER_USER.id
 
-    console.log('👥 Using user IDs:', { adminUserId, businessUserId, customerUserId })
 
     // 2. Create test businesses using existing user IDs
     const updatedBusinesses = TEST_BUSINESSES.map((business, index) => ({
@@ -189,7 +184,6 @@ export async function POST(request: NextRequest) {
       .upsert(updatedBusinesses, { onConflict: 'id' })
 
     if (businessError) {
-      console.error('Business creation error:', businessError)
     }
 
     // 3. Create customer profile using existing user ID
@@ -203,7 +197,6 @@ export async function POST(request: NextRequest) {
       .upsert(updatedCustomer, { onConflict: 'id' })
 
     if (customerError) {
-      console.error('Customer creation error:', customerError)
     }
 
     // 4. Create admin-created stamp cards first
@@ -213,9 +206,7 @@ export async function POST(request: NextRequest) {
       .select()
 
     if (stampError) {
-      console.error('Stamp cards creation error:', stampError)
     } else {
-      console.log('✅ Stamp cards created successfully:', stampCards?.length)
     }
 
     // 5. Create admin-created membership cards
@@ -225,9 +216,7 @@ export async function POST(request: NextRequest) {
       .select()
 
     if (membershipError) {
-      console.error('Membership cards creation error:', membershipError)
     } else {
-      console.log('✅ Membership cards created successfully:', membershipCards?.length)
     }
 
     // 5b. Create corresponding stamp_cards entries for membership cards
@@ -249,17 +238,12 @@ export async function POST(request: NextRequest) {
         .select()
 
       if (membershipStampError) {
-        console.error('Membership stamp cards creation error:', membershipStampError)
       } else {
-        console.log('✅ Membership stamp cards created successfully:', createdMembershipStampCards?.length)
         membershipStampCards = createdMembershipStampCards
       }
     }
 
     // 6. Create customer cards for testing using actual created card IDs
-    console.log('🎯 Starting customer cards creation process...')
-    console.log('📊 Stamp cards result:', { count: stampCards?.length, ids: stampCards?.map(c => c.id) })
-    console.log('📊 Membership cards result:', { count: membershipCards?.length, ids: membershipCards?.map(c => c.id) })
     const customerCardsToCreate = []
     
     // Create customer card for stamp card (if stamp card was created successfully)
@@ -293,7 +277,6 @@ export async function POST(request: NextRequest) {
     let customerCardsError = null
 
     if (customerCardsToCreate.length > 0) {
-      console.log('🔨 About to create customer cards:', customerCardsToCreate)
       const result = await supabase
         .from('customer_cards')
         .upsert(customerCardsToCreate, { onConflict: 'id' })
@@ -303,13 +286,9 @@ export async function POST(request: NextRequest) {
       customerCardsError = result.error
 
           if (customerCardsError) {
-      console.error('❌ Customer cards creation error:', customerCardsError)
     } else {
-      console.log('✅ Customer cards created successfully:', customerCards?.length)
-      console.log('📋 Customer cards data:', customerCards)
     }
     } else {
-      console.log('⚠️ No customer cards created - stamp/membership cards creation failed')
     }
 
     return NextResponse.json({
@@ -347,7 +326,6 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error in admin cards dev-seed:', error)
     return NextResponse.json({
       success: false,
       error: 'Failed to create admin test data',
@@ -405,7 +383,6 @@ export async function GET() {
     })
 
   } catch (error) {
-    console.error('Error checking admin test data:', error)
     return NextResponse.json({
       success: false,
       error: 'Failed to check admin test data status'

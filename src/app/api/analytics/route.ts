@@ -40,7 +40,6 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error('Analytics logging error:', error)
       return NextResponse.json(
         { error: 'Failed to log analytics event' },
         { status: 500 }
@@ -50,7 +49,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, event_id: data.id })
 
   } catch (error) {
-    console.error('Analytics POST error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -112,7 +110,6 @@ export async function GET(request: NextRequest) {
     )
 
   } catch (error) {
-    console.error('Analytics GET error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -155,7 +152,6 @@ async function getAdminAnalytics(timeRange: string, eventType: string) {
       }
     })
   } catch (error) {
-    console.error('Admin analytics error:', error)
     return NextResponse.json(
       { error: 'Failed to fetch admin analytics' },
       { status: 500 }
@@ -229,7 +225,6 @@ async function getBusinessAnalytics(userId: string, timeRange: string, eventType
       }
     })
   } catch (error) {
-    console.error('Business analytics error:', error)
     return NextResponse.json(
       { error: 'Failed to fetch business analytics' },
       { status: 500 }
@@ -258,7 +253,6 @@ async function getCustomerAnalytics(userId: string, timeRange: string) {
       }
     })
   } catch (error) {
-    console.error('Customer analytics error:', error)
     return NextResponse.json(
       { error: 'Failed to fetch customer analytics' },
       { status: 500 }

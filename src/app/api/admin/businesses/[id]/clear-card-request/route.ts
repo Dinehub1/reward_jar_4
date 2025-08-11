@@ -15,7 +15,6 @@ export async function POST(
   try {
     const { id: businessId } = await params
     
-    console.log('🔄 Admin API: Clearing card request for business ID:', businessId)
 
     // ✅ Server-side only - safe to use admin client
     const supabase = createAdminClient()
@@ -32,7 +31,6 @@ export async function POST(
       .single()
 
     if (updateError) {
-      console.error('❌ Admin API: Failed to clear card request:', updateError)
       return NextResponse.json(
         { 
           success: false, 
@@ -44,7 +42,6 @@ export async function POST(
     }
 
     if (!business) {
-      console.error('❌ Admin API: Business not found:', businessId)
       return NextResponse.json(
         { 
           success: false, 
@@ -54,7 +51,6 @@ export async function POST(
       )
     }
 
-    console.log('✅ Admin API: Card request cleared successfully:', business.name)
 
     // Optional: Log this admin action for audit purposes
     try {
@@ -70,7 +66,6 @@ export async function POST(
         })
     } catch (logError) {
       // Don't fail the main operation if logging fails
-      console.warn('⚠️ Admin API: Failed to log action:', logError)
     }
 
     return NextResponse.json({
@@ -80,7 +75,6 @@ export async function POST(
     } as ApiResponse<typeof business>)
 
   } catch (error) {
-    console.error('❌ Admin API: Unexpected error clearing card request:', error)
     return NextResponse.json(
       { 
         success: false, 

@@ -45,7 +45,6 @@ export async function POST(request: NextRequest) {
 
     // For development, we'll create a simple session token
     // In a real app, you'd verify the password properly
-    console.log('🔧 DEV LOGIN - User found:', {
       id: userData.id,
       email: userData.email,
       role: userData.role_id
@@ -63,7 +62,6 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Dev login error:', error)
     return NextResponse.json(
       { error: 'Login failed', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

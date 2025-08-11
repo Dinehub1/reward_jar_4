@@ -121,7 +121,6 @@ export default function StampCardRewardsPage() {
           .order('created_at', { ascending: false })
 
         if (rewardsError) {
-          console.error('Error fetching rewards:', rewardsError)
           setError('Failed to load rewards')
           return
         }
@@ -144,7 +143,6 @@ export default function StampCardRewardsPage() {
           setFilteredRewards(formattedRewards)
         }
       } catch (err) {
-        console.error('Error fetching data:', err)
         setError('Something went wrong. Please try again.')
       } finally {
         setLoading(false)

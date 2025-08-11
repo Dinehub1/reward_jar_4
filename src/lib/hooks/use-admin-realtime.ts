@@ -135,7 +135,6 @@ export function useAdminRealtime() {
     eventType: string, 
     record: any
   ) => {
-    console.log(`🔄 Processing ${table} ${eventType} for admin dashboard`)
 
     // Add small delay to ensure database consistency
     setTimeout(async () => {
@@ -170,9 +169,7 @@ export function useAdminRealtime() {
             await invalidateAdminDashboard()
         }
 
-        console.log(`✅ Admin cache invalidated for ${table} ${eventType}`)
       } catch (error) {
-        console.error(`❌ Failed to invalidate cache for ${table} change:`, error)
       }
     }, 500) // 500ms delay for database consistency
   }
@@ -192,24 +189,20 @@ export function useAdminNotifications() {
   const channelRef = useRef<any>(null)
 
   useEffect(() => {
-    console.log('📢 Setting up admin notification listener...')
 
     const channel = supabase.channel('admin-notifications')
 
     // Listen for custom admin dashboard notifications
     channel.on('broadcast', { event: 'admin_update' }, (payload) => {
-      console.log('📢 Admin notification received:', payload)
       handleAdminNotification(payload.payload)
     })
 
     channel.subscribe((status) => {
-      console.log('📢 Admin notifications subscription status:', status)
     })
 
     channelRef.current = channel
 
     return () => {
-      console.log('📢 Cleaning up admin notifications...')
       if (channelRef.current) {
         channelRef.current.unsubscribe()
         channelRef.current = null
@@ -237,7 +230,6 @@ export function useAdminNotifications() {
         break
 
       default:
-        console.log(`📢 Unknown admin notification type: ${type}`)
     }
   }
 

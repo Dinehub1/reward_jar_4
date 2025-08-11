@@ -30,24 +30,24 @@
   .dark {
     /* Dark mode colors */
     --background: 3 7 18; /* gray-950 */
-    --foreground: 248 250 252; /* slate-50 */
-    --card: 15 23 42; /* slate-800 */
-    --card-foreground: 248 250 252; /* slate-50 */
-    --popover: 15 23 42; /* slate-800 */
-    --popover-foreground: 248 250 252; /* slate-50 */
+    --foreground: 241 245 249; /* slate-100 for better legibility */
+    --card: 17 24 39; /* slate-900 */
+    --card-foreground: 241 245 249; /* slate-100 */
+    --popover: 17 24 39; /* slate-900 */
+    --popover-foreground: 241 245 249; /* slate-100 */
     --primary: 59 130 246; /* blue-500 */
-    --primary-foreground: 15 23 42; /* slate-800 */
+    --primary-foreground: 255 255 255; /* white for contrast */
     --secondary: 30 41 59; /* slate-700 */
-    --secondary-foreground: 248 250 252; /* slate-50 */
+    --secondary-foreground: 241 245 249; /* slate-100 */
     --muted: 30 41 59; /* slate-700 */
     --muted-foreground: 148 163 184; /* slate-400 */
     --accent: 30 41 59; /* slate-700 */
-    --accent-foreground: 248 250 252; /* slate-50 */
+    --accent-foreground: 241 245 249; /* slate-100 */
     --destructive: 220 38 38; /* red-600 */
-    --destructive-foreground: 248 250 252; /* slate-50 */
-    --border: 51 65 85; /* slate-600 */
-    --input: 51 65 85; /* slate-600 */
-    --ring: 147 197 253; /* blue-300 */
+    --destructive-foreground: 241 245 249; /* slate-100 */
+    --border: 71 85 105; /* slate-600 -> slightly lighter for clarity */
+    --input: 71 85 105; /* slate-600 */
+    --ring: 96 165 250; /* blue-400 */
   }
 
   * {
@@ -58,6 +58,10 @@
     @apply bg-background text-foreground transition-colors duration-300;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
+  
+  /* Elevation tokens for dark mode to reduce washed overlays */
+  .dark .shadow-card { box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+  .dark .shadow-card-sm { box-shadow: 0 4px 14px rgba(0,0,0,0.35); }
   
   h1, h2, h3, h4, h5, h6 {
     @apply text-foreground;
@@ -93,4 +97,40 @@
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
     @apply bg-muted-foreground/50;
   }
+}
+
+/* Dark mode fix-ups for legacy utility classes using light colors
+   Map common hardcoded Tailwind utilities to design tokens when `.dark` is present.
+   This avoids half light/half dark UIs without refactoring every component. */
+@layer utilities {
+  /* Backgrounds (skip when an explicit dark: variant is present on the element) */
+  .dark :where(.bg-white):not([class*="dark:bg-"]) { background-color: rgb(var(--card) / var(--tw-bg-opacity)) !important; }
+  .dark :where(.bg-gray-50):not([class*="dark:bg-"]) { background-color: rgb(var(--muted) / var(--tw-bg-opacity)) !important; }
+  .dark :where(.bg-gray-100):not([class*="dark:bg-"]) { background-color: rgb(var(--muted) / var(--tw-bg-opacity)) !important; }
+  .dark :where(.bg-slate-50):not([class*="dark:bg-"]) { background-color: rgb(var(--muted) / var(--tw-bg-opacity)) !important; }
+  .dark :where(.bg-gray-200):not([class*="dark:bg-"]) { background-color: rgb(var(--muted) / var(--tw-bg-opacity)) !important; }
+
+  /* Common translucent white backgrounds */
+  .dark :where(.bg-white\/5):not([class*="dark:bg-"])  { background-color: rgb(var(--card) / 0.05) !important; }
+  .dark :where(.bg-white\/10):not([class*="dark:bg-"]) { background-color: rgb(var(--card) / 0.10) !important; }
+  .dark :where(.bg-white\/20):not([class*="dark:bg-"]) { background-color: rgb(var(--card) / 0.20) !important; }
+  .dark :where(.bg-white\/25):not([class*="dark:bg-"]) { background-color: rgb(var(--card) / 0.25) !important; }
+  .dark :where(.bg-white\/30):not([class*="dark:bg-"]) { background-color: rgb(var(--card) / 0.30) !important; }
+  .dark :where(.bg-white\/70):not([class*="dark:bg-"]) { background-color: rgb(var(--card) / 0.70) !important; }
+  .dark :where(.bg-white\/80):not([class*="dark:bg-"]) { background-color: rgb(var(--card) / 0.80) !important; }
+  .dark :where(.bg-white\/90):not([class*="dark:bg-"]) { background-color: rgb(var(--card) / 0.90) !important; }
+
+  /* Text colors (skip when explicit dark: text is present) */
+  .dark :where(.text-black):not([class*="dark:text-"]) { color: rgb(var(--foreground) / var(--tw-text-opacity)) !important; }
+  .dark :where(.text-gray-900):not([class*="dark:text-"]) { color: rgb(var(--foreground) / var(--tw-text-opacity)) !important; }
+  .dark :where(.text-gray-800):not([class*="dark:text-"]) { color: rgb(var(--foreground) / var(--tw-text-opacity)) !important; }
+  .dark :where(.text-gray-700):not([class*="dark:text-"]) { color: rgb(var(--muted-foreground) / var(--tw-text-opacity)) !important; }
+  .dark :where(.text-gray-600):not([class*="dark:text-"]) { color: rgb(var(--muted-foreground) / var(--tw-text-opacity)) !important; }
+
+  /* Borders (skip when explicit dark: border is present) */
+  .dark :where(.border-gray-50):not([class*="dark:border-"]) { border-color: rgb(var(--border) / var(--tw-border-opacity)) !important; }
+  .dark :where(.border-gray-100):not([class*="dark:border-"]) { border-color: rgb(var(--border) / var(--tw-border-opacity)) !important; }
+  .dark :where(.border-gray-200):not([class*="dark:border-"]) { border-color: rgb(var(--border) / var(--tw-border-opacity)) !important; }
+  .dark :where(.border-gray-300):not([class*="dark:border-"]) { border-color: rgb(var(--border) / var(--tw-border-opacity)) !important; }
+  .dark :where(.border-slate-200):not([class*="dark:border-"]) { border-color: rgb(var(--border) / var(--tw-border-opacity)) !important; }
 }

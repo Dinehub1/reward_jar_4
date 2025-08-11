@@ -106,7 +106,6 @@ function CustomerDashboard() {
           })
         }
       } catch (error) {
-        console.error('Error fetching customer cards:', error)
         // ✅ FIXED: Set empty state instead of letting error propagate to render
         setCustomerCards([])
         setStats({

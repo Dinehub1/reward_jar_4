@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin-client'
 
 export async function GET(request: NextRequest) {
-  console.log('🏥 ADMIN HEALTH CHECK - Starting comprehensive health check...')
   
   const results = {
     timestamp: new Date().toISOString(),
@@ -36,7 +35,6 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = createAdminClient()
     results.admin_client.creation = 'success'
-    console.log('✅ Admin client created successfully')
 
     // Test database connection
     try {
@@ -48,16 +46,13 @@ export async function GET(request: NextRequest) {
       if (error) {
         results.admin_client.connection = 'failed'
         results.issues.push(`Database connection failed: ${error.message}`)
-        console.error('❌ Database connection failed:', error)
       } else {
         results.admin_client.connection = 'success'
         results.admin_client.data_access = 'success'
-        console.log('✅ Database connection successful')
       }
     } catch (dbError) {
       results.admin_client.connection = 'error'
       results.issues.push(`Database error: ${dbError instanceof Error ? dbError.message : 'Unknown error'}`)
-      console.error('❌ Database error:', dbError)
     }
 
     // Test table access and get counts
@@ -106,17 +101,14 @@ export async function GET(request: NextRequest) {
         results.issues.push(`Membership cards table access failed: ${membershipCardsResult.reason}`)
       }
 
-      console.log('📊 Database table counts:', results.database_tables)
 
     } catch (tableError) {
       results.issues.push(`Table access error: ${tableError instanceof Error ? tableError.message : 'Unknown error'}`)
-      console.error('❌ Table access error:', tableError)
     }
 
   } catch (clientError) {
     results.admin_client.creation = 'failed'
     results.issues.push(`Admin client creation failed: ${clientError instanceof Error ? clientError.message : 'Unknown error'}`)
-    console.error('❌ Admin client creation failed:', clientError)
   }
 
   // Test API endpoints
@@ -167,9 +159,6 @@ export async function GET(request: NextRequest) {
   const healthStatus = results.issues.length === 0 ? 'healthy' : 
                       results.issues.length <= 2 ? 'warning' : 'critical'
 
-  console.log(`🏥 ADMIN HEALTH CHECK - Status: ${healthStatus.toUpperCase()}`)
-  console.log(`📊 Issues found: ${results.issues.length}`)
-  console.log(`💡 Recommendations: ${results.recommendations.length}`)
 
   return NextResponse.json({
     status: healthStatus,

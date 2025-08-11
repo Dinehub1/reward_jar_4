@@ -176,7 +176,6 @@ export default function MembershipDetailsPage() {
       setCustomerStats(mockCustomerStats)
 
     } catch (err) {
-      console.error('Error fetching membership details:', err)
       setError(err instanceof Error ? err.message : 'Failed to load membership details')
     } finally {
       setLoading(false)
@@ -206,7 +205,6 @@ export default function MembershipDetailsPage() {
 
   const generateQRCode = () => {
     // TODO: Implement QR code generation
-    console.log('Generate QR code for membership card:', membershipId)
     // This would typically open a modal or navigate to QR generation page
   }
 

@@ -177,7 +177,6 @@ export default function CustomerDetailPage() {
         }
 
       } catch (err) {
-        console.error('Error fetching data:', err)
         setError('Something went wrong. Please try again.')
       } finally {
         setLoading(false)
@@ -217,7 +216,6 @@ export default function CustomerDetailPage() {
       const walletUrl = `${baseUrl}/api/wallet/${walletType}/${customer.id}`
       window.open(walletUrl, '_blank')
     } catch (error) {
-      console.error('Error generating wallet pass:', error)
     }
   }
 

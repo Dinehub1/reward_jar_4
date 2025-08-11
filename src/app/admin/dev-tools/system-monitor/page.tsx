@@ -55,7 +55,6 @@ export default function SystemMonitorPage() {
 
   // Initialize metrics
   useEffect(() => {
-    console.log('🔍 System Monitor - Initializing...')
     const initialMetrics: SystemMetric[] = [
       {
         id: 'total-businesses',
@@ -143,11 +142,9 @@ export default function SystemMonitorPage() {
     setMetrics(initialMetrics)
     setServices(initialServices)
     
-    console.log('🔍 System Monitor - Initial services:', initialServices.map(s => ({ name: s.name, status: s.status, endpoint: s.endpoint })))
     
     // Load real data after a short delay to ensure component is mounted
     setTimeout(() => {
-      console.log('🔍 System Monitor - Loading system data...')
       loadSystemData()
     }, 1000)
   }, [])
@@ -182,7 +179,6 @@ export default function SystemMonitorPage() {
       await checkServicesHealth()
       
     } catch (error) {
-      console.error('Error loading system data:', error)
       // Set error state for metrics that failed to load
       setMetrics(prev => prev.map(metric => ({
         ...metric,
@@ -196,15 +192,11 @@ export default function SystemMonitorPage() {
   }
 
   const checkServicesHealth = async () => {
-    console.log('🔍 System Monitor - Starting health check...')
-    console.log('🔍 Current services:', services.map(s => ({ name: s.name, status: s.status })))
     
     try {
       const healthChecks = services.map(async (service) => {
-        console.log(`🔍 Checking health for: ${service.name} at ${service.endpoint}`)
         
         if (!service.endpoint) {
-          console.log(`⚠️ No endpoint for ${service.name}`)
           return service
         }
 
@@ -222,13 +214,10 @@ export default function SystemMonitorPage() {
           let status: 'online' | 'degraded' | 'offline'
           if (response.ok) {
             status = 'online'
-            console.log(`✅ ${service.name}: ${response.status} in ${responseTime}ms`)
           } else if (response.status >= 400 && response.status < 500) {
             status = 'degraded'
-            console.log(`⚠️ ${service.name}: ${response.status} (degraded)`)
           } else {
             status = 'offline'
-            console.log(`❌ ${service.name}: ${response.status} (offline)`)
           }
           
           return {
@@ -240,7 +229,6 @@ export default function SystemMonitorPage() {
           }
         } catch (error) {
           const responseTime = Date.now() - startTime
-          console.log(`❌ ${service.name} failed:`, error)
           
           return {
             ...service,
@@ -253,7 +241,6 @@ export default function SystemMonitorPage() {
       })
 
       const updatedServices = await Promise.all(healthChecks)
-      console.log('🔍 Final health check results:', updatedServices.map(s => ({ 
         name: s.name, 
         status: s.status, 
         responseTime: s.responseTime 
@@ -261,10 +248,8 @@ export default function SystemMonitorPage() {
       
       setServices(updatedServices)
       setLastRefresh(new Date())
-      console.log('✅ Health check completed, services updated')
       
     } catch (error) {
-      console.error('❌ Health check failed:', error)
     }
   }
 
@@ -341,7 +326,6 @@ export default function SystemMonitorPage() {
     : 0
 
   // Debug logging for health calculation
-  console.log('🔍 Health Calculation:', {
     services: services.map(s => ({ name: s.name, status: s.status })),
     overallHealth,
     healthPercentage
@@ -374,8 +358,6 @@ export default function SystemMonitorPage() {
               </Button>
               <Button 
                 onClick={() => {
-                  console.log('🔍 Check Health button clicked!')
-                  console.log('🔍 Current services before check:', services)
                   checkServicesHealth()
                 }} 
                 disabled={isLoading}

@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin-client'
 
 export async function POST(request: NextRequest) {
-  console.log('🌱 REALISTIC DATA SEEDING - Starting comprehensive data creation...')
   
   try {
     const supabase = createAdminClient()
@@ -17,7 +16,6 @@ export async function POST(request: NextRequest) {
       throw new Error(`Failed to fetch businesses: ${businessError?.message}`)
     }
     
-    console.log(`📊 Found ${businesses.length} businesses to assign customers to`)
     
     // 2. Get existing stamp and membership cards
     const { data: stampCards, error: stampError } = await supabase
@@ -34,7 +32,6 @@ export async function POST(request: NextRequest) {
       throw new Error(`Failed to fetch cards: ${stampError?.message || membershipError?.message}`)
     }
     
-    console.log(`🎴 Found ${stampCards?.length || 0} stamp cards and ${membershipCards?.length || 0} membership cards`)
     
     let customersCreated = 0
     let customerCardsCreated = 0
@@ -68,7 +65,6 @@ export async function POST(request: NextRequest) {
           .single()
         
         if (userError) {
-          console.log(`⚠️ Skipping user creation (might already exist): ${customerEmail}`)
           continue
         }
         
@@ -84,12 +80,10 @@ export async function POST(request: NextRequest) {
           .single()
         
         if (customerError) {
-          console.log(`⚠️ Customer creation failed: ${customerError.message}`)
           continue
         }
         
         customersCreated++
-        console.log(`👤 Created customer: ${customerName} for business: ${business.name}`)
         
         // 4. Assign 1-3 cards to each customer
         const cardsToAssign = Math.floor(Math.random() * 3) + 1
@@ -99,7 +93,6 @@ export async function POST(request: NextRequest) {
         ]
         
         if (businessCards.length === 0) {
-          console.log(`⚠️ No cards found for business: ${business.name}`)
           continue
         }
         
@@ -150,7 +143,6 @@ export async function POST(request: NextRequest) {
                 sessionUsageCreated++
               }
               
-              console.log(`  🎯 Assigned stamp card: ${card.name} (${currentStamps}/${(card as any).total_stamps} stamps)`)
             }
           } else if (isMembershipCard) {
             // Create membership card for customer
@@ -197,7 +189,6 @@ export async function POST(request: NextRequest) {
                 sessionUsageCreated++
               }
               
-              console.log(`  🎗️ Assigned membership: ${card.name} (${sessionsUsed}/${totalSessions} sessions)`)
             }
           }
         }
@@ -233,12 +224,10 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString()
     }
     
-    console.log('✅ REALISTIC DATA SEEDING - Complete!', result.summary)
     
     return NextResponse.json(result)
     
   } catch (error) {
-    console.error('💥 REALISTIC DATA SEEDING - Error:', error)
     return NextResponse.json({
       success: false,
       error: 'Failed to seed realistic data',

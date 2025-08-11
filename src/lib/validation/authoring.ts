@@ -6,6 +6,7 @@ export const AuthoringSchema = z.object({
   businessName: z.string().optional(),
   businessLogoUrl: z.string().url('Logo must be a valid URL').optional().or(z.literal('')),
   type: z.enum(['stamp', 'membership']),
+  membership_mode: z.enum(['sessions', 'discount']).optional(),
 
   cardColor: z.string().regex(/^#([0-9a-fA-F]{6})$/, 'Color must be a hex like #AABBCC'),
   iconEmoji: z.string().min(1, 'Emoji is required'),
@@ -18,6 +19,16 @@ export const AuthoringSchema = z.object({
   cardDescription: z.string().max(120).optional(),
   howToEarnStamp: z.string().max(120).optional(),
   rewardDetails: z.string().max(200).optional(),
+  // Discount membership fields (when membership_mode = 'discount')
+  discountType: z.enum(['percent', 'amount']).optional(),
+  discountValue: z.number().int().positive().optional(),
+  minSpendCents: z.number().int().nonnegative().optional(),
+  stackable: z.boolean().optional(),
+  maxUsesPerDay: z.number().int().positive().optional(),
+  maxUsesPerWeek: z.number().int().positive().optional(),
+  validityWindows: z.any().optional(),
+  eligibleCategories: z.array(z.string()).optional(),
+  eligibleSkus: z.array(z.string()).optional(),
 })
 
 export type AuthoringInput = z.infer<typeof AuthoringSchema>

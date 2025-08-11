@@ -1,0 +1,48 @@
+---
+alwaysApply: true
+---
+# RewardJar Project Rules (Canonical)
+
+## Duplicate and Conflict Prevention
+- Before creating any file, search the repo for existing equivalents by purpose and name. Prefer editing or reusing existing implementations.
+- Do not create multiple files for the same conceptual rules. Maintain this file as the single source of truth under `.cursor/rules/000-rewardjar-project.mdc`.
+- When adding components/utilities, check for similar modules and consolidate rather than duplicating. Propose refactors if overlap is detected.
+
+## Hydration Safety
+- Never render non-deterministic values on the server (e.g., `new Date().toLocale*`, `Math.random()`).
+- If a date/time must be shown, render it via a tiny client component (e.g., `components/shared/ClientDate.tsx`) and wrap server markup with `suppressHydrationWarning` where unavoidable.
+
+## Supabase Security Rules
+- Never expose `SUPABASE_SERVICE_ROLE_KEY` to client code.
+- `createAdminClient()` is allowed only in server code: server components, API routes, or server actions.
+- Client components may use `createClient()` for auth-only flows. Admin data must go through API routes or SWR hooks.
+
+## Next.js 15 Route Params
+- Treat `params` as a Promise. Client components: `use(params)`. Server components: `await params`.
+- Type route components as `{ params: Promise<Record<string, string>> }` or specific shapes.
+
+## Auth Loading Guards
+- Always gate auth-dependent UI on `isLoading`. Avoid premature redirects and flashes. Add minimal loading states.
+
+## Data Fetching Patterns
+- Admin dashboard data must use centralized SWR hooks and secure API routes. No direct DB calls from client.
+- Follow unified `customer_cards` constraints. Reference only one of `stamp_card_id` or `membership_card_id`.
+
+## API Contract Stability
+- When changing types/interfaces that are exported, propagate updates to all usage sites and API handlers.
+- Flag any breaking change and provide migration notes.
+
+## Shared Component Sync
+- If a shared component’s structure/props change, update all usage sites in the same edit. Prefer centralized props/types.
+
+## Implementation Pattern Reuse
+- Reuse existing hooks, utilities, and patterns. Propose DRY refactors when similar logic exists.
+
+## Code Quality
+- Strict TypeScript for Supabase responses. Strong error types. Comprehensive error boundaries.
+- Optimize React rendering; memoize expensive components; implement loading states for async work.
+
+## Execution Discipline
+- Plan changes, then apply edits atomically per logical unit. Run lint and tests after substantive edits.
+- Never generate duplicate directories or files differing only by naming convention.
+

@@ -16,7 +16,6 @@ export async function GET(
   try {
     const { id: businessId } = await params
     
-    console.log('🔍 Admin API: Fetching business details for ID:', businessId)
 
     // Use server client to authenticate the user
     const supabase = await createServerClient()
@@ -24,7 +23,6 @@ export async function GET(
     // Verify user authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
-      console.log('❌ Admin API: Authentication failed:', authError?.message)
       return NextResponse.json(
         { success: false, error: 'Authentication required' } as ApiResponse<never>,
         { status: 401 }
@@ -40,7 +38,6 @@ export async function GET(
       .single()
 
     if (userError || userData?.role_id !== 1) {
-      console.log('❌ Admin API: Access denied, user role:', userData?.role_id)
       return NextResponse.json(
         { success: false, error: 'Admin access required' } as ApiResponse<never>,
         { status: 403 }
@@ -55,14 +52,12 @@ export async function GET(
       .single()
 
     if (checkError) {
-      console.error('❌ Admin API: Error in simple business check:', checkError)
       return NextResponse.json(
         { success: false, error: `Business not found: ${checkError.message}` } as ApiResponse<never>,
         { status: 404 }
       )
     }
 
-    console.log('✅ Admin API: Business found, fetching detailed data...')
 
     // Fetch related data separately to avoid join issues
     const [
@@ -83,7 +78,6 @@ export async function GET(
       customer_cards: customerCards || []
     }
 
-    console.log('✅ Admin API: Business details fetched successfully:', business.name)
 
     return NextResponse.json({
       success: true,
@@ -92,7 +86,6 @@ export async function GET(
     } as ApiResponse<typeof business>)
 
   } catch (error) {
-    console.error('❌ Admin API: Error in business details fetch:', error)
     return NextResponse.json(
       { success: false, error: 'Internal server error' } as ApiResponse<never>,
       { status: 500 }
@@ -130,7 +123,6 @@ export async function PUT(
       formatted_address
     } = body
 
-    console.log('🔍 Admin API: Updating business:', businessId, { name, contact_email, status })
 
     // Use server client to authenticate the user
     const supabase = await createServerClient()
@@ -138,7 +130,6 @@ export async function PUT(
     // Verify user authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
-      console.log('❌ Admin API: Authentication failed:', authError?.message)
       return NextResponse.json(
         { success: false, error: 'Authentication required' } as ApiResponse<never>,
         { status: 401 }
@@ -154,7 +145,6 @@ export async function PUT(
       .single()
 
     if (userError || userData?.role_id !== 1) {
-      console.log('❌ Admin API: Access denied, user role:', userData?.role_id)
       return NextResponse.json(
         { success: false, error: 'Admin access required' } as ApiResponse<never>,
         { status: 403 }
@@ -211,14 +201,12 @@ export async function PUT(
       .single()
 
     if (error) {
-      console.error('❌ Admin API: Error updating business:', error)
       return NextResponse.json(
         { success: false, error: 'Failed to update business: ' + error.message } as ApiResponse<never>,
         { status: 500 }
       )
     }
 
-    console.log('✅ Admin API: Business updated successfully:', updatedBusiness.name)
 
     return NextResponse.json({
       success: true,
@@ -227,7 +215,6 @@ export async function PUT(
     } as ApiResponse<typeof updatedBusiness>)
 
   } catch (error) {
-    console.error('❌ Admin API: Error in business update:', error)
     return NextResponse.json(
       { success: false, error: 'Internal server error' } as ApiResponse<never>,
       { status: 500 }
@@ -247,7 +234,6 @@ export async function DELETE(
   try {
     const { id: businessId } = await params
     
-    console.log('🔍 Admin API: Deleting business:', businessId)
 
     // Use server client to authenticate the user
     const supabase = await createServerClient()
@@ -255,7 +241,6 @@ export async function DELETE(
     // Verify user authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
-      console.log('❌ Admin API: Authentication failed:', authError?.message)
       return NextResponse.json(
         { success: false, error: 'Authentication required' } as ApiResponse<never>,
         { status: 401 }
@@ -271,7 +256,6 @@ export async function DELETE(
       .single()
 
     if (userError || userData?.role_id !== 1) {
-      console.log('❌ Admin API: Access denied, user role:', userData?.role_id)
       return NextResponse.json(
         { success: false, error: 'Admin access required' } as ApiResponse<never>,
         { status: 403 }
@@ -327,14 +311,12 @@ export async function DELETE(
       .eq('id', businessId)
 
     if (deleteError) {
-      console.error('❌ Admin API: Error deleting business:', deleteError)
       return NextResponse.json(
         { success: false, error: 'Failed to delete business: ' + deleteError.message } as ApiResponse<never>,
         { status: 500 }
       )
     }
 
-    console.log('✅ Admin API: Business deleted successfully:', businessToDelete.name)
 
     return NextResponse.json({
       success: true,
@@ -343,7 +325,6 @@ export async function DELETE(
     } as ApiResponse<{ id: string, name: string }>)
 
   } catch (error) {
-    console.error('❌ Admin API: Error in business deletion:', error)
     return NextResponse.json(
       { success: false, error: 'Internal server error' } as ApiResponse<never>,
       { status: 500 }

@@ -319,13 +319,15 @@ const LivePreview = React.memo(({
   activeView,
   showBackPage = false,
   onToggleBack,
-  cardType
+  cardType,
+  debugMode = false
 }: { 
   cardData: CardFormData
   activeView: 'apple' | 'google' | 'pwa'
   showBackPage?: boolean
   onToggleBack?: (show: boolean) => void
   cardType: 'stamp' | 'membership'
+  debugMode?: boolean
 }) => {
   // Calculate demo progress (show about 40% completion for preview)
   const demoFilledStamps = Math.max(1, Math.floor(cardData.stampsRequired * 0.4))
@@ -349,6 +351,7 @@ const LivePreview = React.memo(({
         <CardLivePreview
           defaultPlatform={activeView}
           showControls={false}
+          debugMode={debugMode}
           cardData={{
             ...mapAdminCardFormToPreview({
               cardName: cardData.cardName,
@@ -387,6 +390,7 @@ function CardCreationPageContent() {
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState<ValidationError[]>([])
   const [activePreview, setActivePreview] = useState<'apple' | 'google' | 'pwa'>('apple')
+  const [debugMode, setDebugMode] = useState(false)
   const [showBackPage, setShowBackPage] = useState(false)
   const [showTemplateSelector, setShowTemplateSelector] = useState(false)
   
@@ -456,7 +460,6 @@ function CardCreationPageContent() {
         }
       }
     } catch (error) {
-      console.error('Failed to load businesses:', error)
       setErrors([{ field: 'business', message: 'Failed to load businesses. Please refresh and try again.' }])
     } finally {
       setLoading(false)
@@ -585,7 +588,6 @@ function CardCreationPageContent() {
         throw new Error(result.error || 'Failed to create card')
       }
     } catch (error) {
-      console.error('Failed to save card:', error)
       setErrors([{ field: 'save', message: error instanceof Error ? error.message : 'Failed to save card' }])
     } finally {
       setSaving(false)
@@ -634,7 +636,7 @@ function CardCreationPageContent() {
         return (
           <div className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {[{ id: 'stamp', label: 'Stamp Card', desc: 'Collect stamps to unlock rewards' }, { id: 'membership', label: 'Membership Card', desc: 'Track sessions or time-based access' }].map((type) => (
+              {[{ id: 'stamp', label: 'Stamp Card', desc: 'Collect stamps to unlock rewards' }, { id: 'membership', label: 'Membership Card', desc: 'Track sessions or discount benefits' }].map((type) => (
                 <button
                   key={type.id}
                   onClick={() => setCardType(type.id as CardType)}
@@ -1174,11 +1176,22 @@ function CardCreationPageContent() {
               </button>
           </div>
 
-            {/* Live Preview - Simplified for Step 4 */}
+            {/* Live Preview with platform tags */}
             <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-8 rounded-xl shadow-inner">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">Live Preview</h3>
+                <label className="flex items-center space-x-2 text-sm">
+                  <span className="text-gray-600">Debug Mode</span>
+                  <input
+                    type="checkbox"
+                    className="rounded border-gray-300"
+                    onChange={(e) => setDebugMode(e.target.checked)}
+                  />
+                </label>
+              </div>
               <div className="flex justify-center">
                 <div className="w-80 h-96">
-                  <LivePreview cardData={cardData} activeView={activePreview} cardType={cardType} />
+                  <LivePreview cardData={cardData} activeView={activePreview} cardType={cardType} debugMode={debugMode} />
                 </div>
               </div>
         </div>

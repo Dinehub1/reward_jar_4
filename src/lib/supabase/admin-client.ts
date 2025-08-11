@@ -54,15 +54,17 @@ export function createAdminClient() {
           signal: AbortSignal.timeout(30000)
         }
         
-        console.log(`🔗 SUPABASE FETCH - URL: ${url}, Timeout: 30s`)
         
         return fetch(url, enhancedInit).catch(error => {
-          console.error('🚨 SUPABASE FETCH ERROR:', {
-            url: url.toString(),
-            error: error.message,
-            code: error.code,
-            cause: error.cause
-          })
+          // Log admin client fetch errors for debugging
+          if (process.env.NODE_ENV === 'development') {
+            console.error('Admin client fetch error:', {
+              url: url.toString(),
+              error: error.message,
+              code: error.code,
+              cause: error.cause
+            })
+          }
           throw error
         })
       }
@@ -82,7 +84,6 @@ export function createSecureAdminClient() {
   
   // Additional check for API routes
   if (process.env.NODE_ENV === 'production' && !process.env.VERCEL) {
-    console.warn('⚠️ Admin client being used outside of Vercel production environment')
   }
   
   return createAdminClient()
@@ -97,7 +98,6 @@ export function createDevAdminClient() {
     throw new Error('createDevAdminClient can only be used in development')
   }
   
-  console.log('🧪 DEV ADMIN CLIENT: Creating admin client for development use')
   return createAdminClient()
 }
 

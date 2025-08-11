@@ -148,7 +148,6 @@ export default function BusinessProfilePage() {
       setProgress(calculateProgress(profileData))
 
     } catch (err) {
-      console.error('Error fetching business profile:', err)
       setError('Failed to load business profile')
     } finally {
       setLoading(false)
@@ -283,7 +282,6 @@ export default function BusinessProfilePage() {
       setTimeout(() => setSuccess(null), 3000)
 
     } catch (err) {
-      console.error('Error updating business profile:', err)
       setError(err instanceof Error ? err.message : 'Failed to update profile')
     } finally {
       setSaving(false)

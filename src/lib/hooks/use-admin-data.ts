@@ -29,7 +29,6 @@ const ADMIN_SWR_CONFIG = {
   errorRetryCount: 3,
   errorRetryInterval: 5000,
   onError: (error: Error, key: string) => {
-    console.warn('❌ Admin SWR Error:', error.message)
     
     // ✅ ADMIN NOTIFICATION: Notify admins of persistent API errors
     if (error.message.includes('500') || error.message.includes('timeout')) {
@@ -44,7 +43,6 @@ const ADMIN_SWR_CONFIG = {
 
 // ✅ ENHANCED: Generic fetcher with retry logic and admin notifications
 const fetcher = async (url: string) => {
-  console.log(`🔍 SWR Fetching: ${url}`)
   try {
     const data = await fetchJsonWithTimeout<any>(url, {
       timeoutMs: 15000,
@@ -66,7 +64,6 @@ const fetcher = async (url: string) => {
         )
       }
     })
-    console.log(`✅ SWR Data fetched from ${url}:`, (data as any)?.success ? 'Success' : 'Failed')
     return data
   } catch (error) {
     throw error
@@ -291,7 +288,6 @@ export function useAdminMutation(endpoint: string) {
 
       return response.json()
     } catch (error) {
-      console.error('Admin mutation error:', error)
       throw error
     }
   }

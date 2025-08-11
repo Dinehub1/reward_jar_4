@@ -3,7 +3,6 @@ import { createAdminClient } from '@/lib/supabase/admin-client'
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🔄 ADMIN API - Starting wallet sync...')
     
     const supabase = createAdminClient()
     
@@ -16,14 +15,12 @@ export async function POST(request: NextRequest) {
       .limit(10)
 
     if (fetchError) {
-      console.error('❌ Error fetching pending wallet updates:', fetchError)
       return NextResponse.json(
         { error: 'Failed to fetch pending updates', details: fetchError.message },
         { status: 500 }
       )
     }
 
-    console.log(`📊 Found ${pendingUpdates?.length || 0} pending wallet updates`)
 
     // Process each update (simulate processing)
     const processedCount = pendingUpdates?.length || 0
@@ -40,11 +37,9 @@ export async function POST(request: NextRequest) {
         .eq('failed', false)
 
       if (updateError) {
-        console.error('❌ Error updating wallet queue status:', updateError)
       }
     }
 
-    console.log(`✅ Wallet sync completed - processed ${processedCount} updates`)
 
     return NextResponse.json({
       success: true,
@@ -54,7 +49,6 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('💥 ADMIN API - Wallet sync error:', error)
     return NextResponse.json(
       { 
         error: 'Internal server error during wallet sync',

@@ -95,7 +95,6 @@ export default function AdminSandbox() {
         }
       }
     } catch (error) {
-      console.error('Error fetching cards:', error)
       toast.error('Failed to load cards')
     } finally {
       setLoading(false)
@@ -156,7 +155,6 @@ export default function AdminSandbox() {
       }, ...prev])
       
     } catch (error) {
-      console.error('Error generating QR:', error)
       toast.error('Failed to generate QR code')
     } finally {
       setIsGeneratingQR(false)
@@ -205,13 +203,11 @@ export default function AdminSandbox() {
           message: `Test customer data created for ${currentCard.name} (ID: ${result.data.customerCard.id})`
         }, ...prev])
         
-        console.log('Generated test data:', result.data)
       } else {
         throw new Error(result.error || 'Failed to generate test data')
       }
       
     } catch (error) {
-      console.error('Error generating test data:', error)
       toast.error('Failed to generate test data: ' + (error instanceof Error ? error.message : 'Unknown error'))
       
       // Add error to test results
@@ -267,7 +263,6 @@ export default function AdminSandbox() {
       }, ...prev])
       
     } catch (error) {
-      console.error('Error executing test action:', error)
       toast.error('Test action failed')
     }
   }

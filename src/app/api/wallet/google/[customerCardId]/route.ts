@@ -9,6 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { buildGoogleIds, createLoyaltyObject, createSaveToWalletJwt, buildSaveUrl } from '@/lib/wallet/builders/google-pass-builder'
+import { formatDate } from '@/lib/format'
 import { createAdminClient } from '@/lib/supabase/admin-client'
 
 export async function GET(
@@ -19,7 +20,6 @@ export async function GET(
     const resolvedParams = await params
     const customerCardId = resolvedParams.customerCardId
 
-    console.log('🎫 Generating Google Wallet pass for card:', customerCardId)
 
     // Get customer card data
     const supabase = createAdminClient()
@@ -31,7 +31,6 @@ export async function GET(
       .single()
     
     if (error || !customerCard) {
-      console.error('❌ Customer card not found:', error)
       return NextResponse.json({ error: 'Customer card not found' }, { status: 404 })
     }
 
@@ -59,32 +58,42 @@ export async function GET(
     if (cardData?.business_id) {
       const { data } = await supabase
         .from('businesses')
-        .select('*')
+        .select('id,name,description,currency_code,locale')
         .eq('id', cardData.business_id)
         .single()
       businessData = data
     }
 
-    const ids = buildGoogleIds(customerCardId)
-    console.log('🆔 Generated IDs:', { classId: ids.classId, objectId: ids.objectId })
+    const ids = buildGoogleIds(customerCardId, undefined, isMembershipCard)
 
     // We're using the existing approved class, so no need to define it again
 
+    const isMember = isMembershipCard
+    const current = isMember ? (customerCard.sessions_used || 0) : (customerCard.current_stamps || 0)
+    const total = isMember ? (cardData?.total_sessions || 20) : (cardData?.total_stamps || 10)
+    const label = isMember ? 'Sessions' : 'Points'
+
+    const textModulesData = [] as { header: string; body: string }[]
+    if (isMember && customerCard.expiry_date) {
+      const locale = businessData?.locale || 'en-US'
+      textModulesData.push({ header: 'Expires on', body: formatDate(customerCard.expiry_date, locale) })
+    }
+
     const loyaltyObject = createLoyaltyObject({
       ids,
-      current: customerCard.current_stamps || 0,
-      total: cardData?.total_stamps || cardData?.stamps_required || 10,
-      displayName: 'Guest User',
+      current,
+      total,
+      displayName: [businessData?.name, cardData?.name].filter(Boolean).join(' • ') || 'RewardJar',
       objectDisplayId: customerCard.id,
+      label,
+      textModulesData,
     })
 
     // Create Save to Wallet JWT
     let jwt: string
     try {
       jwt = createSaveToWalletJwt(loyaltyObject)
-      console.log('✅ JWT signed successfully')
     } catch (signError) {
-      console.error('❌ JWT signing failed:', signError)
       return NextResponse.json({ 
         error: 'Failed to sign JWT token',
         details: signError instanceof Error ? signError.message : 'Unknown signing error'
@@ -161,12 +170,13 @@ export async function GET(
         <div class="container">
             <h1>🎫 Add to Google Wallet</h1>
             
-            <div class="card-preview">
+             <div class="card-preview">
                 <div class="business-name">${businessData?.name || 'Business'}</div>
                 <div class="card-title">${cardData?.name || 'Loyalty Card'}</div>
                 <div style="margin-top: 15px; font-size: 14px;">
-                    ${cardData?.icon_emoji || '⭐'} ${customerCard.current_stamps || 0}/${cardData?.total_stamps || cardData?.stamps_required || 10} stamps
+                    ${cardData?.icon_emoji || '⭐'} ${current}/${total} ${isMember ? 'sessions' : 'stamps'}
                 </div>
+                 ${isMember && customerCard.expiry_date && new Date(customerCard.expiry_date) < new Date() ? `<div style="margin-top:8px;color:#fee2e2;background:#b91c1c;border-radius:6px;padding:4px 8px;display:inline-block;font-weight:600;">Expired</div>` : ''}
             </div>
             
             <p>Add this loyalty card to your Google Wallet for easy access.</p>
@@ -188,7 +198,6 @@ export async function GET(
     })
 
   } catch (error) {
-    console.error('❌ Google Wallet generation error:', error)
     return NextResponse.json({ 
       error: 'Failed to generate Google Wallet pass',
       details: error instanceof Error ? error.message : 'Unknown error'

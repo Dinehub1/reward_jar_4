@@ -19,11 +19,11 @@ interface AdminLayoutClientProps {
 const ModernAdminHeader: React.FC<{ user: any, signOut: () => void }> = ({ user, signOut }) => {
   return (
     <motion.header 
-      className="border-b bg-white/80 backdrop-blur-sm"
+      className="border-b bg-background/60 backdrop-blur supports-[backdrop-filter]:bg-background/40"
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: designTokens.animation.easing.out }}
-      style={{ borderColor: 'rgb(226 232 240 / 0.8)' }}
+      style={{ borderColor: 'rgb(var(--border) / 0.6)' }}
     >
       <div className="flex h-16 items-center justify-between px-6">
         <div className="flex items-center space-x-4">
@@ -32,12 +32,12 @@ const ModernAdminHeader: React.FC<{ user: any, signOut: () => void }> = ({ user,
         <div className="flex items-center space-x-4">
           {user && (
             <motion.div 
-              className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+              className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-accent/30 hover:bg-accent/40 transition-colors"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              <User className="w-4 h-4 text-gray-600" />
-              <span className="text-sm font-medium text-gray-700">
+              <User className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-medium text-foreground/90">
                 {user.email}
               </span>
             </motion.div>
@@ -115,31 +115,25 @@ function AccessDeniedState() {
 export function AdminLayoutClient({ children, requireAuth = true }: AdminLayoutClientProps) {
   const { isAdmin, isLoading, user, error, signOut } = useAdminAuth(requireAuth)
   const router = useRouter()
+  const isBrowser = typeof window !== 'undefined'
 
-  // Debug logging for troubleshooting
-  console.log('🔍 AdminLayoutClient Debug:', {
-    isAdmin,
-    isLoading,
-    user: user ? { id: user.id, email: user.email } : null,
-    error,
-    requireAuth
-  })
+  // Debug logging for troubleshooting (browser only to avoid SSR/HEAD noise)
+  if (isBrowser && process.env.NODE_ENV === 'development') {
+    // Auth debugging removed in cleanup
+  }
 
   // Enhanced loading guards - prevent any rendering until auth is fully resolved
-  if (isLoading) {
-    console.log('🔄 AdminLayoutClient: Auth still loading, showing loading state')
+  if (isLoading && isBrowser) {
     return <LoadingState />
   }
 
   // Additional safety check - if we don't have user data but should be admin, keep loading
-  if (requireAuth && isAdmin && !user) {
-    console.log('🔄 AdminLayoutClient: Admin verified but user data not loaded, continuing to load')
+  if (isBrowser && requireAuth && isAdmin && !user) {
     return <LoadingState />
   }
 
   // If auth is required but user is not admin, show access denied
   if (requireAuth && !isAdmin) {
-    console.log('❌ AdminLayoutClient: Access denied - showing access denied state')
     return <AccessDeniedState />
   }
 

@@ -82,11 +82,9 @@ async function fetchAdminData(): Promise<AdminData> {
   
   // Return cached data if it's still valid
   if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-    console.log('🔄 ADMIN DATA SERVICE - Using cached data (prevents redundant API calls)')
     return cached.data
   }
   
-  console.log('🔍 ADMIN DATA SERVICE - Fetching fresh data from API...')
   
   try {
     // Use relative URLs for server-side requests
@@ -137,7 +135,6 @@ async function fetchAdminData(): Promise<AdminData> {
     // Cache the result with timestamp
     adminDataCache.set(cacheKey, { data: result, timestamp: Date.now() })
     
-    console.log('✅ ADMIN DATA SERVICE - Fresh data fetched and cached:', {
       stats: result.stats,
       businessCount: result.businesses.length,
       customerCount: result.customers.length,
@@ -146,7 +143,6 @@ async function fetchAdminData(): Promise<AdminData> {
     
     return result
   } catch (error) {
-    console.error('❌ ADMIN DATA SERVICE - Error fetching data:', error)
     
     // Return safe defaults to prevent crashes
     return {
@@ -189,7 +185,6 @@ export async function getAllAdminData(): Promise<AdminData> {
 export function clearAdminCache(): void {
   const adminDataCache = getGlobalCache()
   adminDataCache.clear()
-  console.log('🗑️ ADMIN DATA SERVICE - Cache cleared')
 }
 
 // Types export for use in components

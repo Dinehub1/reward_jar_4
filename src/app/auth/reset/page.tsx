@@ -25,23 +25,18 @@ export default function ResetAccountPage() {
     setMessage(null)
 
     try {
-      console.log('=== ACCOUNT RESET START ===')
-      console.log('Email:', email)
 
       // First, sign out any existing session
       await supabase.auth.signOut()
-      console.log('Signed out existing session')
 
       // Clear local storage
       if (typeof window !== 'undefined') {
         localStorage.clear()
         sessionStorage.clear()
-        console.log('Cleared local/session storage')
       }
 
       // Try to find and clean up any existing user data
       const { data: { session } } = await supabase.auth.getSession()
-      console.log('Current session after signout:', session)
 
       setMessage('Account reset completed. You can now try signing up again with a fresh start.')
       
@@ -51,7 +46,6 @@ export default function ResetAccountPage() {
       }, 2000)
 
     } catch (err) {
-      console.error('Reset error:', err)
       setError(err instanceof Error ? err.message : 'Reset failed')
     } finally {
       setLoading(false)

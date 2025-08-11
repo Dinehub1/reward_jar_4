@@ -41,6 +41,9 @@ function adjustColorBrightness(hex: string, percent: number): string {
   )
 }
 
+import { formatCurrency, formatDate } from '@/lib/format'
+import { PwaCopy } from '@/lib/wallet/walletCopy'
+
 export function buildPwaHtml(params: PwaParams): string {
   const primaryColor = params.cardColor || '#8B4513'
   const secondaryColor = adjustColorBrightness(primaryColor, -20)
@@ -54,7 +57,7 @@ export function buildPwaHtml(params: PwaParams): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Digital Stamp Card - ${businessName}</title>
+  <title>${PwaCopy.stamp.pageTitle} - ${businessName}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -84,7 +87,7 @@ export function buildPwaHtml(params: PwaParams): string {
   <div class="card">
     <div class="header">
       <div class="business-name">${businessName}</div>
-      <div class="card-type">Digital Stamp Card</div>
+      <div class="card-type">${PwaCopy.stamp.pageTitle}</div>
     </div>
     <div class="stamps-grid">
       ${stampsGrid
@@ -92,15 +95,15 @@ export function buildPwaHtml(params: PwaParams): string {
         .join('')}
     </div>
     <div class="progress">
-      <div class="progress-text">${currentStamps}/${totalStamps} Stamps Collected</div>
-      <div class="reward-text">${rewardDescription || 'Collect all stamps to earn your reward!'}</div>
+      <div class="progress-text">${currentStamps}/${totalStamps} ${PwaCopy.stamp.progressSuffix}</div>
+      <div class="reward-text">${rewardDescription || PwaCopy.stamp.rewardFallback}</div>
     </div>
     <div class="qr-section">
       <div class="qr-code"><img src="${qrCodeDataUrl}" alt="QR Code" style="width: 120px; height: 120px;"></div>
-      <div class="qr-text">Scan to add stamps or redeem rewards</div>
+      <div class="qr-text">${PwaCopy.stamp.qrText}</div>
     </div>
     <div class="footer">
-      <div class="footer-text">Powered by RewardJar - Happy Loyalty Management</div>
+      <div class="footer-text">${PwaCopy.stamp.footer}</div>
     </div>
   </div>
 </body>
@@ -114,7 +117,7 @@ export function buildPwaHtml(params: PwaParams): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Digital Membership Card - ${businessName}</title>
+  <title>${PwaCopy.membership.pageTitle} - ${businessName}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -143,22 +146,22 @@ export function buildPwaHtml(params: PwaParams): string {
   <div class="card">
     <div class="header">
       <div class="business-name">${businessName}</div>
-      <div class="card-type">Digital Membership Card</div>
+      <div class="card-type">${PwaCopy.membership.pageTitle}</div>
     </div>
     <div class="progress-section">
-      <div class="sessions-text">${sessionsUsed}/${totalSessions} Sessions Used</div>
+      <div class="sessions-text">${sessionsUsed}/${totalSessions} ${PwaCopy.membership.sessionsUsed}</div>
       <div class="progress-bar">
         <div class="progress-fill" style="width: ${progressPercent}%"></div>
       </div>
-      ${typeof cost === 'number' ? `<div class="cost-text">₩${cost.toLocaleString()}</div>` : ''}
-      ${expiryDate ? `<div class="expiry-text">Expires: ${new Date(expiryDate).toLocaleDateString()}</div>` : ''}
+      ${typeof cost === 'number' ? `<div class="cost-text">${formatCurrency(cost, 'KRW')}</div>` : ''}
+      ${expiryDate ? `<div class="expiry-text">${PwaCopy.membership.expiresOn}: ${formatDate(expiryDate)}</div>` : ''}
     </div>
     <div class="qr-section">
       <div class="qr-code"><img src="${qrCodeDataUrl}" alt="QR Code" style="width: 120px; height: 120px;"></div>
-      <div class="qr-text">Scan to mark sessions or check membership</div>
+      <div class="qr-text">${PwaCopy.membership.qrText}</div>
     </div>
     <div class="footer">
-      <div class="footer-text">Powered by RewardJar - Happy Loyalty Management</div>
+      <div class="footer-text">${PwaCopy.membership.footer}</div>
     </div>
   </div>
 </body>

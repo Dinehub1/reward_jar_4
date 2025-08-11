@@ -40,11 +40,11 @@ const getFrameColors = (variant: AndroidFrameProps['variant']) => {
   }
 }
 
-export const AndroidFrame: React.FC<AndroidFrameProps> = ({ 
+export function AndroidFrame({  
   children, 
   variant = 'default',
   className = ''
-}) => {
+ }: AndroidFrameProps) {
   const colors = getFrameColors(variant)
   
   return (
@@ -158,16 +158,16 @@ export const AndroidFrame: React.FC<AndroidFrameProps> = ({
 }
 
 // Enhanced version with interactive features
-export const InteractiveAndroidFrame: React.FC<AndroidFrameProps & {
-  onDeviceInteraction?: () => void
-  showReflection?: boolean
-}> = ({ 
+export function InteractiveAndroidFrame({ 
   children, 
   variant = 'default',
   className = '',
   onDeviceInteraction,
   showReflection = true
-}) => {
+}: AndroidFrameProps & {
+  onDeviceInteraction?: () => void
+  showReflection?: boolean
+}) {
   return (
     <motion.div
       whileHover={{ scale: 1.02 }}

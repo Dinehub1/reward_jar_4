@@ -88,7 +88,6 @@ export default function ManagerModeToggle({
   // Fetch manager permissions from database
   const fetchManagerPermissions = useCallback(async () => {
     if (!userId || !businessId) {
-      console.warn('Missing userId or businessId for manager permissions fetch')
       return
     }
 
@@ -138,7 +137,6 @@ export default function ManagerModeToggle({
       }
 
     } catch (error) {
-      console.error('Error fetching manager permissions:', error)
       setError('Failed to load manager permissions')
     } finally {
       setIsLoading(false)

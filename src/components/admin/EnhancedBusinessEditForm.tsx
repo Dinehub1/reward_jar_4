@@ -264,10 +264,8 @@ export function EnhancedBusinessEditForm({
       setIsDirty(false)
       
       // Show subtle success indicator
-      console.log('✅ Auto-saved at', new Date().toLocaleTimeString())
       
     } catch (error) {
-      console.error('Auto-save error:', error)
     } finally {
       setSaving(false)
     }
@@ -334,7 +332,6 @@ export function EnhancedBusinessEditForm({
       onSave(result.data)
       
     } catch (error) {
-      console.error('Save error:', error)
       setErrors({ submit: error instanceof Error ? error.message : 'Failed to save changes' })
     } finally {
       setSaving(false)

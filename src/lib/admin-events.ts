@@ -57,7 +57,6 @@ class AdminEventManager {
       try {
         listener(event)
       } catch (error) {
-        console.error('Admin event listener failed:', error)
       }
     })
 
@@ -119,7 +118,6 @@ class AdminEventManager {
   private showModal(event: AdminEvent): void {
     if (typeof window !== 'undefined') {
       // This would integrate with your modal system
-      console.log('📢 ADMIN MODAL:', event)
       
       // Simple alert as fallback for critical events
       if (event.severity === 'critical') {
@@ -134,7 +132,6 @@ class AdminEventManager {
   private async sendEmailNotification(event: AdminEvent): Promise<void> {
     try {
       // In a real implementation, this would use your email service
-      console.log('📧 EMAIL NOTIFICATION:', event)
       
       // TODO: Integrate with email service (SendGrid, AWS SES, etc.)
       // await emailService.sendToAdmins({
@@ -143,7 +140,6 @@ class AdminEventManager {
       //   severity: event.severity
       // })
     } catch (error) {
-      console.error('Failed to send admin email notification:', error)
     }
   }
 
@@ -155,7 +151,6 @@ class AdminEventManager {
     try {
       // Only import and use admin client in server-side contexts
       if (typeof window !== 'undefined') {
-        console.log('📝 ADMIN EVENT (client-side):', event.title)
         return
       }
 
@@ -174,9 +169,7 @@ class AdminEventManager {
       //   metadata: event.metadata || {}
       // })
       
-      console.log('💾 ADMIN EVENT STORED:', event.id)
     } catch (error) {
-      console.error('Failed to store admin event in database:', error)
     }
   }
 

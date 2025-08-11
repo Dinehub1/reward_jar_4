@@ -50,7 +50,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json() as WalletProvisionRequest
     const { cardId, cardName } = body
 
-    console.log('🔍 Wallet Provision API: Provisioning card:', { cardId, cardName })
 
     // Verify admin access
     const supabase = createAdminClient()
@@ -171,10 +170,8 @@ export async function POST(request: NextRequest) {
           }
         })
     } catch (statusError) {
-      console.warn('⚠️ Failed to store provisioning status:', statusError)
     }
 
-    console.log('✅ Wallet provisioning completed:', statuses)
 
     return NextResponse.json({
       success: true,
@@ -183,7 +180,6 @@ export async function POST(request: NextRequest) {
     } as ApiResponse<{ statuses: WalletStatus[] }>)
 
   } catch (error) {
-    console.error('❌ Wallet Provision API Error:', error)
     return NextResponse.json(
       { success: false, error: 'Internal server error' } as ApiResponse<never>,
       { status: 500 }
@@ -201,7 +197,6 @@ async function provisionAppleWallet(cardData: any): Promise<{ success: boolean; 
     // 3. Upload to Apple Wallet servers
     // 4. Return pass URL or status
     
-    console.log('📱 Provisioning Apple Wallet for:', cardData.name)
     
     // Simulate API call delay
     await new Promise(resolve => setTimeout(resolve, 1000))
@@ -231,7 +226,6 @@ async function provisionGoogleWallet(cardData: any): Promise<{ success: boolean;
     // 3. Sign with Google credentials
     // 4. Return wallet URL or status
     
-    console.log('📱 Provisioning Google Wallet for:', cardData.name)
     
     // Simulate API call delay
     await new Promise(resolve => setTimeout(resolve, 800))
@@ -255,7 +249,6 @@ async function provisionGoogleWallet(cardData: any): Promise<{ success: boolean;
 async function provisionPWAWallet(cardData: any): Promise<{ success: boolean; error?: string }> {
   try {
     // PWA wallet is always available as universal fallback
-    console.log('🌐 Provisioning PWA Wallet for:', cardData.name)
     
     // Simulate minimal delay
     await new Promise(resolve => setTimeout(resolve, 200))

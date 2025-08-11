@@ -42,7 +42,6 @@ export async function POST(request: NextRequest) {
       })
 
     if (error) {
-      console.error('Error flagging business:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
@@ -53,7 +52,6 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Admin flag business error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 } 

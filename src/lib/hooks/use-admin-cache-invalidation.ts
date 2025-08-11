@@ -22,7 +22,6 @@ export const ADMIN_CACHE_KEYS = {
  * Use this after any business activity that affects admin data
  */
 export async function invalidateAdminDashboard() {
-  console.log('🔄 Invalidating all admin dashboard caches...')
   
   const invalidationPromises = Object.values(ADMIN_CACHE_KEYS).map(key => 
     mutate(key, undefined, { revalidate: true })
@@ -30,7 +29,6 @@ export async function invalidateAdminDashboard() {
   
   try {
     await Promise.all(invalidationPromises)
-    console.log('✅ Admin dashboard caches invalidated successfully')
     
     // Notify unified API of cache invalidation
     await fetch('/api/admin/dashboard-unified', {
@@ -43,7 +41,6 @@ export async function invalidateAdminDashboard() {
     })
     
   } catch (error) {
-    console.error('❌ Failed to invalidate admin caches:', error)
   }
 }
 
@@ -52,7 +49,6 @@ export async function invalidateAdminDashboard() {
  * More efficient for targeted updates
  */
 export async function invalidateAdminSection(section: 'businesses' | 'customers' | 'cards' | 'stats') {
-  console.log(`🔄 Invalidating admin ${section} cache...`)
   
   const cacheKey = section === 'stats' 
     ? ADMIN_CACHE_KEYS.UNIFIED_DASHBOARD
@@ -61,9 +57,7 @@ export async function invalidateAdminSection(section: 'businesses' | 'customers'
   try {
     await mutate(cacheKey, undefined, { revalidate: true })
     await mutate(ADMIN_CACHE_KEYS.UNIFIED_DASHBOARD, undefined, { revalidate: true })
-    console.log(`✅ Admin ${section} cache invalidated`)
   } catch (error) {
-    console.error(`❌ Failed to invalidate ${section} cache:`, error)
   }
 }
 
@@ -75,7 +69,6 @@ export async function invalidateAfterBusinessActivity(
   activityType: 'stamp_added' | 'session_marked' | 'card_created' | 'customer_registered' | 'business_created',
   metadata?: Record<string, any>
 ) {
-  console.log(`🔄 Invalidating caches after ${activityType}:`, metadata)
   
   // Always invalidate main dashboard
   await invalidateAdminDashboard()
@@ -106,7 +99,6 @@ export async function invalidateAfterBusinessActivity(
       break
   }
   
-  console.log(`✅ Cache invalidation completed for ${activityType}`)
 }
 
 /**

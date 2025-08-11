@@ -93,7 +93,6 @@ export default function CustomerCardPage() {
           .single()
 
         if (cardError) {
-          console.error('Error fetching customer card:', cardError)
           setError('Card not found or you don\'t have access to it')
           return
         }
@@ -118,7 +117,6 @@ export default function CustomerCardPage() {
           })
         }
       } catch (err) {
-        console.error('Error in fetchCustomerCard:', err)
         setError('Something went wrong. Please try again.')
       } finally {
         setLoading(false)
@@ -144,7 +142,6 @@ export default function CustomerCardPage() {
         window.location.href = walletUrl
       }
     } catch (err) {
-      console.error('Error adding to wallet:', err)
       setError('Failed to add to wallet. Please try again.')
     } finally {
       setWalletLoading(false)

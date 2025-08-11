@@ -10,7 +10,6 @@ import type { ApiResponse } from '@/lib/supabase/types'
  */
 export async function GET(request: NextRequest) {
   try {
-    console.log('👥 ADMIN CUSTOMERS SIMPLE - Fetching customers data...')
     
     const supabase = createAdminClient()
     
@@ -26,7 +25,6 @@ export async function GET(request: NextRequest) {
       .limit(50) // Limit to prevent memory issues
     
     if (error) {
-      console.error('❌ CUSTOMERS SIMPLE - Database error:', error)
       return NextResponse.json({
         success: false,
         error: 'Failed to fetch customers data',
@@ -34,7 +32,6 @@ export async function GET(request: NextRequest) {
       } as ApiResponse<never>, { status: 500 })
     }
     
-    console.log('✅ CUSTOMERS SIMPLE - Success:', customers?.length || 0, 'customers')
     
     return NextResponse.json({
       success: true,
@@ -43,7 +40,6 @@ export async function GET(request: NextRequest) {
     } as ApiResponse<any[]>)
     
   } catch (error) {
-    console.error('❌ CUSTOMERS SIMPLE - Error:', error)
     return NextResponse.json({
       success: false,
       error: 'Internal server error',

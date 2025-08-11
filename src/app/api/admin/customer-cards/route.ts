@@ -28,7 +28,6 @@ export async function GET(request: NextRequest) {
     const walletType = url.searchParams.get('wallet_type') as 'apple' | 'google' | 'pwa' | null
     const detailed = url.searchParams.get('detailed') === 'true'
     
-    console.log('🎫 ADMIN CUSTOMER CARDS API - Fetching customer cards:', {
       page,
       limit,
       cardType,
@@ -139,14 +138,12 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
 
     if (error) {
-      console.error('💥 ADMIN CUSTOMER CARDS API - Database error:', error)
       return NextResponse.json(
         { success: false, error: 'Failed to fetch customer cards' } as ApiResponse<never>,
         { status: 500 }
       )
     }
 
-    console.log('✅ ADMIN CUSTOMER CARDS API - Successfully fetched:', customerCards?.length || 0, 'customer cards')
 
     // Return paginated response if pagination was requested
     if (url.searchParams.has('page')) {
@@ -174,7 +171,6 @@ export async function GET(request: NextRequest) {
     } as ApiResponse<CustomerCard[] | CustomerCardWithDetails[]>)
 
   } catch (error) {
-    console.error('💥 ADMIN CUSTOMER CARDS API - Unexpected error:', error)
     return NextResponse.json(
       { success: false, error: 'Internal server error' } as ApiResponse<never>,
       { status: 500 }
@@ -192,7 +188,6 @@ export async function POST(request: NextRequest) {
     const supabase = createAdminClient()
     const body = await request.json()
     
-    console.log('🎫 ADMIN CUSTOMER CARDS API - Creating customer card:', body)
 
     // Validate required fields
     const { 
@@ -244,14 +239,12 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error('💥 ADMIN CUSTOMER CARDS API - Create error:', error)
       return NextResponse.json(
         { success: false, error: 'Failed to create customer card' } as ApiResponse<never>,
         { status: 500 }
       )
     }
 
-    console.log('✅ ADMIN CUSTOMER CARDS API - Customer card created:', customerCard.id)
 
     return NextResponse.json({
       success: true,
@@ -260,7 +253,6 @@ export async function POST(request: NextRequest) {
     } as ApiResponse<CustomerCard>)
 
   } catch (error) {
-    console.error('💥 ADMIN CUSTOMER CARDS API - Unexpected error:', error)
     return NextResponse.json(
       { success: false, error: 'Internal server error' } as ApiResponse<never>,
       { status: 500 }
