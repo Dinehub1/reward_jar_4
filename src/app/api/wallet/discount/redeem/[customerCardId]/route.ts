@@ -146,7 +146,7 @@ export async function POST(
           terminal_id: terminalId,
           override_used: override && roleId === 1
         }
-      }
+      })
     } catch (e) {
     }
 
@@ -164,7 +164,7 @@ export async function POST(
           businessName: 'Business' // Will be filled from actual business data in implementation
         }
       }
-    }
+    })
 
   } catch (error) {
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })

@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { AdminLayoutClient } from '@/components/layouts/AdminLayoutClient'
 import { useCustomers, useAdminStatsCompat as useAdminStats } from '@/lib/hooks/use-admin-data'
+import { ComponentErrorBoundary } from '@/components/shared/ErrorBoundary'
+import { getPageEnhancement, createErrorFallback, createLoadingState } from '@/lib/design-consistency/page-enhancer'
 import { 
   Users, 
   UserPlus, 
@@ -326,7 +328,7 @@ function CustomersTable() {
   )
 }
 
-export default function AdminCustomers() {
+function LegacyAdminCustomers() {
   return (
     <AdminLayoutClient>
       <div className="space-y-6">
@@ -354,5 +356,17 @@ export default function AdminCustomers() {
         <CustomersTable />
       </div>
     </AdminLayoutClient>
+  )
+}
+
+export default function AdminCustomers() {
+  const enhancement = getPageEnhancement('admin', 'management')
+  
+  return (
+    <ComponentErrorBoundary fallback={createErrorFallback('admin', 'Customer Management')}>
+      <div className={enhancement.containerClass}>
+        <LegacyAdminCustomers />
+      </div>
+    </ComponentErrorBoundary>
   )
 } 

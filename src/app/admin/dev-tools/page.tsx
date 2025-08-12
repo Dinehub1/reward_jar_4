@@ -43,6 +43,8 @@ import {
   Download
 } from 'lucide-react'
 import Link from 'next/link'
+import { ComponentErrorBoundary } from '@/components/shared/ErrorBoundary'
+import { modernStyles, roleStyles } from '@/lib/design-tokens'
 
 interface DevTool {
   id: string
@@ -263,7 +265,7 @@ const devTools: DevTool[] = [
   }
 ]
 
-export default function DevToolsPage() {
+function LegacyDevToolsPage() {
   const [activeCategory, setActiveCategory] = useState<string>('all')
   const [searchTerm, setSearchTerm] = useState('')
   
@@ -1438,5 +1440,27 @@ export default function DevToolsPage() {
         </div>
       </div>
     </AdminLayoutClient>
+  )
+}
+export default function DevToolsPage() {
+  return (
+    <ComponentErrorBoundary fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Developer Tools Unavailable</h2>
+          <p className="text-gray-600 mb-4">Unable to load the developer tools</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium"
+          >
+            Reload Page
+          </button>
+        </div>
+      </div>
+    }>
+      <div className={modernStyles.layout.container}>
+        <LegacyDevToolsPage />
+      </div>
+    </ComponentErrorBoundary>
   )
 }

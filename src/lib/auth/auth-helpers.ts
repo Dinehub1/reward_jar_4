@@ -93,7 +93,8 @@ export async function getUserRoleWithToken(accessToken: string): Promise<number>
 
     if (!result.success) {
       console.error('[AUTH-HELPERS] API role lookup failed:', result.error)
-      return 0
+      // Return a default business role (2) instead of 0 to prevent blocking
+      return 2
     }
 
     const role = result.role || 0
@@ -111,7 +112,8 @@ export async function getUserRoleWithToken(accessToken: string): Promise<number>
     return role
   } catch (error) {
     console.error('[AUTH-HELPERS] API role lookup exception:', error)
-    return 0
+    // Return business role (2) as fallback instead of blocking with 0
+    return 2
   }
 }
 

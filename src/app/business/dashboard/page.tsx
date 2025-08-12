@@ -3,12 +3,15 @@
 import { useEffect, useState, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { motion, AnimatePresence } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/use-admin-auth'
 import BusinessLayout from '@/components/layouts/BusinessLayout'
+import MobileDashboard from '@/components/mobile/MobileDashboard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Progress } from '@/components/ui/progress'
 import { 
   Plus, 
   CreditCard, 
@@ -30,10 +33,19 @@ import {
   X,
   Loader2,
   Eye,
-  Edit
+  Edit,
+  Zap,
+  Target,
+  Calendar,
+  Clock,
+  Award,
+  Sparkles
 } from 'lucide-react'
 import ManagerModeToggle from '@/components/business/ManagerModeToggle'
 import { QRScanner } from '@/components/business/QRScanner'
+import { modernStyles, roleStyles, getRoleTheme } from '@/lib/design-tokens'
+import ModernBusinessDashboard from '@/components/business/ModernBusinessDashboard'
+import { ComponentErrorBoundary } from '@/components/shared/ErrorBoundary'
 
 // Import card templates from admin section for consistency
 const CARD_TEMPLATES = [
@@ -800,6 +812,27 @@ function BusinessDashboardContent() {
   )
 }
 
+// Mobile-optimized business dashboard using new unified API
+function MobileBusinessDashboard() {
+  return (
+    <ComponentErrorBoundary fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Dashboard Loading...</h2>
+          <p className="text-gray-600">Please wait while we load your business dashboard</p>
+        </div>
+      </div>
+    }>
+      <BusinessLayout>
+        {/* Modern Unified Dashboard - Mobile First Design */}
+        <div className={modernStyles.mobile.content}>
+          <ModernBusinessDashboard />
+        </div>
+      </BusinessLayout>
+    </ComponentErrorBoundary>
+  )
+}
+
 export default function BusinessDashboard() {
   return (
     <Suspense fallback={
@@ -810,7 +843,7 @@ export default function BusinessDashboard() {
         </div>
       </div>
     }>
-      <BusinessDashboardContent />
+      <MobileBusinessDashboard />
     </Suspense>
   )
 } 

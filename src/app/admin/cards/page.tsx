@@ -9,6 +9,8 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { AdminLayoutClient } from '@/components/layouts/AdminLayoutClient'
 import { CardLivePreview } from '@/components/unified/CardLivePreview'
+import ModernAdminCardManagement from '@/components/admin/ModernAdminCardManagement'
+import { ComponentErrorBoundary } from '@/components/shared/ErrorBoundary'
 // Supabase client is not used here; avoid importing admin/service role in client code
 // import { createClient } from '@/lib/supabase/client'
 import { 
@@ -75,7 +77,7 @@ interface MembershipCard {
   }>
 }
 
-export default function AdminCardsPage() {
+function LegacyAdminCardsPage() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<'stamp' | 'membership' | 'templates'>('stamp')
   const [searchTerm, setSearchTerm] = useState('')
@@ -588,5 +590,41 @@ export default function AdminCardsPage() {
         </div>
       </div>
     </AdminLayoutClient>
+  )
+}
+
+export default function AdminCardsPage() {
+  const router = useRouter()
+
+  const handleCreateCard = () => {
+    router.push('/admin/cards/new')
+  }
+
+  const handleViewCard = (cardId: string) => {
+    router.push(`/admin/cards/stamp/${cardId}`)
+  }
+
+  const handleEditCard = (cardId: string) => {
+    router.push(`/admin/cards/stamp/${cardId}`)
+  }
+
+  const handleDeleteCard = (cardId: string) => {
+    // Delete confirmation logic
+    console.log('Delete card:', cardId)
+  }
+
+  return (
+    <ComponentErrorBoundary fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Loading Cards...</h2>
+          <p className="text-gray-600">Please wait while we load the card management system</p>
+        </div>
+      </div>
+    }>
+      <AdminLayoutClient>
+        <LegacyAdminCardsPage />
+      </AdminLayoutClient>
+    </ComponentErrorBoundary>
   )
 } 

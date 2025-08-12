@@ -23,6 +23,8 @@ import {
   RefreshCw,
   Building
 } from 'lucide-react'
+import { modernStyles, roleStyles } from '@/lib/design-tokens'
+import { ComponentErrorBoundary } from '@/components/shared/ErrorBoundary'
 
 // Interfaces
 
@@ -44,7 +46,7 @@ interface FormData {
   website_url: string
 }
 
-export default function BusinessProfilePage() {
+function LegacyBusinessProfilePage() {
   const [formData, setFormData] = useState<FormData>({
     name: '',
     contact_email: '',
@@ -599,5 +601,25 @@ export default function BusinessProfilePage() {
         </Card>
       </div>
     </BusinessLayout>
+  )
+}
+
+export default function BusinessProfilePage() {
+  return (
+    <ComponentErrorBoundary fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Profile Unavailable</h2>
+          <p className="text-gray-600 mb-4">Unable to load your business profile</p>
+          <Button onClick={() => window.location.reload()} className={roleStyles.business.button.primary}>
+            Reload Page
+          </Button>
+        </div>
+      </div>
+    }>
+      <div className={modernStyles.mobile.content}>
+        <LegacyBusinessProfilePage />
+      </div>
+    </ComponentErrorBoundary>
   )
 } 

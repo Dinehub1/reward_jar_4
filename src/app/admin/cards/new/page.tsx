@@ -38,6 +38,8 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import Image from 'next/image'
+import { modernStyles, roleStyles } from '@/lib/design-tokens'
+import { ComponentErrorBoundary } from '@/components/shared/ErrorBoundary'
 import { PageTransition } from '@/components/modern/layout/PageTransition'
 import { Slider } from '@/components/ui/slider'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -68,7 +70,7 @@ import {
 import { IPhone15Frame } from '@/components/modern/preview/iPhone15Frame'
 import { AndroidFrame } from '@/components/modern/preview/AndroidFrame'
 import { WebFrame } from '@/components/modern/preview/WebFrame'
-import { designTokens, modernStyles } from '@/lib/design-tokens'
+import { designTokens } from '@/lib/design-tokens'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CardLivePreview } from '@/components/unified/CardLivePreview'
 import { mapAdminCardFormToPreview } from '@/lib/card-mappers'
@@ -1779,15 +1781,27 @@ function CardCreationPageContent() {
 // Export with Suspense boundary for Next.js 15+ compatibility
 export default function CardCreationPage() {
   return (
-    <Suspense fallback={
+    <ComponentErrorBoundary fallback={
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading card creation...</p>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Card Creation Unavailable</h2>
+          <p className="text-gray-600 mb-4">Unable to load the card creation wizard</p>
+          <ModernButton onClick={() => window.location.reload()}>
+            Reload Page
+          </ModernButton>
         </div>
       </div>
     }>
-      <CardCreationPageContent />
-    </Suspense>
+      <Suspense fallback={
+        <div className={`min-h-screen ${roleStyles.admin.header} flex items-center justify-center`}>
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+            <p className="text-white">Loading card creation wizard...</p>
+          </div>
+        </div>
+      }>
+        <CardCreationPageContent />
+      </Suspense>
+    </ComponentErrorBoundary>
   )
 }

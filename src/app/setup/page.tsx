@@ -6,8 +6,10 @@ import { Button } from '@/components/ui/button'
 import { CheckCircle, XCircle, AlertCircle, Copy } from 'lucide-react'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
+import { ComponentErrorBoundary } from '@/components/shared/ErrorBoundary'
+import { modernStyles, roleStyles } from '@/lib/design-tokens'
 
-export default function SetupPage() {
+function LegacySetupPage() {
   const envStatus = useEnvValidation()
   const [mounted, setMounted] = useState(false)
 
@@ -280,3 +282,25 @@ NEXT_PUBLIC_BASE_URL=https://www.rewardjar.xyz
     </div>
   )
 } 
+export default function SetupPage() {
+  return (
+    <ComponentErrorBoundary fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Setup Unavailable</h2>
+          <p className="text-gray-600 mb-4">Unable to load the setup</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium"
+          >
+            Reload Page
+          </button>
+        </div>
+      </div>
+    }>
+      <div className={modernStyles.layout.container}>
+        <LegacySetupPage />
+      </div>
+    </ComponentErrorBoundary>
+  )
+}

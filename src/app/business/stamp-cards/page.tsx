@@ -9,6 +9,8 @@ import BusinessLayout from '@/components/layouts/BusinessLayout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Plus, Users, Target, Calendar, QrCode } from 'lucide-react'
+import ModernCardManagement from '@/components/business/ModernCardManagement'
+import { ComponentErrorBoundary } from '@/components/shared/ErrorBoundary'
 
 interface StampCard {
   id: string
@@ -20,7 +22,7 @@ interface StampCard {
   customer_count?: number
 }
 
-export default function StampCardsPage() {
+function LegacyStampCardsPage() {
   const [stampCards, setStampCards] = useState<StampCard[]>([])
   const [loading, setLoading] = useState(true)
   const [showQRModal, setShowQRModal] = useState(false)
@@ -397,5 +399,50 @@ export default function StampCardsPage() {
         )}
       </div>
     </BusinessLayout>
+  )
+}
+
+export default function StampCardsPage() {
+  const [stampCards, setStampCards] = useState<StampCard[]>([])
+  const [loading, setLoading] = useState(true)
+  const router = useRouter()
+
+  const handleCreateCard = () => {
+    router.push('/business/no-access') // Business users can't create cards
+  }
+
+  const handleViewCard = (cardId: string) => {
+    router.push(`/business/stamp-cards/${cardId}/customers`)
+  }
+
+  const handleEditCard = (cardId: string) => {
+    router.push(`/business/stamp-cards/${cardId}/rewards`)
+  }
+
+  const handleDeleteCard = (cardId: string) => {
+    // Delete confirmation logic
+    console.log('Delete card:', cardId)
+  }
+
+  return (
+    <ComponentErrorBoundary fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Loading Cards...</h2>
+          <p className="text-gray-600">Please wait while we load your loyalty cards</p>
+        </div>
+      </div>
+    }>
+      <BusinessLayout>
+        <ModernCardManagement
+          cards={stampCards}
+          loading={loading}
+          onCreateCard={handleCreateCard}
+          onViewCard={handleViewCard}
+          onEditCard={handleEditCard}
+          onDeleteCard={handleDeleteCard}
+        />
+      </BusinessLayout>
+    </ComponentErrorBoundary>
   )
 } 

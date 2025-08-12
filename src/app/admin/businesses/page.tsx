@@ -14,6 +14,8 @@ import { AdminLayoutClient } from '@/components/layouts/AdminLayoutClient'
 import { useBusinesses, useAdminStatsCompat as useAdminStats } from '@/lib/hooks/use-admin-data'
 import { CardSkeleton, TableSkeleton } from '@/components/ui/skeleton'
 import { RefreshCw, AlertTriangle, CheckCircle, Clock, Search, Filter, Edit, Trash2, Plus, ExternalLink } from 'lucide-react'
+import ModernBusinessManagement from '@/components/admin/ModernBusinessManagement'
+import { ComponentErrorBoundary } from '@/components/shared/ErrorBoundary'
 
 // Use types from the centralized service
 interface Business {
@@ -40,7 +42,7 @@ interface BusinessMetrics {
   newThisWeek: number
 }
 
-export default function BusinessesPage() {
+function LegacyBusinessesPage() {
   const { data: statsData, loading: statsLoading, error: statsError } = useAdminStats()
   const { data: businessesData, loading: businessesLoading, error: businessesError, refetch } = useBusinesses()
   
@@ -874,5 +876,64 @@ function DeleteBusinessDialog({ business, onBusinessDeleted }: { business: Busin
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  )
+}
+
+export default function BusinessesPage() {
+  const router = useRouter()
+  const { data: businessesData, loading: businessesLoading } = useBusinesses()
+  const { data: statsData, loading: statsLoading } = useAdminStats()
+
+  const handleCreateBusiness = () => {
+    // Navigate to business creation form
+    console.log('Create business clicked')
+  }
+
+  const handleViewBusiness = (businessId: string) => {
+    router.push(`/admin/businesses/${businessId}`)
+  }
+
+  const handleEditBusiness = (businessId: string) => {
+    router.push(`/admin/businesses/${businessId}`)
+  }
+
+  const handleDeleteBusiness = (businessId: string) => {
+    // Delete confirmation logic
+    console.log('Delete business:', businessId)
+  }
+
+  // Transform data for modern component
+  const transformedBusinesses = businessesData?.data || []
+  const transformedMetrics = statsData ? {
+    totalBusinesses: statsData.totalBusinesses || 0,
+    activeBusinesses: statsData.activeBusinesses || 0,
+    flaggedBusinesses: statsData.flaggedBusinesses || 0,
+    cardRequests: statsData.cardRequests || 0,
+    newThisWeek: statsData.newThisWeek || 0,
+    totalRevenue: 24890, // Mock data
+    avgCompletion: 72 // Mock data
+  } : undefined
+
+  return (
+    <ComponentErrorBoundary fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Business Management Unavailable</h2>
+          <p className="text-gray-600">Unable to load the business management system</p>
+        </div>
+      </div>
+    }>
+      <AdminLayoutClient>
+        <ModernBusinessManagement
+          businesses={transformedBusinesses}
+          metrics={transformedMetrics}
+          loading={businessesLoading || statsLoading}
+          onCreateBusiness={handleCreateBusiness}
+          onViewBusiness={handleViewBusiness}
+          onEditBusiness={handleEditBusiness}
+          onDeleteBusiness={handleDeleteBusiness}
+        />
+      </AdminLayoutClient>
+    </ComponentErrorBoundary>
   )
 } 

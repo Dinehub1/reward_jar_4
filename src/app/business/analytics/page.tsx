@@ -25,6 +25,9 @@ import {
   RefreshCw,
   AlertCircle
 } from 'lucide-react'
+import AdvancedAnalyticsDashboard from '@/components/analytics/AdvancedAnalyticsDashboard'
+import { ComponentErrorBoundary } from '@/components/shared/ErrorBoundary'
+import { modernStyles, roleStyles } from '@/lib/design-tokens'
 
 // Interfaces
 interface StampCardAnalytics {
@@ -71,7 +74,7 @@ interface GrowthBanner {
   color: string
 }
 
-export default function BusinessAnalytics() {
+function LegacyBusinessAnalytics() {
   const [stampAnalytics, setStampAnalytics] = useState<StampCardAnalytics>({
     totalStamps: 0,
     averageStampsPerCard: 0,
@@ -365,7 +368,7 @@ export default function BusinessAnalytics() {
 
         {/* Analytics Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="stamp-cards" className="flex items-center">
               <Target className="w-4 h-4 mr-2" />
               Stamp Cards
@@ -373,6 +376,10 @@ export default function BusinessAnalytics() {
             <TabsTrigger value="membership-cards" className="flex items-center">
               <CreditCard className="w-4 h-4 mr-2" />
               Membership Cards
+            </TabsTrigger>
+            <TabsTrigger value="advanced-analytics" className="flex items-center">
+              <Trophy className="w-4 h-4 mr-2" />
+              Industry Benchmarks
             </TabsTrigger>
           </TabsList>
 
@@ -634,6 +641,11 @@ export default function BusinessAnalytics() {
             </CardContent>
           </Card>
           </TabsContent>
+
+          {/* Advanced Analytics Tab */}
+          <TabsContent value="advanced-analytics" className="space-y-6">
+            <AdvancedAnalyticsDashboard timeRange="30d" />
+          </TabsContent>
         </Tabs>
 
         {/* CLV Insights */}
@@ -694,3 +706,25 @@ export default function BusinessAnalytics() {
     </BusinessLayout>
   )
 } 
+export default function BusinessAnalytics() {
+  return (
+    <ComponentErrorBoundary fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Business Analytics Unavailable</h2>
+          <p className="text-gray-600 mb-4">Unable to load the business analytics</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium"
+          >
+            Reload Page
+          </button>
+        </div>
+      </div>
+    }>
+      <div className={modernStyles.layout.container}>
+        <LegacyBusinessAnalytics />
+      </div>
+    </ComponentErrorBoundary>
+  )
+}

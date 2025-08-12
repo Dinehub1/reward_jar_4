@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
         'Last-Modified': lastModified,
         'Cache-Control': 'no-cache, no-store, must-revalidate'
       }
-    }
+    })
 
   } catch (error) {
     return NextResponse.json(
@@ -217,7 +217,7 @@ export async function GET(request: NextRequest) {
       headers: {
         'Last-Modified': lastModified
       }
-    }
+    })
 
   } catch (error) {
     return NextResponse.json(

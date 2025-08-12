@@ -110,7 +110,9 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
     if (process.env.NODE_ENV === 'development') {
       console.group('🚨 Error Boundary Caught Error')
       console.error('Error:', error)
-      console.error('Error Info:', errorInfo)
+      console.error('Error Info:', errorInfo || 'No additional error info available')
+      console.error('Error Stack:', error.stack)
+      console.error('Component Stack:', errorInfo?.componentStack || 'No component stack available')
       console.groupEnd()
     }
   }

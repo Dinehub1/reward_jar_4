@@ -40,6 +40,50 @@ export const designTokens = {
     }
   },
 
+  // Role-Based Color Palettes
+  roles: {
+    admin: {
+      primary: '#2563eb',     // blue-600
+      secondary: '#1e40af',   // blue-700  
+      accent: '#6366f1',      // indigo-500
+      surface: '#f8fafc',     // slate-50
+      muted: '#64748b',       // slate-500
+      success: '#059669',     // emerald-600
+      warning: '#d97706',     // amber-600
+      error: '#dc2626',       // red-600
+    },
+    business: {
+      primary: '#059669',     // emerald-600
+      secondary: '#047857',   // emerald-700
+      accent: '#10b981',      // emerald-500
+      surface: '#ecfdf5',     // emerald-50
+      muted: '#6b7280',       // gray-500
+      success: '#059669',     // emerald-600
+      warning: '#d97706',     // amber-600
+      error: '#dc2626',       // red-600
+    },
+    customer: {
+      primary: '#9333ea',     // purple-600
+      secondary: '#7c3aed',   // purple-700
+      accent: '#a855f7',      // purple-500
+      surface: '#faf5ff',     // purple-50
+      muted: '#6b7280',       // gray-500
+      success: '#059669',     // emerald-600
+      warning: '#d97706',     // amber-600
+      error: '#dc2626',       // red-600
+    },
+    public: {
+      primary: '#0f172a',     // slate-900
+      secondary: '#1e293b',   // slate-800
+      accent: '#3b82f6',      // blue-500
+      surface: '#ffffff',     // white
+      muted: '#64748b',       // slate-500
+      success: '#059669',     // emerald-600
+      warning: '#d97706',     // amber-600
+      error: '#dc2626',       // red-600
+    }
+  },
+
   // Spacing System
   spacing: {
     xs: '0.25rem',    // 4px
@@ -136,13 +180,77 @@ export const designTokens = {
     }
   },
 
-  // Breakpoints
+  // Breakpoints (Mobile-First)
   breakpoints: {
-    sm: '640px',
-    md: '768px',
-    lg: '1024px',
-    xl: '1280px',
-    '2xl': '1536px',
+    sm: '640px',    // Small tablets
+    md: '768px',    // Tablets
+    lg: '1024px',   // Laptops
+    xl: '1280px',   // Desktop
+    '2xl': '1536px', // Large desktop
+  },
+
+  // Mobile-First Interaction Tokens
+  mobile: {
+    touchTarget: {
+      min: '44px',    // Minimum touch target size
+      comfortable: '48px', // Comfortable touch size
+      large: '56px',  // Large touch target
+    },
+    gesture: {
+      swipeThreshold: '50px',
+      tapTimeout: '300ms',
+      longPressTimeout: '500ms',
+    },
+    viewport: {
+      safePadding: '16px',
+      headerHeight: '64px',
+      bottomNavHeight: '80px',
+      tabBarHeight: '48px',
+    }
+  },
+
+  // Component Design Patterns
+  components: {
+    card: {
+      mobile: {
+        padding: '16px',
+        borderRadius: '12px',
+        gap: '12px',
+      },
+      desktop: {
+        padding: '24px',
+        borderRadius: '16px',
+        gap: '16px',
+      }
+    },
+    button: {
+      mobile: {
+        height: '48px',
+        fontSize: '16px',
+        padding: '12px 20px',
+        borderRadius: '12px',
+      },
+      desktop: {
+        height: '40px',
+        fontSize: '14px',
+        padding: '8px 16px',
+        borderRadius: '8px',
+      }
+    },
+    input: {
+      mobile: {
+        height: '48px',
+        fontSize: '16px', // Prevents zoom on iOS
+        padding: '12px 16px',
+        borderRadius: '12px',
+      },
+      desktop: {
+        height: '40px',
+        fontSize: '14px',
+        padding: '8px 12px',
+        borderRadius: '8px',
+      }
+    }
   }
 } as const
 
@@ -174,6 +282,11 @@ export const themeVariants = {
   }
 } as const
 
+// Role-based theme utilities
+export const getRoleTheme = (role: 'admin' | 'business' | 'customer' | 'public') => {
+  return designTokens.roles[role]
+}
+
 // Modern component styles using design tokens
 export const modernStyles = {
   button: {
@@ -182,25 +295,134 @@ export const modernStyles = {
       bg-gradient-to-r from-blue-500 to-blue-600 text-white 
       hover:from-blue-600 hover:to-blue-700 
       focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+      min-h-[44px] touch-manipulation
     `,
     secondary: `
       px-4 py-2 rounded-xl font-medium transition-all duration-200 
       bg-gray-100 text-gray-700 hover:bg-gray-200 
       focus:ring-2 focus:ring-gray-500 focus:ring-offset-2
+      min-h-[44px] touch-manipulation
     `,
     outline: `
       px-4 py-2 rounded-xl font-medium transition-all duration-200 
       border border-gray-300 text-gray-700 hover:bg-gray-50 
       focus:ring-2 focus:ring-gray-500 focus:ring-offset-2
+      min-h-[44px] touch-manipulation
     `
   },
   card: {
     elevated: `
       bg-white rounded-2xl shadow-lg border border-gray-200 
       hover:shadow-xl transition-shadow duration-300
+      p-4 md:p-6
     `,
     flat: `
       bg-white rounded-xl border border-gray-200
+      p-4 md:p-6
+    `,
+    interactive: `
+      bg-white rounded-2xl shadow-md border border-gray-200 
+      hover:shadow-lg active:scale-[0.98] transition-all duration-200
+      cursor-pointer p-4 md:p-6 touch-manipulation
     `
+  },
+  layout: {
+    container: `
+      max-w-7xl mx-auto px-4 sm:px-6 lg:px-8
+    `,
+    section: `
+      space-y-6 md:space-y-8
+    `,
+    grid: {
+      responsive: `
+        grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6
+      `,
+      metrics: `
+        grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6
+      `
+    }
+  },
+  mobile: {
+    bottomNav: `
+      fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200
+      h-20 flex items-center justify-around px-4 z-50 lg:hidden
+    `,
+    header: `
+      sticky top-0 bg-white border-b border-gray-200 z-40
+      h-16 flex items-center justify-between px-4
+    `,
+    content: `
+      pb-20 lg:pb-0 min-h-screen bg-gray-50
+    `
+  }
+} as const
+
+// Role-specific component styles
+export const roleStyles = {
+  admin: {
+    header: `
+      bg-gradient-to-r from-blue-600 to-indigo-600 text-white
+      border-b border-blue-700
+    `,
+    sidebar: `
+      bg-slate-900 text-slate-100 border-r border-slate-800
+    `,
+    card: `
+      bg-white border border-slate-200 rounded-xl shadow-sm
+      hover:shadow-md transition-shadow duration-200
+    `,
+    button: {
+      primary: `
+        bg-blue-600 hover:bg-blue-700 text-white
+        focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+      `,
+      secondary: `
+        bg-slate-100 hover:bg-slate-200 text-slate-700
+        focus:ring-2 focus:ring-slate-500 focus:ring-offset-2
+      `
+    }
+  },
+  business: {
+    header: `
+      bg-gradient-to-r from-emerald-600 to-green-600 text-white
+      border-b border-emerald-700
+    `,
+    sidebar: `
+      bg-emerald-50 text-emerald-900 border-r border-emerald-200
+    `,
+    card: `
+      bg-white border border-emerald-200 rounded-xl shadow-sm
+      hover:shadow-md transition-shadow duration-200
+    `,
+    button: {
+      primary: `
+        bg-emerald-600 hover:bg-emerald-700 text-white
+        focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2
+      `,
+      secondary: `
+        bg-emerald-100 hover:bg-emerald-200 text-emerald-700
+        focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2
+      `
+    }
+  },
+  customer: {
+    header: `
+      bg-gradient-to-r from-purple-600 to-violet-600 text-white
+      border-b border-purple-700
+    `,
+    card: `
+      bg-white border border-purple-200 rounded-xl shadow-sm
+      hover:shadow-md transition-shadow duration-200
+    `,
+    button: {
+      primary: `
+        bg-purple-600 hover:bg-purple-700 text-white
+        focus:ring-2 focus:ring-purple-500 focus:ring-offset-2
+      `,
+      secondary: `
+        bg-purple-100 hover:bg-purple-200 text-purple-700
+        focus:ring-2 focus:ring-purple-500 focus:ring-offset-2
+      `
+    }
   }
 } as const

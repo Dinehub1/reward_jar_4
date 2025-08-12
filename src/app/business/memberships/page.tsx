@@ -9,7 +9,9 @@ import ManagerModeToggle from '@/components/business/ManagerModeToggle'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { 
+import { ComponentErrorBoundary } from '@/components/shared/ErrorBoundary'
+import { modernStyles, roleStyles } from '@/lib/design-tokens'
+import {
   Plus, 
   Users, 
   DollarSign,
@@ -43,7 +45,7 @@ interface ManagerPermissions {
   view_customer_data: boolean
 }
 
-export default function MembershipsPage() {
+function LegacyMembershipsPage() {
   const [membershipCards, setMembershipCards] = useState<MembershipCard[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -406,3 +408,25 @@ export default function MembershipsPage() {
     </BusinessLayout>
   )
 } 
+export default function MembershipsPage() {
+  return (
+    <ComponentErrorBoundary fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Membership Management Unavailable</h2>
+          <p className="text-gray-600 mb-4">Unable to load the membership management</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium"
+          >
+            Reload Page
+          </button>
+        </div>
+      </div>
+    }>
+      <div className={modernStyles.layout.container}>
+        <LegacyMembershipsPage />
+      </div>
+    </ComponentErrorBoundary>
+  )
+}

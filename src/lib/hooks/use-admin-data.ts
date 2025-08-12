@@ -333,7 +333,7 @@ export function useAdminCustomersPaginated(page: number = 1, limit: number = 20)
 export function useBusinesses() {
   const { data: response, error, isLoading, mutate } = useAdminBusinesses()
   return {
-    data: response?.data || [],
+    data: response, // Return the full response object which contains { success, data, stats }
     loading: isLoading,
     error: error ? (error instanceof Error ? error.message : 'Failed to load businesses') : null,
     refetch: mutate

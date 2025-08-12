@@ -7,6 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { CreditCard, Trophy, Star, ArrowRight, Gift } from 'lucide-react'
 import Link from 'next/link'
+import { ComponentErrorBoundary } from '@/components/shared/ErrorBoundary'
+import { modernStyles, roleStyles } from '@/lib/design-tokens'
 
 interface CustomerCard {
   id: string
@@ -308,4 +310,39 @@ function CustomerDashboard() {
   )
 }
 
-export default CustomerDashboard 
+function LegacyCustomerDashboardPage() {
+  return (
+    <ComponentErrorBoundary fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Dashboard Loading...</h2>
+          <p className="text-gray-600">Please wait while we load your loyalty cards</p>
+        </div>
+      </div>
+    }>
+      <CustomerDashboard />
+    </ComponentErrorBoundary>
+  )
+} 
+export default function CustomerDashboardPage() {
+  return (
+    <ComponentErrorBoundary fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Customer Dashboard Unavailable</h2>
+          <p className="text-gray-600 mb-4">Unable to load the customer dashboard</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium"
+          >
+            Reload Page
+          </button>
+        </div>
+      </div>
+    }>
+      <div className={modernStyles.layout.container}>
+        <LegacyCustomerDashboardPage />
+      </div>
+    </ComponentErrorBoundary>
+  )
+}

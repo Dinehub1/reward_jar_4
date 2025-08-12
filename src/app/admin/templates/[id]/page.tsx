@@ -11,8 +11,10 @@ import { AuthoringSchema } from '@/lib/validation/authoring'
 import { useAutosaveDraft } from '@/lib/hooks/use-autosave-draft'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ComponentErrorBoundary } from '@/components/shared/ErrorBoundary'
+import { modernStyles, roleStyles } from '@/lib/design-tokens'
 
-export default function TemplateEditorPage({ params }: { params: Promise<{ id: string }> }) {
+function LegacyTemplateEditorPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const [loading, setLoading] = useState(true)
   const [template, setTemplate] = useState<any>(null)
@@ -202,3 +204,26 @@ export default function TemplateEditorPage({ params }: { params: Promise<{ id: s
   )
 }
 
+
+export default function TemplateEditorPage() {
+  return (
+    <ComponentErrorBoundary fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Template Detail Unavailable</h2>
+          <p className="text-gray-600 mb-4">Unable to load the template detail</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium"
+          >
+            Reload Page
+          </button>
+        </div>
+      </div>
+    }>
+      <div className={modernStyles.layout.container}>
+        <LegacyTemplateEditorPage />
+      </div>
+    </ComponentErrorBoundary>
+  )
+}

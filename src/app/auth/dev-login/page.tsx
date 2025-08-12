@@ -3,13 +3,15 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { ComponentErrorBoundary } from '@/components/shared/ErrorBoundary'
+import { modernStyles, roleStyles } from '@/lib/design-tokens'
 
 /**
  * Development-only login page
  * Use this when Supabase email authentication is disabled
  * Remove this file in production
  */
-export default function DevLoginPage() {
+function LegacyDevLoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -139,5 +141,27 @@ export default function DevLoginPage() {
         </form>
       </div>
     </div>
+  )
+}
+export default function DevLoginPage() {
+  return (
+    <ComponentErrorBoundary fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Dev Login Unavailable</h2>
+          <p className="text-gray-600 mb-4">Unable to load the dev login</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium"
+          >
+            Reload Page
+          </button>
+        </div>
+      </div>
+    }>
+      <div className={modernStyles.layout.container}>
+        <LegacyDevLoginPage />
+      </div>
+    </ComponentErrorBoundary>
   )
 }

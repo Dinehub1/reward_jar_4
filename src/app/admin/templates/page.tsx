@@ -7,8 +7,10 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Input } from '@/components/ui/input'
 import type { AuthoringPayload } from '@/lib/templates/types'
 import { useRouter } from 'next/navigation'
+import { ComponentErrorBoundary } from '@/components/shared/ErrorBoundary'
+import { getPageEnhancement, createErrorFallback } from '@/lib/design-consistency/page-enhancer'
 
-export default function TemplatesIndexPage() {
+function LegacyTemplatesIndexPage() {
   const router = useRouter()
   const [templates, setTemplates] = useState<any[]>([])
   const [open, setOpen] = useState(false)
@@ -108,6 +110,18 @@ export default function TemplatesIndexPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function TemplatesIndexPage() {
+  const enhancement = getPageEnhancement('admin', 'management')
+  
+  return (
+    <ComponentErrorBoundary fallback={createErrorFallback('admin', 'Template Management')}>
+      <div className={enhancement.containerClass}>
+        <LegacyTemplatesIndexPage />
+      </div>
+    </ComponentErrorBoundary>
   )
 }
 

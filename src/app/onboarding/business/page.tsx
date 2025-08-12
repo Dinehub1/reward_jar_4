@@ -21,6 +21,8 @@ import {
   Loader2
 } from 'lucide-react'
 import { CardLivePreview } from '@/components/unified/CardLivePreview'
+import { modernStyles, roleStyles } from '@/lib/design-tokens'
+import { ComponentErrorBoundary } from '@/components/shared/ErrorBoundary'
 
 interface BusinessFormData {
   ownerName: string
@@ -46,7 +48,7 @@ interface User {
   email?: string
 }
 
-export default function BusinessOnboardingPage() {
+function LegacyBusinessOnboardingPage() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -666,5 +668,28 @@ export default function BusinessOnboardingPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function BusinessOnboardingPage() {
+  return (
+    <ComponentErrorBoundary fallback={
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 to-blue-900 flex items-center justify-center">
+        <div className="text-center text-white">
+          <h2 className="text-2xl font-semibold mb-2">Business Onboarding</h2>
+          <p className="mb-4">Unable to load the onboarding system</p>
+          <Button 
+            onClick={() => window.location.reload()}
+            className="bg-white text-gray-900 hover:bg-gray-100 px-6"
+          >
+            Reload Page
+          </Button>
+        </div>
+      </div>
+    }>
+      <div className={modernStyles.mobile.content}>
+        <LegacyBusinessOnboardingPage />
+      </div>
+    </ComponentErrorBoundary>
   )
 }

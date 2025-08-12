@@ -3,8 +3,10 @@ import { Button } from '@/components/ui/button'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { CreditCard, QrCode, Smartphone, TrendingUp, Users, Zap } from 'lucide-react'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
+import { modernStyles, roleStyles } from '@/lib/design-tokens'
+import { ComponentErrorBoundary } from '@/components/shared/ErrorBoundary'
 
-export default function HomePage() {
+function LandingPageContent() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-slate-900 dark:to-slate-800 transition-colors duration-300">
       {/* Navigation */}
@@ -20,7 +22,7 @@ export default function HomePage() {
                 <Button variant="ghost" className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">Business Login</Button>
               </Link>
               <Link href="/onboarding/business">
-                <Button className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 px-6">Get Started</Button>
+                <Button className={`${roleStyles.public?.primary || 'bg-blue-600 hover:bg-blue-700'} px-6`}>Get Started</Button>
               </Link>
             </div>
           </div>
@@ -309,5 +311,26 @@ export default function HomePage() {
         </div>
       </footer>
     </div>
+  )
+}
+
+export default function HomePage() {
+  return (
+    <ComponentErrorBoundary fallback={
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 to-blue-900 flex items-center justify-center">
+        <div className="text-center text-white">
+          <h2 className="text-2xl font-semibold mb-2">RewardJar</h2>
+          <p className="mb-4">Unable to load the homepage</p>
+          <a 
+            href="/"
+            className="inline-block bg-white text-gray-900 hover:bg-gray-100 px-6 py-2 rounded-lg font-medium"
+          >
+            Reload Page
+          </a>
+        </div>
+      </div>
+    }>
+      <LandingPageContent />
+    </ComponentErrorBoundary>
   )
 }

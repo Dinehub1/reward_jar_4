@@ -27,6 +27,8 @@ import {
   Settings
 } from 'lucide-react'
 import Link from 'next/link'
+import { ComponentErrorBoundary } from '@/components/shared/ErrorBoundary'
+import { modernStyles, roleStyles } from '@/lib/design-tokens'
 
 interface TestSuite {
   id: string
@@ -189,7 +191,7 @@ const testPages: TestPage[] = [
   }
 ]
 
-export default function TestAutomationPage() {
+function LegacyTestAutomationPage() {
   const [suites, setSuites] = useState<TestSuite[]>(testSuites)
   const [activeTab, setActiveTab] = useState('suites')
   const [runningTests, setRunningTests] = useState<Set<string>>(new Set())
@@ -601,5 +603,27 @@ export default function TestAutomationPage() {
         </Tabs>
       </div>
     </AdminLayoutClient>
+  )
+}
+export default function TestAutomationPage() {
+  return (
+    <ComponentErrorBoundary fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Test Automation Unavailable</h2>
+          <p className="text-gray-600 mb-4">Unable to load the test automation</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium"
+          >
+            Reload Page
+          </button>
+        </div>
+      </div>
+    }>
+      <div className={modernStyles.layout.container}>
+        <LegacyTestAutomationPage />
+      </div>
+    </ComponentErrorBoundary>
   )
 }

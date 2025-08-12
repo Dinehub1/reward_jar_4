@@ -9,6 +9,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { AdminLayoutClient } from '@/components/layouts/AdminLayoutClient'
+import { ComponentErrorBoundary } from '@/components/shared/ErrorBoundary'
+import { modernStyles, roleStyles } from '@/lib/design-tokens'
 
 interface SupportLog {
   id: string
@@ -439,7 +441,7 @@ function SupportStats() {
   )
 }
 
-export default function AdminSupport() {
+function LegacyAdminSupport() {
   return (
     <AdminLayoutClient>
       <div className="space-y-6">
@@ -478,3 +480,25 @@ export default function AdminSupport() {
     </AdminLayoutClient>
   )
 } 
+export default function AdminSupport() {
+  return (
+    <ComponentErrorBoundary fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Support Dashboard Unavailable</h2>
+          <p className="text-gray-600 mb-4">Unable to load the support dashboard</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium"
+          >
+            Reload Page
+          </button>
+        </div>
+      </div>
+    }>
+      <div className={modernStyles.layout.container}>
+        <LegacyAdminSupport />
+      </div>
+    </ComponentErrorBoundary>
+  )
+}

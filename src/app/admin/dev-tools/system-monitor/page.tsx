@@ -26,6 +26,8 @@ import {
   Minus
 } from 'lucide-react'
 import Link from 'next/link'
+import { ComponentErrorBoundary } from '@/components/shared/ErrorBoundary'
+import { modernStyles, roleStyles } from '@/lib/design-tokens'
 
 interface SystemMetric {
   id: string
@@ -47,7 +49,7 @@ interface ServiceStatus {
   endpoint?: string
 }
 
-export default function SystemMonitorPage() {
+function LegacySystemMonitorPage() {
   const [metrics, setMetrics] = useState<SystemMetric[]>([])
   const [services, setServices] = useState<ServiceStatus[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -581,5 +583,27 @@ export default function SystemMonitorPage() {
         </Tabs>
       </div>
     </AdminLayoutClient>
+  )
+}
+export default function SystemMonitorPage() {
+  return (
+    <ComponentErrorBoundary fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">System Monitor Unavailable</h2>
+          <p className="text-gray-600 mb-4">Unable to load the system monitor</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium"
+          >
+            Reload Page
+          </button>
+        </div>
+      </div>
+    }>
+      <div className={modernStyles.layout.container}>
+        <LegacySystemMonitorPage />
+      </div>
+    </ComponentErrorBoundary>
   )
 }

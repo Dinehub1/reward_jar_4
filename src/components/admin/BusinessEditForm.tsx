@@ -200,7 +200,7 @@ export function BusinessEditForm({
     } catch (error) {
         console.error("Error:", error)
       }
-    }} finally {
+    } finally {
       setSaving(false)
       setUploading(false)
     }

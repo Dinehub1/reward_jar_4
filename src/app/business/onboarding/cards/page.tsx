@@ -8,6 +8,8 @@ import { checkAuth } from '@/lib/auth-protection'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { CreditCard, Users, TrendingUp, Smartphone, Gift, CheckCircle, ChevronDown } from 'lucide-react'
+import { ComponentErrorBoundary } from '@/components/shared/ErrorBoundary'
+import { modernStyles, roleStyles } from '@/lib/design-tokens'
 
 interface Business {
   id: string
@@ -15,7 +17,7 @@ interface Business {
   description: string | null
 }
 
-export default function BusinessCardsIntroPage() {
+function LegacyBusinessCardsIntroPage() {
   const [business, setBusiness] = useState<Business | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [selectedCardType, setSelectedCardType] = useState<'stamp' | 'membership' | null>(null)
@@ -329,3 +331,25 @@ export default function BusinessCardsIntroPage() {
     </div>
   )
 } 
+export default function BusinessCardsIntroPage() {
+  return (
+    <ComponentErrorBoundary fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Card Setup Unavailable</h2>
+          <p className="text-gray-600 mb-4">Unable to load the card setup</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium"
+          >
+            Reload Page
+          </button>
+        </div>
+      </div>
+    }>
+      <div className={modernStyles.layout.container}>
+        <LegacyBusinessCardsIntroPage />
+      </div>
+    </ComponentErrorBoundary>
+  )
+}

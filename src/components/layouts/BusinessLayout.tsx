@@ -11,6 +11,7 @@ import { Menu, X, LogOut, User as UserIcon } from 'lucide-react'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import ClientDate from '@/components/shared/ClientDate'
 import { ComponentErrorBoundary } from '@/components/shared/ErrorBoundary'
+import MobileBottomNav from '@/components/mobile/MobileBottomNav'
 
 interface BusinessLayoutProps {
   children: React.ReactNode
@@ -134,6 +135,7 @@ export default function BusinessLayout({ children }: BusinessLayoutProps) {
   }
 
   return (
+    <>
     <div className="min-h-screen bg-background transition-colors duration-300">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
@@ -255,12 +257,16 @@ export default function BusinessLayout({ children }: BusinessLayoutProps) {
         </div>
 
         {/* Page content */}
-        <main className="flex-1">
+        <main className="flex-1 pb-16 lg:pb-0">
           <ComponentErrorBoundary>
             {children}
           </ComponentErrorBoundary>
         </main>
       </div>
     </div>
+    
+    {/* Mobile Bottom Navigation */}
+    <MobileBottomNav />
+    </>
   )
 } 

@@ -7,7 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { 
+import { ComponentErrorBoundary } from '@/components/shared/ErrorBoundary'
+import { modernStyles, roleStyles } from '@/lib/design-tokens'
+import {
   Activity, 
   Database, 
   Users, 
@@ -45,7 +47,7 @@ interface TestResult {
   timestamp: Date
 }
 
-export default function TestDashboardPage() {
+function LegacyTestDashboardPage() {
   const [metrics, setMetrics] = useState<SystemMetric[]>([])
   const [testResults, setTestResults] = useState<TestResult[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -490,5 +492,27 @@ export default function TestDashboardPage() {
         </Tabs>
       </div>
     </AdminLayoutClient>
+  )
+}
+export default function TestDashboardPage() {
+  return (
+    <ComponentErrorBoundary fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Dashboard Test Unavailable</h2>
+          <p className="text-gray-600 mb-4">Unable to load the dashboard test</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium"
+          >
+            Reload Page
+          </button>
+        </div>
+      </div>
+    }>
+      <div className={modernStyles.layout.container}>
+        <LegacyTestDashboardPage />
+      </div>
+    </ComponentErrorBoundary>
   )
 }

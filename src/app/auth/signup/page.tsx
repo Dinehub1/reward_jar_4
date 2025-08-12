@@ -8,6 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { ComponentErrorBoundary } from '@/components/shared/ErrorBoundary'
+import { modernStyles, roleStyles } from '@/lib/design-tokens'
 
 interface SignupData {
   email: string
@@ -17,7 +19,7 @@ interface SignupData {
   storeNumbers?: string
 }
 
-export default function SignupPage() {
+function LegacySignupPage() {
   const [data, setData] = useState<SignupData>({
     email: '',
     password: '',
@@ -278,3 +280,25 @@ export default function SignupPage() {
     </div>
   )
 } 
+export default function SignupPage() {
+  return (
+    <ComponentErrorBoundary fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Signup Unavailable</h2>
+          <p className="text-gray-600 mb-4">Unable to load the signup</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium"
+          >
+            Reload Page
+          </button>
+        </div>
+      </div>
+    }>
+      <div className={modernStyles.layout.container}>
+        <LegacySignupPage />
+      </div>
+    </ComponentErrorBoundary>
+  )
+}

@@ -52,7 +52,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<GetRoleRe
     const adminClient = createAdminClient()
     console.log('[AUTH-API] Getting role for validated user:', user.id)
     
-    const startTime = Date.now()
+    const queryStartTime = Date.now()
     
     // Query with timeout protection
     const { data: userData, error: roleError } = await Promise.race([
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<GetRoleRe
       )
     ]) as any
 
-    const queryTime = Date.now() - startTime
+    const queryTime = Date.now() - queryStartTime
     console.log('[AUTH-API] Role lookup completed in', queryTime, 'ms')
 
     if (roleError) {
