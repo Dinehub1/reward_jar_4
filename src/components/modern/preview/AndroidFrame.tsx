@@ -8,6 +8,13 @@ interface AndroidFrameProps {
   children: React.ReactNode
   variant?: 'pixel' | 'samsung' | 'oneplus' | 'default'
   className?: string
+  // Enhanced interaction props (Phase 1)
+  interactive?: boolean
+  onDeviceClick?: () => void
+  onDeviceFocus?: () => void
+  showReflection?: boolean
+  enableZoom?: boolean
+  focused?: boolean
 }
 
 const getFrameColors = (variant: AndroidFrameProps['variant']) => {
@@ -43,28 +50,68 @@ const getFrameColors = (variant: AndroidFrameProps['variant']) => {
 export function AndroidFrame({  
   children, 
   variant = 'default',
-  className = ''
+  className = '',
+  interactive = false,
+  onDeviceClick,
+  onDeviceFocus,
+  showReflection = true,
+  enableZoom = false,
+  focused = false
  }: AndroidFrameProps) {
   const colors = getFrameColors(variant)
   
+  // Enhanced animations and interactions (same as iPhone)
+  const scaleOnHover = interactive ? 1.02 : 1
+  const scaleOnTap = interactive ? 0.98 : 1
+  const focusScale = focused && enableZoom ? 1.1 : 1
+  
+  const handleClick = () => {
+    if (interactive) {
+      onDeviceClick?.()
+      onDeviceFocus?.()
+    }
+  }
+  
   return (
     <div className={`relative mx-auto ${className}`}>
-      {/* Outer Device Frame */}
+      {/* Enhanced Android Device Frame with Interactions */}
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
+        animate={{ 
+          opacity: 1, 
+          scale: focusScale 
+        }}
+        whileHover={interactive ? { 
+          scale: scaleOnHover,
+          rotateY: -2, // Opposite direction from iPhone for variety
+          rotateX: 1
+        } : {}}
+        whileTap={interactive ? { 
+          scale: scaleOnTap,
+          rotateY: 0,
+          rotateX: 0
+        } : {}}
         transition={{ 
           duration: 0.5, 
-          ease: designTokens.animation.easing.out 
+          ease: designTokens.animation.easing.out,
+          scale: { duration: 0.3 },
+          rotate: { duration: 0.2 }
         }}
         className={`
           relative w-[375px] h-[812px] ${colors.frame} 
-          rounded-[2.5rem] p-2
+          rounded-[2.5rem] p-2 transform-gpu
+          ${interactive ? 'cursor-pointer' : ''}
+          ${focused ? 'ring-4 ring-green-500 ring-opacity-50' : ''}
         `}
         style={{ 
-          boxShadow: designTokens.wallet.shadows.device,
-          filter: 'drop-shadow(0 4px 20px rgba(0, 0, 0, 0.15))'
+          boxShadow: focused 
+            ? '0 25px 50px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(34, 197, 94, 0.3)'
+            : designTokens.wallet.shadows.device,
+          filter: focused 
+            ? 'drop-shadow(0 8px 32px rgba(0, 0, 0, 0.25))'
+            : 'drop-shadow(0 4px 20px rgba(0, 0, 0, 0.15))'
         }}
+        onClick={handleClick}
       >
         {/* Screen Bezel */}
         <div className={`
@@ -153,6 +200,27 @@ export function AndroidFrame({
           mixBlendMode: 'overlay'
         }}
       />
+      
+      {/* Enhanced Reflection (Phase 1) */}
+      {showReflection && (
+        <motion.div
+          className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 w-[300px] h-6"
+          style={{
+            background: focused 
+              ? 'radial-gradient(ellipse, rgba(34, 197, 94, 0.2) 0%, transparent 70%)'
+              : 'radial-gradient(ellipse, rgba(0,0,0,0.15) 0%, transparent 70%)',
+            filter: 'blur(12px)'
+          }}
+          animate={{
+            opacity: interactive ? [0.3, 0.1, 0.3] : 0.3,
+            scaleX: focused ? 1.2 : 1
+          }}
+          transition={{
+            opacity: { duration: 3, repeat: Infinity, ease: 'easeInOut' },
+            scaleX: { duration: 0.3 }
+          }}
+        />
+      )}
     </div>
   )
 }

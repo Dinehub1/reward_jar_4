@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, use, useCallback } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -122,11 +122,19 @@ function LegacyBusinessDetailsPage({
   const [loading, setLoading] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
+  const [businessId, setBusinessId] = useState<string>('')
   const router = useRouter()
 
-  const { id: businessId } = use(params)
+  // Handle async params in Next.js 15
+  useEffect(() => {
+    params.then(({ id }) => {
+      setBusinessId(id)
+    })
+  }, [params])
 
   const fetchBusiness = useCallback(async () => {
+    if (!businessId) return // Wait for businessId to be set
+    
     try {
     const response = await fetch(`/api/admin/businesses/${businessId}`)
     

@@ -14,6 +14,32 @@ export interface StampConfig {
   duplicateVisitBuffer: '12h' | '1d' | 'none'
 }
 
+// Design Configuration Types (NEW - Phase 1)
+export interface DesignConfig {
+  // Icon System
+  iconStyle: 'emoji' | 'custom' | 'category'
+  gridLayout?: { columns: number; rows: number }
+  
+  // Progress & UI
+  progressStyle?: 'bar' | 'circular' | 'elegant' | 'shopping'
+  brandLevel: 'minimal' | 'moderate' | 'premium' | 'luxury' | 'energetic' | 'elegant' | 'modern'
+  
+  // Countdown Features
+  countdownSettings: {
+    showExpiry?: boolean
+    showSessionsLeft?: boolean
+    showUsesLeft?: boolean
+    urgencyThreshold?: number // days before expiry to show urgency
+  }
+  
+  // Platform-specific overrides
+  platformOverrides?: {
+    apple?: Partial<DesignConfig>
+    google?: Partial<DesignConfig>
+    pwa?: Partial<DesignConfig>
+  }
+}
+
 // Card Form Data Types (Canonical Schema)
 export interface CardFormData {
   // Primary fields
@@ -25,12 +51,17 @@ export interface CardFormData {
   stampsRequired: number
   cardColor: string
   iconEmoji: string
+  customIconUrl?: string // NEW: Custom uploaded icon URL
+  customIconPublicUrl?: string // NEW: Public URL for display
   barcodeType: 'PDF417' | 'QR_CODE'
   cardExpiryDays: number
   rewardExpiryDays: number
   
   // Stamp logic
   stampConfig: StampConfig
+  
+  // Design configuration (NEW - Phase 1)
+  designConfig: DesignConfig
   
   // Information fields
   cardDescription: string
@@ -164,10 +195,13 @@ export interface Database {
           status: string
           card_color: string
           icon_emoji: string
+          custom_icon_url: string | null // NEW: Custom icon storage URL
+          custom_icon_public_url: string | null // NEW: Custom icon public URL
           barcode_type: 'PDF417' | 'QR_CODE'
           card_expiry_days: number
           reward_expiry_days: number
           stamp_config: StampConfig
+          design_config: DesignConfig // NEW: Enhanced design configuration
           card_description: string
           how_to_earn_stamp: string
           reward_details: string
@@ -190,10 +224,13 @@ export interface Database {
           status?: string
           card_color?: string
           icon_emoji?: string
+          custom_icon_url?: string | null // NEW: Custom icon storage URL
+          custom_icon_public_url?: string | null // NEW: Custom icon public URL
           barcode_type?: 'PDF417' | 'QR_CODE'
           card_expiry_days?: number
           reward_expiry_days?: number
           stamp_config?: StampConfig
+          design_config?: DesignConfig // NEW: Enhanced design configuration
           card_description?: string
           how_to_earn_stamp?: string
           reward_details?: string
@@ -216,10 +253,13 @@ export interface Database {
           status?: string
           card_color?: string
           icon_emoji?: string
+          custom_icon_url?: string | null // NEW: Custom icon storage URL
+          custom_icon_public_url?: string | null // NEW: Custom icon public URL
           barcode_type?: 'PDF417' | 'QR_CODE'
           card_expiry_days?: number
           reward_expiry_days?: number
           stamp_config?: StampConfig
+          design_config?: DesignConfig // NEW: Enhanced design configuration
           card_description?: string
           how_to_earn_stamp?: string
           reward_details?: string
@@ -254,6 +294,7 @@ export interface Database {
           validity_windows: any | null
           eligible_categories: string[] | null
           eligible_skus: string[] | null
+          design_config: DesignConfig // NEW: Enhanced design configuration
           status: string
           created_at: string
           updated_at: string
@@ -276,6 +317,7 @@ export interface Database {
           validity_windows?: any | null
           eligible_categories?: string[] | null
           eligible_skus?: string[] | null
+          design_config?: DesignConfig // NEW: Enhanced design configuration
           status?: string
           created_at?: string
           updated_at?: string
@@ -298,6 +340,7 @@ export interface Database {
           validity_windows?: any | null
           eligible_categories?: string[] | null
           eligible_skus?: string[] | null
+          design_config?: DesignConfig // NEW: Enhanced design configuration
           status?: string
           created_at?: string
           updated_at?: string

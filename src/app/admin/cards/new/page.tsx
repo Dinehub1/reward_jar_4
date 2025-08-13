@@ -74,6 +74,7 @@ import { designTokens } from '@/lib/design-tokens'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CardLivePreview } from '@/components/unified/CardLivePreview'
 import { mapAdminCardFormToPreview } from '@/lib/card-mappers'
+import { TemplatePreviewGrid } from '@/components/admin/TemplatePreview'
 
 // Types
 interface Business {
@@ -128,19 +129,25 @@ interface ValidationError {
 }
 
 // Constants
-// Extended step flow to include Type (Step 0) and Mode (Step 1)
+// Enhanced step flow with Template Selection (Step 0) before Card Type
 const STEPS = [
+  {
+    id: 'template',
+    title: 'Template Selection',
+    icon: <FileText className="w-4 h-4" />,
+    description: 'Choose a template or start from scratch'
+  },
   {
     id: 'type',
     title: 'Card Type',
     icon: <Smartphone className="w-4 h-4" />,
-    description: 'Choose between Stamp and Membership (extensible)'
+    description: 'Choose between Stamp and Membership cards'
   },
   {
     id: 'mode',
     title: 'Creation Mode',
     icon: <Settings className="w-4 h-4" />,
-    description: 'Standard (template-based) or Advanced (full designer)'
+    description: 'Quick setup or advanced customization'
   },
   { 
     id: 'details', 
@@ -156,9 +163,9 @@ const STEPS = [
   },
   { 
     id: 'rules', 
-    title: 'Stamp Rules', 
+    title: 'Card Rules', 
     icon: <Zap className="w-4 h-4" />,
-    description: 'Configure stamp collection logic'
+    description: 'Configure card collection logic and rewards'
   },
   { 
     id: 'information', 
@@ -174,129 +181,10 @@ const STEPS = [
   }
 ]
 
-// Card Templates for Quick Start
-const CARD_TEMPLATES = [
-  {
-    id: 'coffee-shop',
-    name: 'Coffee Shop',
-    description: 'Perfect for cafes and coffee shops',
-    cardColor: '#8B4513',
-    iconEmoji: '☕',
-    stampsRequired: 10,
-    reward: 'Free Coffee',
-    rewardDescription: 'Free coffee of your choice',
-    cardDescription: 'Collect stamps to get free coffee',
-    howToEarnStamp: 'Buy any drink to get a stamp',
-    rewardDetails: 'Valid for any coffee size, dine-in or takeaway',
-    stampConfig: {
-      manualStampOnly: true,
-      minSpendAmount: 0,
-      billProofRequired: false,
-      maxStampsPerDay: 3,
-      duplicateVisitBuffer: '12h'
-    }
-  },
-  {
-    id: 'restaurant',
-    name: 'Restaurant',
-    description: 'Great for restaurants and food services',
-    cardColor: '#FF6347',
-    iconEmoji: '🍕',
-    stampsRequired: 8,
-    reward: 'Free Meal',
-    rewardDescription: 'Free main course meal',
-    cardDescription: 'Collect stamps to get a free meal',
-    howToEarnStamp: 'Spend ₹500 or more to get a stamp',
-    rewardDetails: 'Valid for main course items up to ₹800 value',
-    stampConfig: {
-      manualStampOnly: true,
-      minSpendAmount: 500,
-      billProofRequired: true,
-      maxStampsPerDay: 1,
-      duplicateVisitBuffer: '1d'
-    }
-  },
-  {
-    id: 'salon-spa',
-    name: 'Salon & Spa',
-    description: 'Ideal for beauty and wellness services',
-    cardColor: '#FF69B4',
-    iconEmoji: '💅',
-    stampsRequired: 6,
-    reward: 'Free Service',
-    rewardDescription: 'Free haircut or basic facial',
-    cardDescription: 'Collect stamps for free beauty services',
-    howToEarnStamp: 'Book any service to get a stamp',
-    rewardDetails: 'Valid for haircut, basic facial, or manicure',
-    stampConfig: {
-      manualStampOnly: true,
-      minSpendAmount: 1000,
-      billProofRequired: false,
-      maxStampsPerDay: 1,
-      duplicateVisitBuffer: '1d'
-    }
-  },
-  {
-    id: 'retail-store',
-    name: 'Retail Store',
-    description: 'Perfect for retail and shopping',
-    cardColor: '#32CD32',
-    iconEmoji: '🛍️',
-    stampsRequired: 12,
-    reward: '20% Discount',
-    rewardDescription: '20% off your next purchase',
-    cardDescription: 'Shop more, save more with our loyalty program',
-    howToEarnStamp: 'Spend ₹1000 or more to get a stamp',
-    rewardDetails: 'Valid on regular priced items, cannot be combined with other offers',
-    stampConfig: {
-      manualStampOnly: true,
-      minSpendAmount: 1000,
-      billProofRequired: true,
-      maxStampsPerDay: 2,
-      duplicateVisitBuffer: '12h'
-    }
-  },
-  {
-    id: 'fitness-gym',
-    name: 'Fitness & Gym',
-    description: 'Great for gyms and fitness centers',
-    cardColor: '#FF4500',
-    iconEmoji: '🏋️',
-    stampsRequired: 15,
-    reward: 'Free Session',
-    rewardDescription: 'Free personal training session',
-    cardDescription: 'Stay fit and earn rewards for your dedication',
-    howToEarnStamp: 'Complete a workout session to get a stamp',
-    rewardDetails: '1-hour personal training session with certified trainer',
-    stampConfig: {
-      manualStampOnly: true,
-      minSpendAmount: 0,
-      billProofRequired: false,
-      maxStampsPerDay: 1,
-      duplicateVisitBuffer: '1d'
-    }
-  },
-  {
-    id: 'custom',
-    name: 'Start from Scratch',
-    description: 'Create a completely custom card',
-    cardColor: '#8B4513',
-    iconEmoji: '☕',
-    stampsRequired: 10,
-    reward: '',
-    rewardDescription: '',
-    cardDescription: '',
-    howToEarnStamp: '',
-    rewardDetails: '',
-    stampConfig: {
-      manualStampOnly: true,
-      minSpendAmount: 0,
-      billProofRequired: false,
-      maxStampsPerDay: 1,
-      duplicateVisitBuffer: '12h'
-    }
-  }
-]
+import INDUSTRY_TEMPLATES from '@/lib/templates/industry-templates'
+
+// Use the comprehensive industry templates
+const CARD_TEMPLATES = INDUSTRY_TEMPLATES
 
 const EMOJI_OPTIONS = [
   '☕', '🍕', '🧋', '🍔', '🍜', '🥗', '🍰', '🧁', '🍺', '🥂',
@@ -396,6 +284,10 @@ function CardCreationPageContent() {
   const [showBackPage, setShowBackPage] = useState(false)
   const [showTemplateSelector, setShowTemplateSelector] = useState(false)
   
+  // NEW: Template selection state (Phase 1)
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null)
+  const [templateApplied, setTemplateApplied] = useState(false)
+  
   const [cardData, setCardData] = useState<CardFormData>({
     // Step 1: Card Details
     cardName: '',
@@ -422,6 +314,17 @@ function CardCreationPageContent() {
       billProofRequired: false,
       maxStampsPerDay: 1,
       duplicateVisitBuffer: '12h'
+    },
+    
+    // NEW: Design Configuration (Phase 1)
+    designConfig: {
+      iconStyle: 'emoji',
+      gridLayout: { columns: 5, rows: 2 },
+      brandLevel: 'minimal',
+      countdownSettings: {
+        showExpiry: true,
+        urgencyThreshold: 7
+      }
     },
     
     // Step 4: Information
@@ -602,40 +505,112 @@ function CardCreationPageContent() {
     return errors.find(err => err.field === field)?.message
   }, [errors])
 
-  // Apply template to card data
+  // Apply template to card data (Enhanced for Phase 1)
   const applyTemplate = useCallback((templateId: string) => {
     const template = CARD_TEMPLATES.find(t => t.id === templateId)
     if (!template) return
 
-    // Use current state for businessName as source of truth
-    setCardData(prev => {
-      const content = generateCardContent(prev.businessName || 'Business', template)
-      return {
-        ...prev,
-        // Ensure required string fields remain strings, not undefined
-        reward: content.reward ?? prev.reward ?? '',
-        rewardDescription: content.rewardDescription ?? prev.rewardDescription ?? '',
-        cardDescription: content.cardDescription ?? prev.cardDescription ?? '',
-        howToEarnStamp: content.howToEarnStamp ?? prev.howToEarnStamp ?? '',
-        rewardDetails: content.rewardDetails ?? prev.rewardDetails ?? '',
-        cardColor: content.cardColor ?? prev.cardColor,
-        iconEmoji: content.iconEmoji ?? prev.iconEmoji,
-        stampsRequired: content.stampsRequired ?? prev.stampsRequired,
-        stampConfig: {
-          ...prev.stampConfig,
-          ...content.stampConfig,
-          duplicateVisitBuffer: (content.stampConfig?.duplicateVisitBuffer as '12h' | '1d' | 'none') ?? prev.stampConfig.duplicateVisitBuffer
-        },
-      }
-    })
+    // Get the appropriate variant based on current card type
+    const variant = template.variants?.[cardType]
+    if (!variant) return
 
+    // Apply template data to current card state
+    setCardData(prev => ({
+        ...prev,
+      // Core template fields
+      reward: variant.reward ?? prev.reward ?? '',
+      rewardDescription: variant.rewardDescription ?? prev.rewardDescription ?? '',
+      cardDescription: variant.cardDescription ?? prev.cardDescription ?? '',
+      howToEarnStamp: variant.howToEarnStamp ?? prev.howToEarnStamp ?? '',
+      rewardDetails: variant.rewardDetails ?? prev.rewardDetails ?? '',
+      cardColor: variant.cardColor ?? prev.cardColor,
+      iconEmoji: variant.iconEmoji ?? prev.iconEmoji,
+      stampsRequired: variant.stampsRequired ?? prev.stampsRequired,
+      
+      // Enhanced configurations
+      stampConfig: variant.stampConfig ? {
+          ...prev.stampConfig,
+        ...variant.stampConfig
+      } : prev.stampConfig,
+      
+      // NEW: Design configuration from template
+      designConfig: variant.designConfig ? {
+        ...prev.designConfig,
+        ...variant.designConfig
+      } : prev.designConfig,
+      
+      // Membership fields (for membership card types)
+      ...(cardType === 'membership' && {
+        totalSessions: variant.totalSessions ?? prev.totalSessions ?? 10,
+        cost: variant.cost ?? prev.cost ?? 1000,
+        durationDays: variant.durationDays ?? prev.durationDays ?? 30,
+        membershipType: variant.membershipType ?? prev.membershipType ?? 'basic',
+        membershipMode: variant.membershipMode ?? prev.membershipMode ?? 'sessions'
+      })
+    }))
+
+    // Mark template as applied and selected
+    setSelectedTemplate(templateId)
+    setTemplateApplied(true)
     setShowTemplateSelector(false)
-  }, [])
+  }, [cardType])
 
   // Render step content
   const renderStepContent = () => {
     switch (currentStep) {
-      case 0: // Card Type
+      case 0: // Template Selection (NEW - Phase 1)
+        return (
+          <div className="space-y-6">
+            <div className="text-center mb-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">Choose Your Template</h2>
+              <p className="text-gray-600">
+                Select a template to get started quickly, or start from scratch for complete customization
+              </p>
+            </div>
+            
+            {/* Import TemplatePreviewGrid - Note: Will be imported at top of file */}
+            <TemplatePreviewGrid
+              templates={CARD_TEMPLATES}
+              cardType={cardType}
+              selectedTemplate={selectedTemplate}
+              onTemplateSelect={setSelectedTemplate}
+              showPreviews={true}
+              className="max-h-[600px] overflow-y-auto"
+            />
+            
+            {/* Template Actions */}
+            {selectedTemplate && (
+              <div className="flex items-center justify-center gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="text-sm text-blue-900">
+                  <span className="font-medium">
+                    {CARD_TEMPLATES.find(t => t.id === selectedTemplate)?.name}
+                  </span>{' '}
+                  template selected
+                </div>
+                <Button
+                  onClick={() => {
+                    if (selectedTemplate) {
+                      applyTemplate(selectedTemplate)
+                    }
+                  }}
+                  size="sm"
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  Apply Template
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setSelectedTemplate(null)}
+                  size="sm"
+                >
+                  Clear Selection
+                </Button>
+              </div>
+            )}
+          </div>
+        )
+        
+      case 1: // Card Type
         return (
           <div className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -652,7 +627,7 @@ function CardCreationPageContent() {
             </div>
           </div>
         )
-      case 1: // Creation Mode
+      case 2: // Creation Mode
         return (
           <div className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -2,6 +2,7 @@
 // Purpose: Provide a single source of truth for Apple pass JSON used by all Apple wallet routes
 import { formatCurrency, formatDate } from '@/lib/format'
 import { AppleCopy } from '@/lib/wallet/walletCopy'
+import { getOptimalBarcodeConfig, getBarcodeStyles } from '@/lib/wallet/barcode-placement'
 
 export type ApplePassInput = {
   customerCardId: string
@@ -43,6 +44,51 @@ export function convertHexToRgbColor(hexColor?: string): string {
   return 'rgb(16, 185, 129)'
 }
 
+// Countdown helper functions (Phase 2)
+function calculateTimeRemaining(expiryDate: string | Date) {
+  const now = new Date()
+  const expiry = new Date(expiryDate)
+  const diff = expiry.getTime() - now.getTime()
+  
+  if (diff <= 0) return { expired: true, days: 0, hours: 0 }
+  
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+  
+  return { expired, days, hours }
+}
+
+function formatCountdown(timeRemaining: ReturnType<typeof calculateTimeRemaining>): string {
+  const { expired, days, hours } = timeRemaining
+  
+  if (expired) return 'Expired'
+  if (days > 0) return `${days} day${days === 1 ? '' : 's'}`
+  if (hours > 0) return `${hours} hour${hours === 1 ? '' : 's'}`
+  return 'Soon'
+}
+
+function generateCountdownFields(input: ApplePassInput): any[] {
+  const { isMembershipCard, cardData, derived } = input
+  const fields: any[] = []
+  
+  // Check for membership expiry (membership cards)
+  if (isMembershipCard && derived.membershipExpiryDate) {
+    const timeRemaining = calculateTimeRemaining(derived.membershipExpiryDate)
+    const urgencyThreshold = 14 // days for membership
+    
+    if (timeRemaining.expired || timeRemaining.days <= urgencyThreshold) {
+      fields.push({
+        key: 'membership_expiry',
+        label: timeRemaining.expired ? 'Membership' : 'Expires',
+        value: timeRemaining.expired ? 'Expired' : formatCountdown(timeRemaining),
+        textAlignment: 'PKTextAlignmentCenter',
+      })
+    }
+  }
+  
+  return fields
+}
+
 export function buildApplePassJson(input: ApplePassInput) {
   const {
     customerCardId,
@@ -56,6 +102,13 @@ export function buildApplePassJson(input: ApplePassInput) {
     ? convertHexToRgbColor(cardData.card_color)
     : (isMembershipCard ? 'rgb(99, 102, 241)' : 'rgb(16, 185, 129)')
 
+  // Enhanced: Automatic barcode placement (Phase 2)
+  const barcodeConfig = getOptimalBarcodeConfig(
+    'apple',
+    isMembershipCard ? 'membership' : 'stamp',
+    'medium' // Could be dynamic based on card content
+  )
+
   const base = {
     formatVersion: 1,
     passTypeIdentifier: process.env.APPLE_PASS_TYPE_IDENTIFIER,
@@ -67,6 +120,28 @@ export function buildApplePassJson(input: ApplePassInput) {
     backgroundColor,
     foregroundColor: 'rgb(255, 255, 255)',
     labelColor: 'rgb(255, 255, 255)',
+    // Enhanced: Platform-optimized barcode
+    barcodes: [
+      {
+        message: customerCardId,
+        format: barcodeConfig.type === 'PDF417' ? 'PKBarcodeFormatPDF417' :
+                barcodeConfig.type === 'QR_CODE' ? 'PKBarcodeFormatQR' :
+                barcodeConfig.type === 'AZTEC' ? 'PKBarcodeFormatAztec' :
+                'PKBarcodeFormatCode128',
+        messageEncoding: 'iso-8859-1',
+        altText: `Card ID: ${customerCardId}`
+      }
+    ],
+    // Legacy barcode support
+    barcode: {
+      message: customerCardId,
+      format: barcodeConfig.type === 'PDF417' ? 'PKBarcodeFormatPDF417' :
+              barcodeConfig.type === 'QR_CODE' ? 'PKBarcodeFormatQR' :
+              barcodeConfig.type === 'AZTEC' ? 'PKBarcodeFormatAztec' :
+              'PKBarcodeFormatCode128',
+      messageEncoding: 'iso-8859-1',
+      altText: `Card ID: ${customerCardId}`
+    }
   } as const
 
   const storeCard = {
@@ -101,6 +176,8 @@ export function buildApplePassJson(input: ApplePassInput) {
         value: businessData.name,
         textAlignment: 'PKTextAlignmentLeft',
       },
+      // Enhanced: Countdown information (Phase 2)
+      ...generateCountdownFields(input),
       ...(isMembershipCard
         ? []
         : [

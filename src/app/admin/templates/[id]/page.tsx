@@ -1,7 +1,6 @@
 'use client'
 
 import React, { Suspense, useEffect, useMemo, useState } from 'react'
-import { use } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,8 +14,15 @@ import { ComponentErrorBoundary } from '@/components/shared/ErrorBoundary'
 import { modernStyles, roleStyles } from '@/lib/design-tokens'
 
 function LegacyTemplateEditorPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params)
+  const [id, setId] = useState<string>('')
   const [loading, setLoading] = useState(true)
+  
+  // Handle async params in Next.js 15
+  useEffect(() => {
+    params.then(({ id }) => {
+      setId(id)
+    })
+  }, [params])
   const [template, setTemplate] = useState<any>(null)
   const [versions, setVersions] = useState<any[]>([])
   const [authoring, setAuthoring] = useState<AuthoringPayload | null>(null)
@@ -24,6 +30,8 @@ function LegacyTemplateEditorPage({ params }: { params: Promise<{ id: string }> 
   const [activePlatform, setActivePlatform] = useState<'apple'|'google'|'pwa'>('apple')
 
   useEffect(() => {
+    if (!id) return // Wait for id to be set
+    
     let mounted = true
     ;(async () => {
       setLoading(true)

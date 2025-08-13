@@ -45,7 +45,7 @@ export function DevLoginButton() {
   return (
     <div className="mt-4 p-4 bg-yellow-100 border border-yellow-300 rounded-lg">
       <p className="text-sm text-yellow-800 mb-2">
-        🚧 Development Mode: Bypass auth issues
+        Development Mode Only
       </p>
       <button
         onClick={handleDevLogin}

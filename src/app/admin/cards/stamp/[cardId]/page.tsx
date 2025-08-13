@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, use } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -78,10 +78,16 @@ function LegacyAdminStampCardDetailPage({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showQRModal, setShowQRModal] = useState(false)
+  const [cardId, setCardId] = useState<string>('')
 
   const router = useRouter()
-  // Unwrap params Promise using React.use()
-  const { cardId } = use(params)
+  
+  // Handle async params in Next.js 15
+  useEffect(() => {
+    params.then(({ cardId }) => {
+      setCardId(cardId)
+    })
+  }, [params])
   // Initialize Supabase client
   const supabase = createClient()
 

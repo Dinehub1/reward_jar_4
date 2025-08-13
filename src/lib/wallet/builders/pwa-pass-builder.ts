@@ -8,6 +8,9 @@ export interface PwaStampParams {
   totalStamps: number
   rewardDescription?: string
   qrCodeDataUrl: string
+  // Enhanced: Countdown support (Phase 2)
+  cardExpiryDate?: string | null
+  showCountdown?: boolean
 }
 
 export interface PwaMembershipParams {
@@ -20,6 +23,8 @@ export interface PwaMembershipParams {
   cost?: number
   expiryDate?: string | null
   qrCodeDataUrl: string
+  // Enhanced: Countdown support (Phase 2)
+  showCountdown?: boolean
 }
 
 export type PwaParams = PwaStampParams | PwaMembershipParams
@@ -43,11 +48,124 @@ function adjustColorBrightness(hex: string, percent: number): string {
 
 import { formatCurrency, formatDate } from '@/lib/format'
 import { PwaCopy } from '@/lib/wallet/walletCopy'
+import { getOptimalBarcodeConfig, getBarcodeStyles } from '@/lib/wallet/barcode-placement'
+
+// Countdown helper functions (Phase 2)
+function calculateTimeRemaining(expiryDate: string | Date) {
+  const now = new Date()
+  const expiry = new Date(expiryDate)
+  const diff = expiry.getTime() - now.getTime()
+  
+  if (diff <= 0) return { expired: true, days: 0, hours: 0 }
+  
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+  
+  return { expired, days, hours }
+}
+
+function formatCountdownForPwa(timeRemaining: ReturnType<typeof calculateTimeRemaining>): { text: string, urgent: boolean } {
+  const { expired, days, hours } = timeRemaining
+  
+  if (expired) return { text: 'Expired', urgent: true }
+  if (days <= 3) return { text: `${days} day${days === 1 ? '' : 's'} left`, urgent: true }
+  if (days <= 7) return { text: `${days} days left`, urgent: false }
+  if (hours > 0 && days === 0) return { text: `${hours} hour${hours === 1 ? '' : 's'} left`, urgent: true }
+  
+  return { text: '', urgent: false }
+}
+
+function generateCountdownHtml(params: PwaParams, primaryColor: string): string {
+  if (!params.showCountdown) return ''
+  
+  let countdownData: { text: string, urgent: boolean } | null = null
+  
+  if (params.type === 'stamp' && params.cardExpiryDate) {
+    const timeRemaining = calculateTimeRemaining(params.cardExpiryDate)
+    countdownData = formatCountdownForPwa(timeRemaining)
+  } else if (params.type === 'membership' && params.expiryDate) {
+    const timeRemaining = calculateTimeRemaining(params.expiryDate)
+    countdownData = formatCountdownForPwa(timeRemaining)
+  }
+  
+  if (!countdownData?.text) return ''
+  
+  const urgentStyles = countdownData.urgent 
+    ? 'background: linear-gradient(135deg, #fef2f2, #fee2e2); border: 1px solid #fca5a5; color: #dc2626;'
+    : `background: linear-gradient(135deg, ${primaryColor}15, ${primaryColor}25); border: 1px solid ${primaryColor}40; color: ${primaryColor};`
+  
+  return `
+    <div class="countdown-section" style="
+      ${urgentStyles}
+      padding: 12px 16px; 
+      border-radius: 8px; 
+      margin: 16px 0; 
+      text-align: center; 
+      font-size: 14px; 
+      font-weight: 600;
+      ${countdownData.urgent ? 'animation: pulse 2s infinite;' : ''}
+    ">
+      <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+        <span style="font-size: 16px;">${countdownData.urgent ? '⚠️' : '⏰'}</span>
+        <span>${countdownData.urgent ? 'Expires' : 'Valid until'}: ${countdownData.text}</span>
+      </div>
+    </div>
+    <style>
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+      }
+    </style>
+  `
+}
+
+// Enhanced QR section with automatic barcode placement (Phase 2)
+function generateQrSection(
+  qrCodeDataUrl: string, 
+  barcodeStyles: ReturnType<typeof getBarcodeStyles>,
+  barcodeConfig: ReturnType<typeof getOptimalBarcodeConfig>,
+  copyText: string
+): string {
+  const alignmentClass = barcodeConfig.alignment === 'center' ? 'text-align: center;' :
+                        barcodeConfig.alignment === 'left' ? 'text-align: left;' : 
+                        'text-align: right;'
+  
+  return `
+    <div class="qr-section" style="
+      ${alignmentClass}
+      padding: 20px; 
+      background: #f9fafb; 
+      border-radius: ${barcodeStyles.borderRadius}; 
+      margin-top: ${barcodeStyles.marginTop};
+      margin-bottom: ${barcodeStyles.marginBottom};
+    ">
+      <div class="qr-code" style="margin-bottom: 12px;">
+        <img src="${qrCodeDataUrl}" alt="QR Code" style="
+          width: ${barcodeStyles.width}; 
+          height: ${barcodeStyles.width}; 
+          border-radius: ${barcodeStyles.borderRadius};
+          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        ">
+      </div>
+      <div class="qr-text" style="font-size: 12px; color: #6b7280;">
+        ${copyText}
+      </div>
+    </div>
+  `
+}
 
 export function buildPwaHtml(params: PwaParams): string {
   const primaryColor = params.cardColor || '#8B4513'
   const secondaryColor = adjustColorBrightness(primaryColor, -20)
   const isMembership = params.type === 'membership'
+  
+  // Enhanced: Automatic barcode placement (Phase 2)
+  const barcodeConfig = getOptimalBarcodeConfig(
+    'pwa',
+    params.type,
+    'medium'
+  )
+  const barcodeStyles = getBarcodeStyles(barcodeConfig, 'pwa')
 
   if (params.type === 'stamp') {
     const { businessName, cardName, iconEmoji, currentStamps, totalStamps, rewardDescription, qrCodeDataUrl } = params
@@ -98,10 +216,8 @@ export function buildPwaHtml(params: PwaParams): string {
       <div class="progress-text">${currentStamps}/${totalStamps} ${PwaCopy.stamp.progressSuffix}</div>
       <div class="reward-text">${rewardDescription || PwaCopy.stamp.rewardFallback}</div>
     </div>
-    <div class="qr-section">
-      <div class="qr-code"><img src="${qrCodeDataUrl}" alt="QR Code" style="width: 120px; height: 120px;"></div>
-      <div class="qr-text">${PwaCopy.stamp.qrText}</div>
-    </div>
+    ${generateCountdownHtml(params, primaryColor)}
+    ${generateQrSection(qrCodeDataUrl, barcodeStyles, barcodeConfig, PwaCopy.stamp.qrText)}
     <div class="footer">
       <div class="footer-text">${PwaCopy.stamp.footer}</div>
     </div>
@@ -156,10 +272,8 @@ export function buildPwaHtml(params: PwaParams): string {
       ${typeof cost === 'number' ? `<div class="cost-text">${formatCurrency(cost, 'KRW')}</div>` : ''}
       ${expiryDate ? `<div class="expiry-text">${PwaCopy.membership.expiresOn}: ${formatDate(expiryDate)}</div>` : ''}
     </div>
-    <div class="qr-section">
-      <div class="qr-code"><img src="${qrCodeDataUrl}" alt="QR Code" style="width: 120px; height: 120px;"></div>
-      <div class="qr-text">${PwaCopy.membership.qrText}</div>
-    </div>
+    ${generateCountdownHtml(params, primaryColor)}
+    ${generateQrSection(qrCodeDataUrl, barcodeStyles, barcodeConfig, PwaCopy.membership.qrText)}
     <div class="footer">
       <div class="footer-text">${PwaCopy.membership.footer}</div>
     </div>
