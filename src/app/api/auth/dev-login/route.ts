@@ -8,13 +8,11 @@ import { createAdminClient } from '@/lib/supabase/admin-client'
  * SECURITY: Only use in development - remove for production
  */
 export async function POST(request: NextRequest) {
-  // Only allow in development
-  if (process.env.NODE_ENV === 'production') {
-    return NextResponse.json(
-      { error: 'Development endpoint not available in production' },
-      { status: 403 }
-    )
-  }
+  // SECURITY: Completely disable this endpoint
+  return NextResponse.json(
+    { error: 'Development login endpoint has been disabled for security' },
+    { status: 403 }
+  )
 
   try {
     const { email, password } = await request.json()

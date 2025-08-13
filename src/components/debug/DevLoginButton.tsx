@@ -43,16 +43,13 @@ export function DevLoginButton() {
   }
 
   return (
-    <div className="mt-4 p-4 bg-yellow-100 border border-yellow-300 rounded-lg">
-      <p className="text-sm text-yellow-800 mb-2">
-        Development Mode Only
-      </p>
+    <div className="mt-4">
       <button
         onClick={handleDevLogin}
         disabled={isLoading}
-        className="w-full px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 disabled:opacity-50"
+        className="w-full px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 disabled:opacity-50 text-sm"
       >
-        {isLoading ? 'Logging in...' : 'Dev Login (Admin)'}
+        {isLoading ? 'Logging in...' : 'Quick Admin Access'}
       </button>
     </div>
   )

@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { AdminLayoutClient } from '@/components/layouts/AdminLayoutClient'
-import { EnhancedBusinessEditForm } from '@/components/admin/EnhancedBusinessEditForm'
+import { BusinessEditForm } from '@/components/admin/BusinessEditForm'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { 
   Plus, 
   ExternalLink, 
@@ -30,7 +31,8 @@ import {
   Share,
   Bell,
   Loader2,
-  QrCode
+  QrCode,
+  Copy
 } from 'lucide-react'
 import Image from 'next/image'
 import { ComponentErrorBoundary } from '@/components/shared/ErrorBoundary'
@@ -136,39 +138,127 @@ function LegacyBusinessDetailsPage({
     if (!businessId) return // Wait for businessId to be set
     
     try {
-    const response = await fetch(`/api/admin/businesses/${businessId}`)
-    
-    if (!response.ok) {
-        if (response.status === 404) {
-          router.push('/admin/businesses')
+      // Use the specific business endpoint for proper admin access
+      const response = await fetch(`/api/admin/businesses/${businessId}`)
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          // Authentication issue - redirect to login
+          window.location.href = '/auth/login'
+          return
+        } else if (response.status === 403) {
+          // Permission denied - redirect to admin dashboard
+          router.push('/admin')
+          return
+        } else if (response.status === 404) {
+          // Business not found - show error but don't redirect
+          setBusiness(null)
           return
         }
         throw new Error('Failed to fetch business details')
-    }
-    
-    const result = await response.json()
-      setBusiness(result.data)
-    } catch (error) {
-        console.error("Error:", error)
       }
+      
+      const result = await response.json()
+      if (result.success && result.data) {
+        setBusiness(result.data)
+      } else {
+        setBusiness(null)
+      }
+    } catch (error) {
+      console.error("Error fetching business:", error)
+      setBusiness(null)
+    }
   }, [businessId, router])
 
   const fetchStats = useCallback(async () => {
+    if (!businessId) return
+    
     try {
-      const response = await fetch(`/api/admin/businesses/${businessId}/stats`)
-      if (response.ok) {
-        const result = await response.json()
-        setStats(result.data)
+      // Fetch cards for this business
+      const cardsResponse = await fetch(`/api/admin/cards-simple?business_id=${businessId}`)
+      let stampCards = []
+      let membershipCards = []
+      
+      if (cardsResponse.ok) {
+        const cardsResult = await cardsResponse.json()
+        if (cardsResult.success) {
+          stampCards = cardsResult.data.stampCards || []
+          membershipCards = cardsResult.data.membershipCards || []
+        }
+      }
+      
+      // Calculate real stats from card data
+      const totalCards = stampCards.length + membershipCards.length
+      const activeCards = stampCards.filter((c: any) => c.status === 'active').length + 
+                         membershipCards.filter((c: any) => c.status === 'active').length
+      
+      const stats: BusinessStats = {
+        totalCards,
+        activeCards,
+        totalCustomers: 0, // TODO: Calculate from customer_cards relationship
+        monthlyActivity: 0, // TODO: Implement analytics endpoint
+        revenue: 0, // TODO: Implement transaction data endpoint
+        recentActivity: [] // TODO: Fetch from activity/transaction logs
+      }
+      
+      setStats(stats)
+      
+      // Update business object with card data for the BusinessCards component
+      if (stampCards.length > 0 || membershipCards.length > 0) {
+        setBusiness(prev => prev ? {
+          ...prev,
+          stamp_cards: stampCards,
+          membership_cards: membershipCards
+        } : prev)
       }
     } catch (error) {
-        console.error("Error:", error)
-      }
+      console.error("Error fetching business stats:", error)
+    }
   }, [businessId])
 
   const handleRefresh = async () => {
     setRefreshing(true)
     await Promise.all([fetchBusiness(), fetchStats()])
     setRefreshing(false)
+  }
+
+  const handleEditSave = async (updatedBusiness: any) => {
+    try {
+      setLoading(true)
+      
+      // Update business via API
+      const response = await fetch(`/api/admin/businesses/${businessId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedBusiness),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update business')
+      }
+
+      const result = await response.json()
+      if (result.success) {
+        // Update local state
+        setBusiness(result.data)
+        setIsEditing(false)
+        // Refresh data to ensure consistency
+        await fetchBusiness()
+      } else {
+        throw new Error(result.error || 'Failed to update business')
+      }
+    } catch (error) {
+      console.error('Error updating business:', error)
+      alert('Failed to update business. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleEditCancel = () => {
+    setIsEditing(false)
   }
 
   useEffect(() => {
@@ -251,6 +341,11 @@ function LegacyBusinessDetailsPage({
               <div>
                 <h1 className="text-3xl font-bold">{business.name}</h1>
                 <div className="flex items-center gap-2 mt-1">
+                  <code className="text-sm bg-gray-100 px-2 py-1 rounded font-mono text-gray-600">
+                    ID: {business.id}
+                  </code>
+                </div>
+                <div className="flex items-center gap-2 mt-2">
                   <Badge variant={business.status === 'active' ? 'default' : 'secondary'}>
                     {business.status === 'active' && <CheckCircle className="w-3 h-3 mr-1" />}
                     {business.status === 'inactive' && <Clock className="w-3 h-3 mr-1" />}
@@ -288,10 +383,11 @@ function LegacyBusinessDetailsPage({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setIsEditing(!isEditing)}
+              onClick={() => setIsEditing(true)}
+              disabled={loading}
             >
               <Edit className="w-4 h-4 mr-2" />
-              {isEditing ? 'Cancel Edit' : 'Edit Profile'}
+              Edit Profile
             </Button>
 
             <Button variant="outline" size="sm">
@@ -367,13 +463,10 @@ function LegacyBusinessDetailsPage({
         )}
 
         {/* Main Content */}
-        {isEditing ? (
-          <EnhancedBusinessEditForm
-            business={business}
-            stats={stats || undefined}
-            onSave={handleBusinessUpdate}
-            onCancel={() => setIsEditing(false)}
-          />
+        {false ? ( // Temporarily disable edit mode
+          <div className="p-8 text-center">
+            <p>Edit functionality temporarily disabled</p>
+          </div>
         ) : (
           <Tabs defaultValue="overview" className="space-y-4">
             <TabsList className="grid w-full grid-cols-5">
@@ -406,6 +499,23 @@ function LegacyBusinessDetailsPage({
           </Tabs>
         )}
       </div>
+
+      {/* Edit Business Dialog */}
+      <Dialog open={isEditing} onOpenChange={setIsEditing}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Business Profile</DialogTitle>
+          </DialogHeader>
+          {business && (
+            <BusinessEditForm
+              business={business}
+              onSave={handleEditSave}
+              onCancel={handleEditCancel}
+              loading={loading}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </AdminLayoutClient>
   )
 }
@@ -440,6 +550,22 @@ function BusinessOverview({ business }: { business: BusinessDetails }) {
           <div>
             <label className="text-sm font-medium text-gray-500">Business Name</label>
             <div className="font-semibold">{business.name}</div>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-gray-500">Business ID</label>
+            <div className="flex items-center gap-2">
+              <code className="text-sm bg-gray-100 px-2 py-1 rounded font-mono text-gray-700">
+                {business.id}
+              </code>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigator.clipboard.writeText(business.id)}
+              >
+                <Copy className="w-3 h-3" />
+              </Button>
+            </div>
           </div>
           
           <div>
@@ -863,7 +989,11 @@ function BusinessActivity({ business, stats }: { business: BusinessDetails, stat
       </div>
   )
 } 
-export default function BusinessDetailsPage() {
+export default function BusinessDetailsPage({
+  params
+}: {
+  params: Promise<{ id: string }>
+}) {
   return (
     <ComponentErrorBoundary fallback={
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -880,7 +1010,7 @@ export default function BusinessDetailsPage() {
       </div>
     }>
       <div className={modernStyles.layout.container}>
-        <LegacyBusinessDetailsPage />
+        <LegacyBusinessDetailsPage params={params} />
       </div>
     </ComponentErrorBoundary>
   )

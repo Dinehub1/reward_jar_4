@@ -29,7 +29,8 @@ import {
   Download,
   Upload,
   Settings,
-  Eye
+  Eye,
+  RefreshCw
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -37,6 +38,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { modernStyles, roleStyles } from '@/lib/design-tokens'
+import { ComponentErrorBoundary } from '@/components/shared/ErrorBoundary'
 
 /**
  * 🏢 MODERN ADMIN BUSINESS MANAGEMENT
@@ -113,7 +115,9 @@ export default function ModernBusinessManagement({
   }
 
   const filteredBusinesses = displayBusinesses.filter(business => {
-    const matchesSearch = business.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    if (!business) return false
+    
+    const matchesSearch = business.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          business.contact_email?.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = filterStatus === 'all' || business.status === filterStatus
     const matchesFlags = filterFlags === 'all' || 
@@ -126,9 +130,27 @@ export default function ModernBusinessManagement({
     return <BusinessManagementSkeleton />
   }
 
+  // Error state
+  if (!displayBusinesses && !loading) {
+    return (
+      <div className="min-h-[400px] flex items-center justify-center">
+        <div className="text-center">
+          <Building className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Unable to Load Businesses</h3>
+          <p className="text-gray-500 mb-4">There was an error loading business data</p>
+          <Button variant="outline" onClick={() => window.location.reload()}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Try Again
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className={`${modernStyles.layout.container} ${className}`}>
-      <div className={modernStyles.layout.section}>
+    <ComponentErrorBoundary>
+      <div className={`${modernStyles.layout.container} ${className}`}>
+        <div className={modernStyles.layout.section}>
         
         {/* Header */}
         <BusinessManagementHeader 
@@ -186,8 +208,9 @@ export default function ModernBusinessManagement({
         {/* Analytics Summary */}
         <BusinessAnalytics businesses={displayBusinesses} metrics={displayMetrics} />
 
+        </div>
       </div>
-    </div>
+    </ComponentErrorBoundary>
   )
 }
 

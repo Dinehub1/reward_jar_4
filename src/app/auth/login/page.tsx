@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { DevLoginButton } from '@/components/debug/DevLoginButton'
+
 import { getUserRole, getUserRoleWithToken, getRoleRedirectPath } from '@/lib/auth/auth-helpers'
 import { modernStyles, roleStyles } from '@/lib/design-tokens'
 import { ComponentErrorBoundary } from '@/components/shared/ErrorBoundary'
@@ -272,9 +272,6 @@ function LoginContent() {
                 </Link>
               </p>
             </div>
-
-            {/* Development Login Button */}
-            <DevLoginButton />
           </div>
         </div>
 

@@ -11,7 +11,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { AdminLayoutClient } from '@/components/layouts/AdminLayoutClient'
-import { useBusinesses, useAdminStatsCompat as useAdminStats } from '@/lib/hooks/use-admin-data'
+import { useAdminStatsCompat as useAdminStats, useBusinesses } from '@/lib/hooks/use-admin-data'
+import useSWR from 'swr'
 import { CardSkeleton, TableSkeleton } from '@/components/ui/skeleton'
 import { RefreshCw, AlertTriangle, CheckCircle, Clock, Search, Filter, Edit, Trash2, Plus, ExternalLink } from 'lucide-react'
 import ModernBusinessManagement from '@/components/admin/ModernBusinessManagement'
@@ -481,16 +482,13 @@ function BusinessesTable({ businesses, onBusinessUpdated }: { businesses: Busine
                     <td className="p-2">
                       <div>
                         <div className="font-medium">{business.name || 'Unnamed Business'}</div>
-                        <div className="text-sm text-muted-foreground">
-                          ID: {business.id.slice(0, 8)}...
+                        <div className="text-xs text-muted-foreground font-mono">
+                          {business.id.slice(0, 8)}...
                         </div>
                       </div>
                     </td>
                     <td className="p-2">
-                      <div>
-                        <div className="text-sm">{business.contact_email || 'No email'}</div>
-                        <div className="text-sm text-muted-foreground">ID: {business.id.slice(0, 8)}...</div>
-                      </div>
+                      <div className="text-sm">{business.contact_email || 'No email'}</div>
                     </td>
                     <td className="p-2">
                       <div className="text-sm">
@@ -879,14 +877,165 @@ function DeleteBusinessDialog({ business, onBusinessDeleted }: { business: Busin
   )
 }
 
+// Controlled version of CreateBusinessDialog for external triggering
+function CreateBusinessDialogControlled({ 
+  open, 
+  onOpenChange, 
+  onBusinessCreated 
+}: { 
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onBusinessCreated: () => void 
+}) {
+  const [loading, setLoading] = useState(false)
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    contact_email: '',
+    status: 'active' as 'active' | 'inactive'
+  })
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+
+    try {
+      const response = await fetch('/api/admin/businesses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        onOpenChange(false)
+        setFormData({ name: '', description: '', contact_email: '', status: 'active' })
+        onBusinessCreated()
+      } else {
+        alert('Error: ' + result.error)
+      }
+    } catch (error) {
+      console.error("Error:", error)
+      alert('Failed to create business')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Create New Business</DialogTitle>
+          <DialogDescription>
+            Add a new business to the platform. All fields are required.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit}>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">Business Name</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Enter business name"
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="contact_email">Contact Email</Label>
+              <Input
+                id="contact_email"
+                type="email"
+                value={formData.contact_email}
+                onChange={(e) => setFormData(prev => ({ ...prev, contact_email: e.target.value }))}
+                placeholder="business@example.com"
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Brief description of the business"
+                rows={3}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="status">Status</Label>
+              <Select value={formData.status} onValueChange={(value: 'active' | 'inactive') => setFormData(prev => ({ ...prev, status: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? 'Creating...' : 'Create Business'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// Simple fetcher function
+const fetcher = (url: string) => fetch(url).then(res => res.json())
+
+// Custom hook for businesses with pagination support
+function useBusinessesSimple(page = 1, limit = 50, search = '') {
+  const searchParams = new URLSearchParams()
+  searchParams.set('page', page.toString())
+  searchParams.set('limit', limit.toString())
+  if (search.trim()) {
+    searchParams.set('search', search.trim())
+  }
+  
+  const { data, error, isLoading, mutate } = useSWR(
+    `/api/admin/businesses-simple?${searchParams.toString()}`,
+    fetcher,
+    {
+      refreshInterval: 30000,
+      revalidateOnFocus: true,
+      dedupingInterval: 10000 // Reduce duplicate requests
+    }
+  )
+  
+  return {
+    data: data?.success ? { 
+      data: data.data, 
+      pagination: data.pagination 
+    } : null,
+    loading: isLoading,
+    error: error || (!data?.success ? data?.error : null),
+    refetch: mutate
+  }
+}
+
 export default function BusinessesPage() {
   const router = useRouter()
-  const { data: businessesData, loading: businessesLoading } = useBusinesses()
+  const [currentPage, setCurrentPage] = useState(1)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [showCreateDialog, setShowCreateDialog] = useState(false)
+  
+  const { data: businessesData, loading: businessesLoading, refetch } = useBusinessesSimple(currentPage, 50, searchTerm)
   const { data: statsData, loading: statsLoading } = useAdminStats()
 
   const handleCreateBusiness = () => {
-    // Navigate to business creation form
-    console.log('Create business clicked')
+    setShowCreateDialog(true)
   }
 
   const handleViewBusiness = (businessId: string) => {
@@ -904,15 +1053,36 @@ export default function BusinessesPage() {
 
   // Transform data for modern component
   const transformedBusinesses = businessesData?.data || []
-  const transformedMetrics = statsData ? {
-    totalBusinesses: statsData.totalBusinesses || 0,
-    activeBusinesses: statsData.activeBusinesses || 0,
-    flaggedBusinesses: statsData.flaggedBusinesses || 0,
-    cardRequests: statsData.cardRequests || 0,
-    newThisWeek: statsData.newThisWeek || 0,
-    totalRevenue: 24890, // Mock data
-    avgCompletion: 72 // Mock data
-  } : undefined
+  
+  // Calculate metrics from the actual business data
+  const calculateMetrics = (businesses: Business[]) => {
+    const total = businesses.length
+    const active = businesses.filter(b => b.status === 'active').length
+    const flagged = businesses.filter(b => b.is_flagged === true).length
+    const cardRequests = businesses.filter(b => b.card_requested === true).length
+    
+    return {
+      totalBusinesses: total,
+      activeBusinesses: active,
+      flaggedBusinesses: flagged,
+      cardRequests,
+      newThisWeek: 0, // Could be calculated from created_at
+      totalRevenue: 0, // TODO: Implement revenue endpoint
+      avgCompletion: 0 // TODO: Implement analytics endpoint
+    }
+  }
+  
+  const transformedMetrics = transformedBusinesses.length > 0 
+    ? calculateMetrics(transformedBusinesses)
+    : statsData ? {
+        totalBusinesses: statsData.totalBusinesses || 0,
+        activeBusinesses: statsData.activeBusinesses || 0,
+        flaggedBusinesses: statsData.flaggedBusinesses || 0,
+        cardRequests: statsData.cardRequests || 0,
+        newThisWeek: statsData.newThisWeek || 0,
+        totalRevenue: 0, // TODO: Implement revenue endpoint  
+        avgCompletion: 0 // TODO: Implement analytics endpoint
+      } : undefined
 
   return (
     <ComponentErrorBoundary fallback={
@@ -932,6 +1102,16 @@ export default function BusinessesPage() {
           onViewBusiness={handleViewBusiness}
           onEditBusiness={handleEditBusiness}
           onDeleteBusiness={handleDeleteBusiness}
+        />
+        
+        {/* Create Business Dialog - controlled by state */}
+        <CreateBusinessDialogControlled 
+          open={showCreateDialog}
+          onOpenChange={setShowCreateDialog}
+          onBusinessCreated={() => {
+            refetch()
+            setShowCreateDialog(false)
+          }} 
         />
       </AdminLayoutClient>
     </ComponentErrorBoundary>

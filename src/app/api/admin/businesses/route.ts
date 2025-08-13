@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Process businesses to add card counts
-    const businessesWithCounts = (businesses || []).map(business => {
+    const businessesWithCounts = (businesses || []).map((business) => {
       const stampCards = business.stamp_cards || []
       const membershipCards = business.membership_cards || []
       
@@ -92,6 +92,7 @@ export async function GET(request: NextRequest) {
     } as ApiResponse<typeof businessesWithCounts>)
 
   } catch (error) {
+    console.error('Admin businesses API error:', error)
     return NextResponse.json(
       { success: false, error: 'Internal server error' } as ApiResponse<never>,
       { status: 500 }

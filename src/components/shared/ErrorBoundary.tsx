@@ -43,7 +43,7 @@ function DefaultErrorFallback({ error, resetError, level = 'component' }: ErrorF
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {process.env.NODE_ENV === 'development' && (
+        {process.env.NODE_ENV === 'development' && process.env.SHOW_ERROR_DETAILS === 'true' && (
           <details className="rounded border p-3 bg-gray-50">
             <summary className="cursor-pointer font-medium text-gray-700">
               Error Details (Development Only)
@@ -106,8 +106,8 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
     // Call the onError callback if provided
     this.props.onError?.(error, errorInfo)
 
-    // Log error in development
-    if (process.env.NODE_ENV === 'development') {
+    // Log error in development (only if explicitly enabled)
+    if (process.env.NODE_ENV === 'development' && process.env.SHOW_ERROR_DETAILS === 'true') {
       console.group('🚨 Error Boundary Caught Error')
       console.error('Error:', error)
       console.error('Error Info:', errorInfo || 'No additional error info available')

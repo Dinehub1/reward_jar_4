@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react'
+import React, { useState, useEffect, useCallback, Suspense } from 'react'
 
 // Enhanced CSS animations for better UX
 if (typeof document !== 'undefined') {
@@ -29,14 +29,14 @@ if (typeof document !== 'undefined') {
   document.head.appendChild(style)
 }
 import { useRouter, useSearchParams } from 'next/navigation'
-import dynamic from 'next/dynamic'
-import { mapQuickToAdvancedPayload, generateCardContent } from '@/lib/generation'
+import { mapQuickToAdvancedPayload } from '@/lib/generation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { ModernButton, LoadingButton } from '@/components/modern/ui/ModernButton'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Badge } from '@/components/ui/badge'
+
 import Image from 'next/image'
 import { modernStyles, roleStyles } from '@/lib/design-tokens'
 import { ComponentErrorBoundary } from '@/components/shared/ErrorBoundary'
@@ -93,6 +93,16 @@ interface StampConfig {
   duplicateVisitBuffer: '12h' | '1d' | 'none'
 }
 
+interface DesignConfig {
+  iconStyle: 'emoji' | 'image'
+  gridLayout: { columns: number; rows: number }
+  brandLevel: 'minimal' | 'standard' | 'premium'
+  countdownSettings: {
+    showExpiry: boolean
+    urgencyThreshold: number
+  }
+}
+
 interface CardFormData {
   // Step 1: Card Details
   cardName: string
@@ -121,6 +131,16 @@ interface CardFormData {
   rewardDetails: string
   earnedStampMessage: string
   earnedRewardMessage: string
+  
+  // Design Configuration
+  designConfig?: DesignConfig
+  
+  // Membership specific fields (optional)
+  totalSessions?: number
+  cost?: number
+  durationDays?: number
+  membershipType?: string
+  membershipMode?: string
 }
 
 interface ValidationError {
@@ -223,7 +243,8 @@ const LivePreview = React.memo(({
   const demoFilledStamps = Math.max(1, Math.floor(cardData.stampsRequired * 0.4))
   
 
-  const previewSettings = {
+  // Preview settings for wallet preview component
+  const _previewSettings = {
     showBackPage,
     screenshotMode: false,
     isDarkMode: false,
@@ -278,13 +299,14 @@ function CardCreationPageContent() {
   const [businesses, setBusinesses] = useState<Business[]>([])
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [stepLoading, setStepLoading] = useState(false)
   const [errors, setErrors] = useState<ValidationError[]>([])
   const [activePreview, setActivePreview] = useState<'apple' | 'google' | 'pwa'>('apple')
   const [debugMode, setDebugMode] = useState(false)
   const [showBackPage, setShowBackPage] = useState(false)
   const [showTemplateSelector, setShowTemplateSelector] = useState(false)
   
-  // NEW: Template selection state (Phase 1)
+  // Template selection state
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null)
   const [templateApplied, setTemplateApplied] = useState(false)
   
@@ -335,20 +357,26 @@ function CardCreationPageContent() {
     earnedRewardMessage: 'Reward is earned and waiting for you!'
   })
 
-  // Load businesses
+  // Enhanced business loading with error handling
   const loadBusinesses = useCallback(async () => {
     try {
       setLoading(true)
+      setErrors([])
+      
       const response = await fetch('/api/admin/businesses')
       
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        throw new Error(`Failed to load businesses (${response.status})`)
       }
       
       const data = await response.json()
       
       if (data.success && data.data) {
         setBusinesses(data.data)
+        
+        if (data.data.length === 0) {
+          setErrors([{ field: 'businesses', message: 'No businesses found. Please create a business first.' }])
+        }
         
         // Auto-select business if provided in URL
         const businessId = searchParams?.get('businessId')
@@ -361,11 +389,16 @@ function CardCreationPageContent() {
               businessName: business.name,
               businessLogoUrl: business.logo_url || ''
             }))
+          } else {
+            setErrors([{ field: 'businessId', message: 'Selected business not found' }])
           }
         }
+      } else {
+        throw new Error(data.error || 'Failed to load businesses')
       }
     } catch (error) {
-      console.error("Error:", error)
+      console.error("Business loading error:", error)
+      setErrors([{ field: 'businesses', message: error instanceof Error ? error.message : 'Failed to load businesses' }])
     } finally {
       setLoading(false)
     }
@@ -380,11 +413,13 @@ function CardCreationPageContent() {
     const newErrors: ValidationError[] = []
     
     switch (step) {
-      case 0: // Type selection (no validation required)
+      case 0: // Template selection (no validation required)
         break
-      case 1: // Mode selection (no validation required)
+      case 1: // Type selection (no validation required)
         break
-      case 2: // Card Details
+      case 2: // Mode selection (no validation required)
+        break
+      case 3: // Card Details
         if (!cardData.cardName.trim()) {
           newErrors.push({ field: 'cardName', message: 'Card name is required' })
         }
@@ -402,7 +437,7 @@ function CardCreationPageContent() {
         }
         break
       
-      case 3: // Design
+      case 4: // Design
         if (!cardData.cardColor) {
           newErrors.push({ field: 'cardColor', message: 'Please select a card color' })
         }
@@ -411,7 +446,7 @@ function CardCreationPageContent() {
         }
         break
       
-      case 4: // Stamp Rules
+      case 5: // Stamp Rules
         if (cardData.stampConfig.minSpendAmount < 0) {
           newErrors.push({ field: 'minSpendAmount', message: 'Minimum spend amount cannot be negative' })
         }
@@ -420,7 +455,7 @@ function CardCreationPageContent() {
         }
         break
       
-      case 5: // Information
+      case 6: // Information
         if (!cardData.cardDescription.trim()) {
           newErrors.push({ field: 'cardDescription', message: 'Card description is required' })
         }
@@ -434,70 +469,119 @@ function CardCreationPageContent() {
     return newErrors.length === 0
   }, [cardData])
 
-  // Navigation
-  const nextStep = useCallback(() => {
+  // Check card name uniqueness - MOVED BEFORE nextStep to fix scope issue
+  const checkCardNameUniqueness = useCallback(async (cardName: string, businessId: string) => {
+    if (!cardName.trim() || !businessId) return true
+    
+    try {
+      const response = await fetch(`/api/admin/cards?business_id=${businessId}&name=${encodeURIComponent(cardName)}`)
+      if (response.ok) {
+        const data = await response.json()
+        return !data.data || data.data.length === 0 // true if no existing cards with this name
+      }
+    } catch (error) {
+      console.warn('Failed to check card name uniqueness:', error)
+    }
+    return true // Allow if check fails
+  }, [])
+
+  // Enhanced navigation with loading states
+  const nextStep = useCallback(async () => {
+    setStepLoading(true)
+    setErrors([])
+    
+    // Add card name uniqueness check for step 3 (Card Details)
+    if (currentStep === 3 && cardData.cardName && cardData.businessId) {
+      const isUnique = await checkCardNameUniqueness(cardData.cardName, cardData.businessId)
+      if (!isUnique) {
+        setErrors([{ field: 'cardName', message: 'A card with this name already exists for this business' }])
+        setStepLoading(false)
+        return
+      }
+    }
+    
     if (validateStep(currentStep)) {
       setCurrentStep(prev => Math.min(prev + 1, STEPS.length - 1))
     }
-  }, [currentStep, validateStep])
+    setStepLoading(false)
+  }, [currentStep, validateStep, cardData.cardName, cardData.businessId, checkCardNameUniqueness])
 
   const prevStep = useCallback(() => {
     setCurrentStep(prev => Math.max(prev - 1, 0))
   }, [])
 
-  // Save card
+  // Enhanced save with retry logic
   const saveCard = useCallback(async () => {
-    if (!validateStep(5)) return // Validate all steps up to Information
+    if (!validateStep(6)) return // Validate all steps up to Information
     
     setSaving(true)
     setErrors([])
     
-    try {
-      const payload = mapQuickToAdvancedPayload({
-        cardName: cardData.cardName,
-        businessId: cardData.businessId,
-        reward: cardData.reward,
-        rewardDescription: cardData.rewardDescription,
-        stampsRequired: cardData.stampsRequired,
-        cardColor: cardData.cardColor,
-        iconEmoji: cardData.iconEmoji,
-        barcodeType: cardData.barcodeType,
-        cardExpiryDays: cardData.cardExpiryDays,
-        rewardExpiryDays: cardData.rewardExpiryDays,
-        stampConfig: cardData.stampConfig,
-        cardDescription: cardData.cardDescription,
-        howToEarnStamp: cardData.howToEarnStamp,
-        rewardDetails: cardData.rewardDetails,
-        earnedStampMessage: cardData.earnedStampMessage,
-        earnedRewardMessage: cardData.earnedRewardMessage,
-      })
+    const payload = mapQuickToAdvancedPayload({
+      cardName: cardData.cardName,
+      businessId: cardData.businessId,
+      reward: cardData.reward,
+      rewardDescription: cardData.rewardDescription,
+      stampsRequired: cardData.stampsRequired,
+      cardColor: cardData.cardColor,
+      iconEmoji: cardData.iconEmoji,
+      barcodeType: cardData.barcodeType,
+      cardExpiryDays: cardData.cardExpiryDays,
+      rewardExpiryDays: cardData.rewardExpiryDays,
+      stampConfig: cardData.stampConfig,
+      cardDescription: cardData.cardDescription,
+      howToEarnStamp: cardData.howToEarnStamp,
+      rewardDetails: cardData.rewardDetails,
+      earnedStampMessage: cardData.earnedStampMessage,
+      earnedRewardMessage: cardData.earnedRewardMessage,
+    })
 
-      const response = await fetch('/api/admin/cards', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload)
-      })
+    // Retry logic for transient failures
+    let lastError: Error | null = null
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const response = await fetch('/api/admin/cards', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload)
+        })
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        if (!response.ok) {
+          const errorText = await response.text()
+          throw new Error(`HTTP ${response.status}: ${errorText}`)
+        }
+
+        const result = await response.json()
+        
+        if (result.success) {
+          // Success - redirect to cards list
+          router.push('/admin/cards?created=true')
+          return
+        } else {
+          throw new Error(result.error || 'Failed to create card')
+        }
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error('Unknown error')
+        console.error(`Save attempt ${attempt} failed:`, error)
+        
+        // Don't retry for client errors (400-499)
+        if (error instanceof Error && error.message.includes('HTTP 4')) {
+          break
+        }
+        
+        // Wait before retry (exponential backoff)
+        if (attempt < 3) {
+          await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000))
+        }
       }
-
-      const result = await response.json()
-      
-      if (result.success) {
-        // Success - redirect to cards list
-        router.push('/admin/cards?created=true')
-      } else {
-        throw new Error(result.error || 'Failed to create card')
-      }
-    } catch (error) {
-      console.error("Error:", error)
-      setErrors([{ field: 'general', message: error instanceof Error ? error.message : 'Failed to create card' }])
-    } finally {
-      setSaving(false)
     }
+    
+    // All attempts failed
+    const errorMessage = lastError?.message || 'Failed to create card after multiple attempts'
+    setErrors([{ field: 'general', message: errorMessage }])
+    setSaving(false)
   }, [cardData, validateStep, router])
 
   // Get error for field
@@ -671,7 +755,7 @@ function CardCreationPageContent() {
             )}
           </div>
         )
-      case 2: // Card Details
+      case 3: // Card Details
         return (
     <div className="space-y-6">
         <div className="space-y-2">
@@ -717,23 +801,43 @@ function CardCreationPageContent() {
               <SelectValue placeholder="Select a business" />
             </SelectTrigger>
             <SelectContent>
-                  {businesses.map((business) => (
-                <SelectItem key={business.id} value={business.id}>
-                  <div className="flex items-center gap-2">
-                    {business.logo_url && (
-                      <div className="w-4 h-4 rounded overflow-hidden bg-gray-100 flex items-center justify-center">
-                        {/* Next/Image requires configured remote host; fallback to img if not configured */}
-                        <Image src={business.logo_url} alt={business.name} width={12} height={12} className="w-3 h-3 object-contain" />
+                  {loading ? (
+                    <SelectItem value="loading" disabled>
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
+                        <span>Loading businesses...</span>
                       </div>
-                    )}
-                    <span>{business.name}</span>
-                    {business.logo_url && <span className="text-xs text-gray-500">📷</span>}
-                  </div>
-                </SelectItem>
-              ))}
+                    </SelectItem>
+                  ) : businesses.length === 0 ? (
+                    <SelectItem value="empty" disabled>
+                      <span className="text-gray-500">No businesses available</span>
+                    </SelectItem>
+                  ) : (
+                    businesses.map((business) => (
+                    <SelectItem key={business.id} value={business.id}>
+                      <div className="flex items-center gap-2">
+                        {business.logo_url && (
+                          <div className="w-4 h-4 rounded overflow-hidden bg-gray-100 flex items-center justify-center">
+                            {/* Next/Image requires configured remote host; fallback to img if not configured */}
+                            <Image src={business.logo_url} alt={business.name} width={12} height={12} className="w-3 h-3 object-contain" />
+                          </div>
+                        )}
+                        <span>{business.name}</span>
+                        {business.logo_url && <span className="text-xs text-gray-500">📷</span>}
+                      </div>
+                    </SelectItem>
+                  ))
+                  )}
             </SelectContent>
           </Select>
-              {getError('businessId') && <p className="text-sm text-red-500 mt-1">{getError('businessId')}</p>}
+              {getError('businessId') && <p className="text-sm text-red-500 mt-1 flex items-center gap-1">
+                <AlertCircle className="w-4 h-4" />
+                {getError('businessId')}
+              </p>}
+              {getError('businesses') && <p className="text-sm text-red-500 mt-1 flex items-center gap-1">
+                <AlertCircle className="w-4 h-4" />
+                {getError('businesses')}
+              </p>}
         </div>
 
                     <div>
@@ -803,7 +907,7 @@ function CardCreationPageContent() {
     </div>
   )
 
-      case 3: // Design
+      case 4: // Design
         return (
     <div className="space-y-6">
             {/* Card Style Selection */}
@@ -925,7 +1029,7 @@ function CardCreationPageContent() {
     </div>
   )
 
-      case 4: // Stamp Rules
+      case 5: // Stamp Rules
         return (
     <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -1024,7 +1128,7 @@ function CardCreationPageContent() {
     </div>
   )
 
-      case 5: // Information
+      case 6: // Information
     return (
     <div className="space-y-6">
         {/* Information Form Fields */}
@@ -1115,7 +1219,7 @@ function CardCreationPageContent() {
     </div>
   )
 
-      case 6: // Preview & Save
+      case 7: // Preview & Save
         return (
     <div className="space-y-6">
       <div className="text-center">
@@ -1244,11 +1348,11 @@ function CardCreationPageContent() {
   const renderTemplateSelector = () => (
     <div className="max-w-4xl mx-auto">
       <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold mb-4">Choose a Card Template</h2>
+        <h2 className="text-2xl lg:text-3xl font-bold mb-4">Choose a Card Template</h2>
         <p className="text-gray-600">Start with a pre-designed template or create from scratch</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
         {CARD_TEMPLATES.map((template) => (
           <Card 
             key={template.id} 
@@ -1297,10 +1401,10 @@ function CardCreationPageContent() {
   return (
     <AdminLayoutClient>
       <PageTransition>
-        <div className="container mx-auto px-6 py-8 max-w-7xl">
+        <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 lg:py-8 max-w-6xl xl:max-w-7xl">
           {/* Modern Header */}
           <motion.div 
-            className="flex items-center justify-between mb-10"
+            className="flex items-center justify-between mb-6 lg:mb-10"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: designTokens.animation.easing.out }}
@@ -1320,10 +1424,10 @@ function CardCreationPageContent() {
                 </ModernButton>
               </motion.div>
               <div>
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+                <h1 className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
                   Create New Card
                 </h1>
-                <p className="text-gray-500 mt-1 text-base">
+                <p className="text-gray-500 mt-1 text-sm lg:text-base">
                   Design and configure your loyalty card with our step-by-step wizard
                 </p>
               </div>
@@ -1437,8 +1541,8 @@ function CardCreationPageContent() {
           </div>
         </motion.div>
 
-          {/* Main Content - Improved mobile layout */}
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
+          {/* Main Content - Optimized for smaller screens */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 xl:gap-8">
             {/* Form Section - Enhanced mobile-first design */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}
@@ -1462,11 +1566,11 @@ function CardCreationPageContent() {
                     {STEPS[currentStep].description}
                   </p>
             </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-4 lg:space-y-6">
               {renderStepContent()}
 
                   {/* Navigation Buttons - Enhanced mobile layout */}
-                  <div className="flex flex-col sm:flex-row justify-between gap-3 mt-8 pt-6 border-t border-gray-100">
+                  <div className="flex flex-col sm:flex-row justify-between gap-3 mt-6 lg:mt-8 pt-4 lg:pt-6 border-t border-gray-100">
                 <ModernButton 
                   variant="outline"
                   onClick={prevStep} 
@@ -1482,14 +1586,16 @@ function CardCreationPageContent() {
                 </ModernButton>
                 
                 {currentStep < STEPS.length - 1 && (
-                      <ModernButton 
+                      <LoadingButton 
                         onClick={nextStep} 
+                        loading={stepLoading}
+                        loadingText="Validating..."
                         variant="gradient"
                         className="w-full sm:w-auto flex items-center justify-center gap-2"
                       >
                         Next
                         <ArrowRight className="w-4 h-4" />
-                  </ModernButton>
+                  </LoadingButton>
                 )}
               </div>
                   </CardContent>
@@ -1772,11 +1878,11 @@ export default function CardCreationPage() {
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
             <p className="text-white">Loading card creation wizard...</p>
-          </div>
         </div>
-      }>
-        <CardCreationPageContent />
-      </Suspense>
+      </div>
+    }>
+      <CardCreationPageContent />
+    </Suspense>
     </ComponentErrorBoundary>
   )
 }

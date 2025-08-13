@@ -96,38 +96,29 @@ export async function GET(
       progressLabel = `${sessionsUsed} / ${totalSessions} sessions used`;
     }
 
-    // Create Google Wallet loyalty object
+    // Create Google Wallet loyalty object with correct parameters
+    const customerName = customerCard.customer?.name || 'Guest User'
+    const objectDisplayId = customerCardId // Use customerCardId as display ID
+    const current = isStampCard ? (customerCard.current_stamps || 0) : (customerCard.sessions_used || 0)
+    const total = isStampCard ? cardData.total_stamps : cardData.total_sessions
+    
     const loyaltyObject = createLoyaltyObject({
-      customerCardId,
-      cardData: {
-        name: cardData.name,
-        total_stamps: cardData.total_stamps,
-        reward_description: cardData.reward_description,
-        card_color: cardData.card_color,
-        cost: cardData.cost,
-        total_sessions: cardData.total_sessions,
-      },
-      businessData: {
-        name: businessData.name,
-        description: businessData.description,
-        address: businessData.address,
-        phone: businessData.phone,
-        email: businessData.email,
-        logo_url: businessData.logo_url,
-      },
-      customerData: {
-        current_stamps: customerCard.current_stamps,
-        sessions_used: customerCard.sessions_used,
-        created_at: customerCard.created_at,
-        expiry_date: customerCard.expiry_date,
-      },
-      derived: {
-        progressLabel,
-        progressPercent: progress,
-        isExpired: isMembershipCard ? (customerCard.expiry_date ? new Date(customerCard.expiry_date) < new Date() : false) : undefined,
-      },
       ids: googleIds,
-      locale: businessData.locale || 'en-IN',
+      current,
+      total,
+      displayName: customerName,
+      objectDisplayId,
+      label: isStampCard ? 'Stamps' : 'Sessions',
+      textModulesData: [
+        {
+          header: 'Business',
+          body: businessData.name
+        },
+        {
+          header: 'Reward',
+          body: cardData.reward_description || 'Loyalty reward'
+        }
+      ]
     });
 
     // Check for debug mode
@@ -150,6 +141,8 @@ export async function GET(
           id: loyaltyObject.id,
           classId: loyaltyObject.classId,
           state: loyaltyObject.state,
+          accountName: loyaltyObject.accountName,
+          loyaltyPoints: loyaltyObject.loyaltyPoints,
         },
         googleIds,
         progress: {
@@ -157,22 +150,66 @@ export async function GET(
           label: progressLabel,
         },
         environment: {
-          hasGoogleCredentials: !!(process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.GOOGLE_CLIENT_EMAIL),
-          hasIssuerAccount: !!process.env.GOOGLE_WALLET_ISSUER_ACCOUNT,
+          hasServiceAccountEmail: !!(process.env.GOOGLE_WALLET_SERVICE_ACCOUNT_EMAIL || process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL),
+          hasPrivateKey: !!(process.env.GOOGLE_WALLET_PRIVATE_KEY || process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY),
+          hasIssuerId: !!process.env.GOOGLE_WALLET_ISSUER_ID,
           hasClassSuffix: !!(process.env.GOOGLE_WALLET_CLASS_SUFFIX || process.env.GOOGLE_WALLET_CLASS_SUFFIX_STAMP),
+          emailValue: (process.env.GOOGLE_WALLET_SERVICE_ACCOUNT_EMAIL || process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL) ? 'SET' : 'NOT_SET',
+          privateKeyLength: (process.env.GOOGLE_WALLET_PRIVATE_KEY || process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY)?.length || 0,
         }
       });
     }
 
-    // In production, this would create a Save to Google Wallet JWT and redirect
-    // For now, return a JSON response indicating the service is ready
-    return NextResponse.json({
-      success: true,
-      message: 'Google Wallet integration ready',
-      saveUrl: `https://pay.google.com/gp/v/save/${loyaltyObject.id}`,
-      loyaltyObjectId: loyaltyObject.id,
-      classId: loyaltyObject.classId,
-    });
+    // Create the actual Google Wallet JWT and save URL
+    try {
+      const { createSaveToWalletJwt, buildSaveUrl } = await import('@/lib/wallet/builders/google-pass-builder');
+      
+      // Check if Google Wallet is properly configured
+      const hasCredentials = !!((process.env.GOOGLE_WALLET_SERVICE_ACCOUNT_EMAIL || process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL) && (process.env.GOOGLE_WALLET_PRIVATE_KEY || process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY));
+      
+      if (!hasCredentials) {
+        return NextResponse.json({
+          success: false,
+          error: 'Google Wallet not configured',
+          message: 'Missing Google Wallet credentials. Please configure GOOGLE_SERVICE_ACCOUNT_EMAIL and GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY environment variables.',
+          debug: {
+            hasEmail: !!(process.env.GOOGLE_WALLET_SERVICE_ACCOUNT_EMAIL || process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL),
+            hasPrivateKey: !!(process.env.GOOGLE_WALLET_PRIVATE_KEY || process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY),
+          }
+        }, { status: 500 });
+      }
+      
+      // Create JWT for Google Wallet
+      const jwt = createSaveToWalletJwt(loyaltyObject);
+      const saveUrl = buildSaveUrl(jwt);
+      
+      return NextResponse.json({
+        success: true,
+        message: 'Google Wallet pass ready',
+        saveUrl,
+        loyaltyObjectId: loyaltyObject.id,
+        classId: loyaltyObject.classId,
+        jwt: jwt.substring(0, 50) + '...' // Only show first 50 chars for debugging
+      });
+      
+    } catch (jwtError) {
+      console.error('Google Wallet JWT creation failed:', jwtError);
+      return NextResponse.json({
+        success: false,
+        error: 'Failed to create Google Wallet JWT',
+        message: jwtError instanceof Error ? jwtError.message : 'Unknown JWT error',
+        details: {
+          loyaltyObject: {
+            id: loyaltyObject.id,
+            classId: loyaltyObject.classId,
+          },
+          environment: {
+            hasEmail: !!(process.env.GOOGLE_WALLET_SERVICE_ACCOUNT_EMAIL || process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL),
+            hasPrivateKey: !!(process.env.GOOGLE_WALLET_PRIVATE_KEY || process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY),
+          }
+        }
+      }, { status: 500 });
+    }
 
   } catch (error) {
     console.error('Google Wallet error:', error);

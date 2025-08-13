@@ -94,11 +94,19 @@ function LegacyJoinCardPage() {
 
 
         if (stampCard) {
+          console.log('Stamp card data:', stampCard)
+          console.log('Stamp card businesses array:', stampCard.businesses)
+          console.log('Is businesses array?', Array.isArray(stampCard.businesses))
+          console.log('Businesses length:', stampCard.businesses?.length)
+          const business = stampCard.businesses?.[0] || { id: '', name: 'Unknown Business' }
+          console.log('Business data:', business)
+          console.log('Business name:', business.name)
+          
           setCardInfo({
             id: stampCard.id,
             name: stampCard.name,
             reward_description: stampCard.reward_description,
-            business: stampCard.businesses?.[0] || { id: '', name: 'Unknown Business' },
+            business: business,
             card_type: 'stamp',
             total_stamps: stampCard.total_stamps
           })
@@ -124,11 +132,19 @@ function LegacyJoinCardPage() {
 
 
         if (membershipCard) {
+          console.log('Membership card data:', membershipCard)
+          console.log('Membership card businesses array:', membershipCard.businesses)
+          console.log('Is businesses array?', Array.isArray(membershipCard.businesses))
+          console.log('Businesses length:', membershipCard.businesses?.length)
+          const business = membershipCard.businesses?.[0] || { id: '', name: 'Unknown Business' }
+          console.log('Business data:', business)
+          console.log('Business name:', business.name)
+          
           setCardInfo({
             id: membershipCard.id,
             name: membershipCard.name,
             reward_description: `${membershipCard.total_sessions} sessions for $${membershipCard.cost}`,
-            business: membershipCard.businesses?.[0] || { id: '', name: 'Unknown Business' },
+            business: business,
             card_type: 'membership',
             total_sessions: membershipCard.total_sessions,
             cost: membershipCard.cost,
@@ -249,109 +265,148 @@ function LegacyJoinCardPage() {
         URL.revokeObjectURL(url)
         setStep(5)
       } else if (walletType === 'google') {
-        const html = await response.text()
-        const newWindow = window.open('', '_blank')
-        newWindow?.document.write(html)
-        setStep(5)
+        const result = await response.json()
+        console.log('Google Wallet response:', result) // Debug logging
+        
+        if (result.success && result.saveUrl) {
+          // Automatically open the Google Wallet save URL
+          window.open(result.saveUrl, '_blank')
+          setSuccessMessage('Opening Google Wallet... If it doesn\'t open automatically, check your popup blocker.')
+          setStep(5)
+        } else {
+          // Show detailed error message for debugging
+          const errorMsg = result.error || result.message || 'Google Wallet integration not ready'
+          console.error('Google Wallet error details:', result)
+          throw new Error(errorMsg)
+        }
       }
     } catch (error) {
-      console.error("Error:", error)
-      setError('Failed to join wallet. Please try again.')
+      console.error("Wallet error:", error)
+      const errorMessage = error instanceof Error ? error.message : 'Failed to join wallet. Please try again.'
+      setError(`Google Wallet Error: ${errorMessage}`)
     }
   }
 
   if (isLoading || step === 1) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="p-8 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading card information...</p>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 relative overflow-hidden">
+        <div className="absolute inset-0 bg-grid-slate-100 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))] -z-10" />
+        <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 lg:p-8">
+          <Card className="w-full max-w-md shadow-xl border-0 backdrop-blur-sm bg-white/95">
+            <CardContent className="p-8 text-center">
+              <div className="relative mb-6">
+                <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600 mx-auto"></div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-8 h-8 bg-blue-600 rounded-full animate-pulse"></div>
+                </div>
+              </div>
+              <h3 className="text-lg font-semibold text-slate-800 mb-2">Loading Card Information</h3>
+              <p className="text-slate-600">Please wait while we prepare your card...</p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     )
   }
 
   if (error && !cardInfo) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 to-pink-100 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="p-8 text-center">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-red-600 text-2xl">!</span>
-            </div>
-            <h2 className="text-xl font-semibold text-gray-800 mb-2">Card Not Found</h2>
-            <p className="text-gray-600 mb-4">{error}</p>
-            <Button onClick={() => router.push('/')} variant="outline">
-              Go Home
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-red-50 to-pink-50 relative overflow-hidden">
+        <div className="absolute inset-0 bg-grid-slate-100 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))] -z-10" />
+        <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 lg:p-8">
+          <Card className="w-full max-w-md shadow-xl border-0 backdrop-blur-sm bg-white/95">
+            <CardContent className="p-8 text-center">
+              <div className="w-20 h-20 bg-gradient-to-br from-red-400 to-red-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+                <span className="text-white text-3xl font-bold">!</span>
+              </div>
+              <h2 className="text-xl font-semibold text-slate-800 mb-3">Card Not Found</h2>
+              <p className="text-slate-600 mb-6 leading-relaxed">{error}</p>
+              <Button 
+                onClick={() => router.push('/')} 
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <span className="font-medium">Return Home</span>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="max-w-2xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 relative overflow-hidden">
+      {/* Modern background pattern */}
+      <div className="absolute inset-0 bg-grid-slate-100 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))] -z-10" />
+      
+      <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 lg:p-8">
+        <div className="w-full max-w-lg mx-auto space-y-6">
         {/* Step 2: Card Information Display */}
         {step === 2 && cardInfo && (
-          <Card className="overflow-hidden">
-            <div 
-              className="h-32 bg-gradient-to-r from-blue-600 to-indigo-600 relative overflow-hidden"
-            >
-              <div className="absolute inset-0 bg-black/20" />
-              <div className="relative p-6 text-white">
-                <h1 className="text-2xl font-bold">{cardInfo.business.name}</h1>
-                <p className="text-blue-100">{cardInfo.name}</p>
+          <Card className="overflow-hidden shadow-xl border-0 backdrop-blur-sm bg-white/95">
+            <div className="h-40 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+              <div className="absolute top-4 right-4 w-20 h-20 bg-white/10 rounded-full blur-xl" />
+              <div className="absolute bottom-2 left-4 w-16 h-16 bg-white/5 rounded-full blur-lg" />
+              <div className="relative p-6 h-full flex flex-col justify-end text-white">
+                <h1 className="text-2xl sm:text-3xl font-bold mb-1">{cardInfo.business.name}</h1>
+                <p className="text-blue-100 text-lg opacity-90">{cardInfo.name}</p>
               </div>
             </div>
             
-            <CardContent className="p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <Badge variant={cardInfo.card_type === 'stamp' ? 'default' : 'secondary'}>
-                  {cardInfo.card_type === 'stamp' ? 'Stamp Card' : 'Membership Card'}
+            <CardContent className="p-6 space-y-6">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <Badge 
+                  variant={cardInfo.card_type === 'stamp' ? 'default' : 'secondary'}
+                  className="text-sm px-3 py-1.5 font-medium"
+                >
+                  {cardInfo.card_type === 'stamp' ? '⭐ Stamp Card' : '🎫 Membership Card'}
                 </Badge>
-                <div className="flex items-center gap-4 text-sm text-gray-600">
+                <div className="flex items-center gap-4 text-sm text-slate-600">
                   {cardInfo.card_type === 'stamp' ? (
-                    <div className="flex items-center gap-1">
-                      <Star className="h-4 w-4" />
-                      {cardInfo.total_stamps} stamps to reward
+                    <div className="flex items-center gap-2 bg-amber-50 px-3 py-1.5 rounded-full">
+                      <Star className="h-4 w-4 text-amber-600" />
+                      <span className="font-medium">{cardInfo.total_stamps} stamps to reward</span>
                     </div>
                   ) : (
-                    <>
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-4 w-4" />
-                        {cardInfo.total_sessions} sessions
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2 bg-blue-50 px-3 py-1.5 rounded-full">
+                        <Clock className="h-4 w-4 text-blue-600" />
+                        <span className="font-medium">{cardInfo.total_sessions} sessions</span>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Gift className="h-4 w-4" />
-                        ${cardInfo.cost}
+                      <div className="flex items-center gap-2 bg-green-50 px-3 py-1.5 rounded-full">
+                        <Gift className="h-4 w-4 text-green-600" />
+                        <span className="font-medium">${cardInfo.cost}</span>
                       </div>
-                    </>
+                    </div>
                   )}
                 </div>
               </div>
 
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="font-semibold text-gray-800 mb-2">Reward Details</h3>
-                <p className="text-gray-600">{cardInfo.reward_description}</p>
+              <div className="bg-gradient-to-r from-slate-50 to-blue-50 p-5 rounded-xl border border-slate-200/50">
+                <h3 className="font-semibold text-slate-800 mb-3 flex items-center gap-2">
+                  <Gift className="h-5 w-5 text-blue-600" />
+                  Reward Details
+                </h3>
+                <p className="text-slate-700 leading-relaxed">{cardInfo.reward_description}</p>
               </div>
 
               {cardInfo.business.description && (
-                <div>
-                  <h3 className="font-semibold text-gray-800 mb-2">About {cardInfo.business.name}</h3>
-                  <p className="text-gray-600">{cardInfo.business.description}</p>
+                <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-5 rounded-xl border border-indigo-200/50">
+                  <h3 className="font-semibold text-slate-800 mb-3 flex items-center gap-2">
+                    <Users className="h-5 w-5 text-indigo-600" />
+                    About {cardInfo.business.name}
+                  </h3>
+                  <p className="text-slate-700 leading-relaxed">{cardInfo.business.description}</p>
                 </div>
               )}
 
               <Button 
                 onClick={() => setStep(3)} 
-                className="w-full bg-blue-600 hover:bg-blue-700"
+                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
                 size="lg"
               >
-                Join This Card
+                <span className="font-semibold">Join This Card</span>
               </Button>
             </CardContent>
           </Card>
@@ -359,79 +414,91 @@ function LegacyJoinCardPage() {
 
         {/* Step 3: Registration Form */}
         {step === 3 && cardInfo && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Join {cardInfo.business.name}
+          <Card className="shadow-xl border-0 backdrop-blur-sm bg-white/95">
+            <CardHeader className="pb-6">
+              <CardTitle className="flex items-center gap-3 text-xl">
+                <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
+                  <Users className="h-5 w-5 text-white" />
+                </div>
+                <span>Join {cardInfo.business.name}</span>
               </CardTitle>
+              <p className="text-slate-600 text-sm">Please fill in your details to create your loyalty card.</p>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="name">Full Name *</Label>
+            <CardContent className="space-y-5">
+              <div className="space-y-2">
+                <Label htmlFor="name" className="text-sm font-medium text-slate-700">Full Name *</Label>
                 <Input
                   id="name"
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                   placeholder="Enter your full name"
+                  className="h-11 border-slate-300 focus:border-blue-500 focus:ring-blue-500/20 rounded-lg transition-all"
                   required
                 />
               </div>
 
-              <div>
-                <Label htmlFor="email">Email Address *</Label>
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-sm font-medium text-slate-700">Email Address *</Label>
                 <Input
                   id="email"
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                   placeholder="Enter your email address"
+                  className="h-11 border-slate-300 focus:border-blue-500 focus:ring-blue-500/20 rounded-lg transition-all"
                   required
                 />
               </div>
 
-              <div>
-                <Label htmlFor="phone">Phone Number (Optional)</Label>
+              <div className="space-y-2">
+                <Label htmlFor="phone" className="text-sm font-medium text-slate-700">Phone Number <span className="text-slate-400">(Optional)</span></Label>
                 <Input
                   id="phone"
                   type="tel"
                   value={formData.phone}
                   onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
                   placeholder="Enter your phone number"
+                  className="h-11 border-slate-300 focus:border-blue-500 focus:ring-blue-500/20 rounded-lg transition-all"
                 />
               </div>
 
-              <div>
-                <Label htmlFor="dateOfBirth">Date of Birth *</Label>
+              <div className="space-y-2">
+                <Label htmlFor="dateOfBirth" className="text-sm font-medium text-slate-700">Date of Birth *</Label>
                 <Input
                   id="dateOfBirth"
                   type="date"
                   value={formData.dateOfBirth}
                   onChange={(e) => setFormData(prev => ({ ...prev, dateOfBirth: e.target.value }))}
+                  className="h-11 border-slate-300 focus:border-blue-500 focus:ring-blue-500/20 rounded-lg transition-all"
                   required
                 />
               </div>
 
               {error && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                  <p className="text-red-600 text-sm">{error}</p>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+                  <div className="w-5 h-5 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-red-600 text-xs font-bold">!</span>
+                  </div>
+                  <p className="text-red-700 text-sm leading-relaxed">{error}</p>
                 </div>
               )}
 
-              <div className="flex gap-3">
+              <div className="flex gap-3 pt-2">
                 <Button 
                   variant="outline" 
                   onClick={() => setStep(2)}
-                  className="flex-1"
+                  className="flex-1 h-11 border-slate-300 hover:bg-slate-50 transition-all"
                 >
-                  Back
+                  <span className="font-medium">Back</span>
                 </Button>
                 <Button 
                   onClick={handleRegistration}
                   disabled={isRegistering || !formData.name.trim() || !formData.email.trim() || !formData.dateOfBirth}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700"
+                  className="flex-1 h-11 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:transform-none"
                 >
-                  {isRegistering ? 'Registering...' : 'Register'}
+                  <span className="font-semibold">
+                    {isRegistering ? 'Registering...' : 'Register'}
+                  </span>
                 </Button>
               </div>
             </CardContent>
@@ -440,41 +507,44 @@ function LegacyJoinCardPage() {
 
         {/* Step 4: Wallet Selection */}
         {step === 4 && cardInfo && deviceInfo && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Smartphone className="h-5 w-5" />
-                Add to Your Wallet
+          <Card className="shadow-xl border-0 backdrop-blur-sm bg-white/95">
+            <CardHeader className="pb-6">
+              <CardTitle className="flex items-center gap-3 text-xl">
+                <div className="w-10 h-10 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center">
+                  <Smartphone className="h-5 w-5 text-white" />
+                </div>
+                <span>Add to Your Wallet</span>
               </CardTitle>
+              <p className="text-slate-600 text-sm">Choose how you&apos;d like to store your {cardInfo.name} card for easy access.</p>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-5">
               {successMessage && (
-                <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                  <p className="text-green-800 text-sm">{successMessage}</p>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3">
+                  <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-green-600 text-xs font-bold">✓</span>
+                  </div>
+                  <p className="text-green-700 text-sm leading-relaxed">{successMessage}</p>
                 </div>
               )}
-              
-              <p className="text-gray-600 mb-6">
-                Choose how you&apos;d like to store your {cardInfo.name} card:
-              </p>
 
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {/* Apple Wallet Option */}
                 {deviceInfo.supportsAppleWallet && (
                   <button
                     onClick={() => addToWallet('apple')}
-                    className="w-full p-4 border-2 border-gray-200 rounded-lg hover:border-gray-300 hover:bg-gray-50 transition-all text-left"
+                    className="w-full p-5 border-2 border-slate-200 rounded-xl hover:border-slate-300 hover:bg-slate-50/50 transition-all duration-200 text-left group hover:shadow-lg transform hover:scale-[1.02] active:scale-[0.98]"
                   >
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-black rounded-lg flex items-center justify-center">
-                        <Apple className="h-6 w-6 text-white" />
+                      <div className="w-14 h-14 bg-gradient-to-br from-gray-800 to-black rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
+                        <Apple className="h-7 w-7 text-white" />
                       </div>
-                      <div>
-                        <h3 className="font-semibold">Apple Wallet</h3>
-                        <p className="text-sm text-gray-600">
-                          Add to your iPhone&apos;s built-in wallet app
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-slate-800 mb-1">Apple Wallet</h3>
+                        <p className="text-sm text-slate-600 leading-relaxed">
+                          Add to your iPhone&apos;s built-in wallet app for seamless access
                         </p>
                       </div>
+                      <div className="w-6 h-6 border-2 border-slate-300 rounded-full group-hover:border-black transition-colors" />
                     </div>
                   </button>
                 )}
@@ -483,18 +553,19 @@ function LegacyJoinCardPage() {
                 {deviceInfo.supportsGoogleWallet && (
                   <button
                     onClick={() => addToWallet('google')}
-                    className="w-full p-4 border-2 border-gray-200 rounded-lg hover:border-gray-300 hover:bg-gray-50 transition-all text-left"
+                    className="w-full p-5 border-2 border-slate-200 rounded-xl hover:border-slate-300 hover:bg-slate-50/50 transition-all duration-200 text-left group hover:shadow-lg transform hover:scale-[1.02] active:scale-[0.98]"
                   >
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
-                        <Chrome className="h-6 w-6 text-white" />
+                      <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
+                        <Chrome className="h-7 w-7 text-white" />
                       </div>
-                      <div>
-                        <h3 className="font-semibold">Google Wallet</h3>
-                        <p className="text-sm text-gray-600">
-                          Add to your Google Wallet for easy access
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-slate-800 mb-1">Google Wallet</h3>
+                        <p className="text-sm text-slate-600 leading-relaxed">
+                          Save to Google Wallet for quick access on Android devices
                         </p>
                       </div>
+                      <div className="w-6 h-6 border-2 border-slate-300 rounded-full group-hover:border-blue-500 transition-colors" />
                     </div>
                   </button>
                 )}
@@ -502,25 +573,29 @@ function LegacyJoinCardPage() {
                 {/* PWA Option */}
                 <button
                   onClick={() => addToWallet('pwa')}
-                  className="w-full p-4 border-2 border-gray-200 rounded-lg hover:border-gray-300 hover:bg-gray-50 transition-all text-left"
+                  className="w-full p-5 border-2 border-slate-200 rounded-xl hover:border-slate-300 hover:bg-slate-50/50 transition-all duration-200 text-left group hover:shadow-lg transform hover:scale-[1.02] active:scale-[0.98]"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center">
-                      <Globe className="h-6 w-6 text-white" />
+                    <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
+                      <Globe className="h-7 w-7 text-white" />
                     </div>
-                    <div>
-                      <h3 className="font-semibold">Web Wallet</h3>
-                      <p className="text-sm text-gray-600">
-                        Access your card through any web browser
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-slate-800 mb-1">Web Wallet</h3>
+                      <p className="text-sm text-slate-600 leading-relaxed">
+                        Access your card through any web browser, anywhere
                       </p>
                     </div>
+                    <div className="w-6 h-6 border-2 border-slate-300 rounded-full group-hover:border-emerald-500 transition-colors" />
                   </div>
                 </button>
               </div>
 
               {error && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                  <p className="text-red-600 text-sm">{error}</p>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+                  <div className="w-5 h-5 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-red-600 text-xs font-bold">!</span>
+                  </div>
+                  <p className="text-red-700 text-sm leading-relaxed">{error}</p>
                 </div>
               )}
             </CardContent>
@@ -529,35 +604,62 @@ function LegacyJoinCardPage() {
 
         {/* Step 5: Success */}
         {step === 5 && cardInfo && (
-          <Card>
+          <Card className="shadow-xl border-0 backdrop-blur-sm bg-white/95">
             <CardContent className="p-8 text-center">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-green-600 text-2xl">✓</span>
+              <div className="w-20 h-20 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+                <span className="text-white text-3xl font-bold">✓</span>
               </div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">Welcome to {cardInfo.business.name}!</h2>
-              <p className="text-gray-600 mb-6">
+              <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-3">
+                Welcome to {cardInfo.business.name}!
+              </h2>
+              <p className="text-slate-600 mb-8 text-lg leading-relaxed">
                 Your {cardInfo.name} has been successfully added to your wallet.
               </p>
               
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                <h3 className="font-semibold text-blue-800 mb-2">Next Steps:</h3>
-                <ul className="text-sm text-blue-700 space-y-1 text-left">
-                  <li>• Show your card when making purchases</li>
-                  <li>• Earn {cardInfo.card_type === 'stamp' ? 'stamps' : 'track sessions'} with each visit</li>
-                  <li>• Your card will update automatically</li>
-                  <li>• Enjoy your rewards when you complete the card!</li>
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/50 rounded-xl p-6 mb-8 text-left">
+                <h3 className="font-semibold text-blue-800 mb-4 flex items-center gap-2">
+                  <Star className="h-5 w-5" />
+                  What&apos;s Next?
+                </h3>
+                <ul className="text-sm text-blue-700 space-y-3">
+                  <li className="flex items-start gap-3">
+                    <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-blue-600 text-xs font-bold">1</span>
+                    </div>
+                    <span>Show your digital card when making purchases</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-blue-600 text-xs font-bold">2</span>
+                    </div>
+                    <span>Earn {cardInfo.card_type === 'stamp' ? 'stamps' : 'points'} with each visit</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-blue-600 text-xs font-bold">3</span>
+                    </div>
+                    <span>Your card updates automatically - no manual tracking needed</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-blue-600 text-xs font-bold">4</span>
+                    </div>
+                    <span>Enjoy your rewards when you complete the card!</span>
+                  </li>
                 </ul>
               </div>
 
               <Button 
                 onClick={() => router.push('/')}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] px-8 py-3"
+                size="lg"
               >
-                Done
+                <span className="font-semibold">Return Home</span>
               </Button>
             </CardContent>
           </Card>
         )}
+        </div>
       </div>
     </div>
   )

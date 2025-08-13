@@ -104,8 +104,8 @@ function LegacyAdminCardsPage() {
       setIsLoading(true)
       try {
         
-        // Use the unified API endpoint for consistent data (get all data for customer count)
-        const response = await fetch('/api/admin/dashboard-unified')
+        // Use the working cards-simple API endpoint
+        const response = await fetch('/api/admin/cards-simple')
         if (!response.ok) {
           throw new Error(`API request failed: ${response.status}`)
         }
@@ -116,15 +116,15 @@ function LegacyAdminCardsPage() {
           throw new Error(data.error || 'Failed to load card data')
         }
 
-        // Use the unified API response format
-        const unifiedData = data.data
-        const stampCards = unifiedData.cards?.stampCards || []
-        const membershipCards = unifiedData.cards?.membershipCards || []
+        // Use the cards-simple API response format
+        const cardsData = data.data
+        const stampCards = cardsData.stampCards || []
+        const membershipCards = cardsData.membershipCards || []
         const stats = {
-          totalStampCards: unifiedData.stats?.totalStampCards || stampCards.length,
-          totalMembershipCards: unifiedData.stats?.totalMembershipCards || membershipCards.length,
-          totalCustomers: unifiedData.stats?.totalCustomers || 0,
-          activeCards: unifiedData.stats?.totalCards || 0
+          totalStampCards: cardsData.stats?.totalStampCards || stampCards.length,
+          totalMembershipCards: cardsData.stats?.totalMembershipCards || membershipCards.length,
+          totalCustomers: 0, // TODO: Implement customer count API
+          activeCards: cardsData.stats?.totalCards || 0
         }
 
         setStampCards(stampCards)
@@ -622,9 +622,7 @@ export default function AdminCardsPage() {
         </div>
       </div>
     }>
-      <AdminLayoutClient>
-        <LegacyAdminCardsPage />
-      </AdminLayoutClient>
+      <LegacyAdminCardsPage />
     </ComponentErrorBoundary>
   )
 } 

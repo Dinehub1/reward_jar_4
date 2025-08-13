@@ -4,8 +4,10 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
 import { AdminLayoutClient } from '@/components/layouts/AdminLayoutClient'
 import { useCustomers, useAdminStatsCompat as useAdminStats } from '@/lib/hooks/use-admin-data'
 import { ComponentErrorBoundary } from '@/components/shared/ErrorBoundary'
@@ -157,29 +159,8 @@ function CustomerStats() {
 }
 
 function AnomalyDetection() {
-  const mockAnomalies = [
-    {
-      id: '1',
-      type: 'High Activity',
-      description: 'Customer with 50+ sessions in 24 hours',
-      customer: 'john.doe@example.com',
-      time: '2 hours ago'
-    },
-    {
-      id: '2',
-      type: 'Repeated Errors',
-      description: 'Multiple failed reward redemptions',
-      customer: 'jane.smith@example.com',
-      time: '4 hours ago'
-    },
-    {
-      id: '3',
-      type: 'Duplicate Stamps',
-      description: 'Potential stamp duplication attempt',
-      customer: 'user123@example.com',
-      time: '6 hours ago'
-    }
-  ]
+  // TODO: Replace with real anomaly detection API
+  const anomalies: any[] = []
 
   return (
     <Card>
@@ -191,7 +172,8 @@ function AnomalyDetection() {
         <CardDescription>Automated flags for unusual customer behavior</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {mockAnomalies.map((anomaly) => (
+        {anomalies.length > 0 ? (
+          anomalies.map((anomaly) => (
           <div key={anomaly.id} className="flex items-center justify-between p-4 border rounded-lg">
             <div className="flex items-center space-x-4">
               <Badge variant={anomaly.type === 'High Activity' ? 'default' : 'destructive'}>
@@ -207,7 +189,12 @@ function AnomalyDetection() {
               <Button variant="outline" size="sm">Investigate</Button>
             </div>
           </div>
-        ))}
+          ))) : (
+            <div className="text-center py-8">
+              <p className="text-gray-500">No anomalies detected</p>
+              <p className="text-sm text-gray-400">System monitoring is active</p>
+            </div>
+          )}
       </CardContent>
     </Card>
   )
@@ -328,7 +315,98 @@ function CustomersTable() {
   )
 }
 
+// Create Customer Dialog Component
+function CreateCustomerDialog({ 
+  open, 
+  onOpenChange 
+}: { 
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
+  const [loading, setLoading] = useState(false)
+  const [formData, setFormData] = useState({
+    name: '',
+    email: ''
+  })
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    // For now, show that this needs proper implementation
+    alert(`Customer Creation Not Yet Implemented
+    
+This feature requires:
+1. Creating a Supabase auth user account
+2. Creating a customer record linked to that user
+3. Proper role assignment (role_id = 3 for customers)
+
+Form data would be:
+- Name: ${formData.name}
+- Email: ${formData.email}
+
+Please implement the full user + customer creation flow in /api/admin/customers endpoint.`)
+    
+    // Reset form and close dialog
+    setFormData({ name: '', email: '' })
+    onOpenChange(false)
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Add New Customer</DialogTitle>
+          <DialogDescription>
+            Create a new customer account. This will create both a user account and customer profile.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit}>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="customer-name">Full Name</Label>
+              <Input
+                id="customer-name"
+                value={formData.name}
+                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Enter customer's full name"
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="customer-email">Email Address</Label>
+              <Input
+                id="customer-email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                placeholder="customer@example.com"
+                required
+              />
+            </div>
+            <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <p className="text-sm text-amber-800">
+                <strong>Note:</strong> This will create a customer account with a temporary password. 
+                The customer will receive an email to set their password.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? 'Creating...' : 'Create Customer'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 function LegacyAdminCustomers() {
+  const [showCreateDialog, setShowCreateDialog] = useState(false)
+  
   return (
     <AdminLayoutClient>
       <div className="space-y-6">
@@ -340,7 +418,7 @@ function LegacyAdminCustomers() {
               Track customer activity and detect anomalies
             </p>
           </div>
-          <Button>
+          <Button onClick={() => setShowCreateDialog(true)}>
             <UserPlus className="h-4 w-4 mr-2" />
             Add Customer
           </Button>
@@ -355,6 +433,12 @@ function LegacyAdminCustomers() {
         {/* Customers Table */}
         <CustomersTable />
       </div>
+      
+      {/* Add Customer Dialog */}
+      <CreateCustomerDialog 
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
+      />
     </AdminLayoutClient>
   )
 }

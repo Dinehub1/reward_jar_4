@@ -163,8 +163,8 @@ class GoogleMapsLoader {
       document.head.appendChild(script)
 
     } catch (error) {
-        console.error("Error:", error)
-      }`)
+      console.error('Google Maps loading error:', error)
+      this.handleError('Failed to initialize Google Maps loader')
     }
   }
 
@@ -185,9 +185,11 @@ class GoogleMapsLoader {
       try {
         callback(true)
       } catch (error) {
-        console.error("Error:", error)
+        console.error('Callback execution error:', error)
       }
-    }// Clear callbacks
+    })
+
+    // Clear callbacks
     this.state.callbacks = []
   }
 

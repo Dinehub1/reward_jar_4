@@ -11,7 +11,14 @@ export function buildGoogleIds(
   issuerIdFromEnv?: string,
   isMembershipCard?: boolean
 ): GoogleWalletIds {
-  const issuerId = issuerIdFromEnv || process.env.GOOGLE_ISSUER_ID || '3388000000022940702'
+  // Handle both numeric and string issuer IDs
+  let issuerId = issuerIdFromEnv || process.env.GOOGLE_WALLET_ISSUER_ID || process.env.GOOGLE_ISSUER_ID || '3388000000022940702'
+  
+  // If issuer ID contains dots (legacy format), extract the numeric part or use default
+  if (issuerId && issuerId.includes('.')) {
+    console.warn(`Google Wallet: Legacy issuer ID format detected: ${issuerId}. Please update to numeric format.`)
+    issuerId = '3388000000022940702' // Use default numeric issuer ID
+  }
   const fallbackSuffix = isMembershipCard ? 'rewardjar_membership_1' : 'rewardjar_stamp_1'
   const suffix = (
     isMembershipCard
@@ -52,6 +59,23 @@ export function createLoyaltyObject(params: {
   textModulesData?: { header: string; body: string }[]
 }): LoyaltyObject {
   const { ids, current, total, displayName, objectDisplayId, label, textModulesData } = params
+  
+  // Validate required parameters
+  if (!ids || !ids.objectId || !ids.classId) {
+    throw new Error('Missing required Google Wallet IDs (objectId, classId)')
+  }
+  
+  if (!objectDisplayId || typeof objectDisplayId !== 'string') {
+    throw new Error(`Missing or invalid objectDisplayId: "${objectDisplayId}". Expected a non-empty string.`)
+  }
+  
+  if (typeof current !== 'number' || typeof total !== 'number') {
+    throw new Error(`Invalid progress values: current=${current}, total=${total}. Expected numbers.`)
+  }
+  
+  // Ensure objectDisplayId is long enough for substring operations
+  const safeObjectDisplayId = objectDisplayId.length >= 20 ? objectDisplayId : objectDisplayId.padEnd(20, '0')
+  
   return {
     id: ids.objectId,
     classId: ids.classId,
@@ -61,19 +85,19 @@ export function createLoyaltyObject(params: {
       balance: { string: `${current}/${total}` },
     },
     accountName: displayName || 'Guest User',
-    accountId: objectDisplayId.substring(0, 20),
+    accountId: safeObjectDisplayId.substring(0, 20),
     barcode: {
       type: 'QR_CODE',
       value: objectDisplayId,
-      alternateText: objectDisplayId.substring(0, 20),
+      alternateText: safeObjectDisplayId.substring(0, 20),
     },
     ...(textModulesData && textModulesData.length ? { textModulesData } : {}),
   }
 }
 
 export function createSaveToWalletJwt(loyaltyObject: LoyaltyObject): string {
-  const serviceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
-  let privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY
+  const serviceAccountEmail = process.env.GOOGLE_WALLET_SERVICE_ACCOUNT_EMAIL || process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
+  let privateKey = process.env.GOOGLE_WALLET_PRIVATE_KEY || process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY
 
   if (!serviceAccountEmail || !privateKey) {
     throw new Error('Google Wallet credentials not configured')

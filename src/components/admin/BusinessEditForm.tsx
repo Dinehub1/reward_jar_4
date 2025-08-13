@@ -23,6 +23,7 @@ interface BusinessFormData {
   card_requested: boolean
   admin_notes: string
   logo_url?: string
+  currency_symbol: string
   // Location data
   latitude?: number
   longitude?: number
@@ -54,6 +55,7 @@ export function BusinessEditForm({
     card_requested: business?.card_requested || false,
     admin_notes: business?.admin_notes || '',
     logo_url: business?.logo_url || '',
+    currency_symbol: business?.currency_symbol || '$',
     latitude: business?.latitude || undefined,
     longitude: business?.longitude || undefined,
     place_id: business?.place_id || '',
@@ -198,8 +200,8 @@ export function BusinessEditForm({
         }
       }
     } catch (error) {
-        console.error("Error:", error)
-      }
+      console.error("Error:", error)
+      setErrors({ submit: 'Failed to update business. Please try again.' })
     } finally {
       setSaving(false)
       setUploading(false)
@@ -213,6 +215,13 @@ export function BusinessEditForm({
           <Building2 className="w-5 h-5" />
           Edit Business Profile
         </CardTitle>
+        {business?.id && (
+          <div className="text-sm text-muted-foreground">
+            <code className="bg-gray-100 px-2 py-1 rounded font-mono">
+              ID: {business.id}
+            </code>
+          </div>
+        )}
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -299,20 +308,59 @@ export function BusinessEditForm({
             />
           </div>
 
-          {/* Website URL */}
-          <div className="space-y-2">
-            <Label htmlFor="website_url" className="flex items-center gap-2">
-              <Building2 className="w-4 h-4" />
-              Website URL
-            </Label>
-            <Input
-              id="website_url"
-              type="url"
-              value={formData.website_url}
-              onChange={(e) => handleInputChange('website_url', e.target.value)}
-              placeholder="https://www.example.com"
-              disabled={loading || saving}
-            />
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Website URL */}
+            <div className="space-y-2">
+              <Label htmlFor="website_url" className="flex items-center gap-2">
+                <Building2 className="w-4 h-4" />
+                Website URL
+              </Label>
+              <Input
+                id="website_url"
+                type="url"
+                value={formData.website_url}
+                onChange={(e) => handleInputChange('website_url', e.target.value)}
+                placeholder="https://www.example.com"
+                disabled={loading || saving}
+              />
+            </div>
+
+            {/* Currency Symbol */}
+            <div className="space-y-2">
+              <Label htmlFor="currency_symbol" className="flex items-center gap-2">
+                <span className="text-lg">💰</span>
+                Currency Symbol
+              </Label>
+              <Select
+                value={formData.currency_symbol}
+                onValueChange={(value: string) => handleInputChange('currency_symbol', value)}
+                disabled={loading || saving}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="$">$ (USD - US Dollar)</SelectItem>
+                  <SelectItem value="€">€ (EUR - Euro)</SelectItem>
+                  <SelectItem value="£">£ (GBP - British Pound)</SelectItem>
+                  <SelectItem value="¥">¥ (JPY - Japanese Yen)</SelectItem>
+                  <SelectItem value="C$">C$ (CAD - Canadian Dollar)</SelectItem>
+                  <SelectItem value="A$">A$ (AUD - Australian Dollar)</SelectItem>
+                  <SelectItem value="CHF">CHF (Swiss Franc)</SelectItem>
+                  <SelectItem value="SEK">SEK (Swedish Krona)</SelectItem>
+                  <SelectItem value="NOK">NOK (Norwegian Krone)</SelectItem>
+                  <SelectItem value="DKK">DKK (Danish Krone)</SelectItem>
+                  <SelectItem value="₹">₹ (INR - Indian Rupee)</SelectItem>
+                  <SelectItem value="¥">¥ (CNY - Chinese Yuan)</SelectItem>
+                  <SelectItem value="₩">₩ (KRW - South Korean Won)</SelectItem>
+                  <SelectItem value="₽">₽ (RUB - Russian Ruble)</SelectItem>
+                  <SelectItem value="R$">R$ (BRL - Brazilian Real)</SelectItem>
+                  <SelectItem value="₪">₪ (ILS - Israeli Shekel)</SelectItem>
+                  <SelectItem value="₦">₦ (NGN - Nigerian Naira)</SelectItem>
+                  <SelectItem value="₵">₵ (GHS - Ghanaian Cedi)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="grid gap-6 md:grid-cols-2">

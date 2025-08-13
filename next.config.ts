@@ -25,13 +25,15 @@ const nextConfig: NextConfig = {
   experimental: {
     // Performance improvements
     optimizePackageImports: ['@supabase/supabase-js', 'lucide-react'],
-    turbo: {
-      // Faster builds in development
-      rules: {
-        '*.svg': {
-          loaders: ['@svgr/webpack'],
-          as: '*.js',
-        },
+  },
+  
+  // Turbopack configuration (stable as of Next.js 15+)
+  turbopack: {
+    // Faster builds in development
+    rules: {
+      '*.svg': {
+        loaders: ['@svgr/webpack'],
+        as: '*.js',
       },
     },
   },

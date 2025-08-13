@@ -26,6 +26,7 @@ interface BusinessFormData {
   status: 'active' | 'inactive' | 'pending'
   card_requested: boolean
   logo_url?: string
+  currency_symbol: string
 }
 
 interface BusinessCreationDialogProps {
@@ -45,7 +46,8 @@ export function BusinessCreationDialog({ onBusinessCreated }: BusinessCreationDi
     contact_email: '',
     status: 'active',
     card_requested: false,
-    logo_url: undefined
+    logo_url: undefined,
+    currency_symbol: '$'
   })
 
   const validateForm = (): boolean => {
@@ -249,6 +251,43 @@ export function BusinessCreationDialog({ onBusinessCreated }: BusinessCreationDi
             disabled={loading || uploading}
             error={errors.logo}
           />
+
+          {/* Currency Symbol */}
+          <div className="space-y-2">
+            <Label htmlFor="currency_symbol" className="flex items-center gap-2">
+              <span className="text-lg">💰</span>
+              Currency Symbol
+            </Label>
+            <Select
+              value={formData.currency_symbol}
+              onValueChange={(value: string) => handleInputChange('currency_symbol', value)}
+              disabled={loading}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="$">$ (USD - US Dollar)</SelectItem>
+                <SelectItem value="€">€ (EUR - Euro)</SelectItem>
+                <SelectItem value="£">£ (GBP - British Pound)</SelectItem>
+                <SelectItem value="¥">¥ (JPY - Japanese Yen)</SelectItem>
+                <SelectItem value="C$">C$ (CAD - Canadian Dollar)</SelectItem>
+                <SelectItem value="A$">A$ (AUD - Australian Dollar)</SelectItem>
+                <SelectItem value="CHF">CHF (Swiss Franc)</SelectItem>
+                <SelectItem value="SEK">SEK (Swedish Krona)</SelectItem>
+                <SelectItem value="NOK">NOK (Norwegian Krone)</SelectItem>
+                <SelectItem value="DKK">DKK (Danish Krone)</SelectItem>
+                <SelectItem value="₹">₹ (INR - Indian Rupee)</SelectItem>
+                <SelectItem value="¥">¥ (CNY - Chinese Yuan)</SelectItem>
+                <SelectItem value="₩">₩ (KRW - South Korean Won)</SelectItem>
+                <SelectItem value="₽">₽ (RUB - Russian Ruble)</SelectItem>
+                <SelectItem value="R$">R$ (BRL - Brazilian Real)</SelectItem>
+                <SelectItem value="₪">₪ (ILS - Israeli Shekel)</SelectItem>
+                <SelectItem value="₦">₦ (NGN - Nigerian Naira)</SelectItem>
+                <SelectItem value="₵">₵ (GHS - Ghanaian Cedi)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
           {/* Status */}
           <div className="space-y-2">

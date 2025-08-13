@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { createClient } from '@/lib/supabase/client'
+
 import { AdminLayoutClient } from '@/components/layouts/AdminLayoutClient'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -22,7 +22,11 @@ import {
   Copy,
   Eye,
   BarChart3,
-  RefreshCw
+  RefreshCw,
+  Apple,
+  Chrome,
+  Globe,
+  Wallet
 } from 'lucide-react'
 
 // Interfaces
@@ -84,12 +88,15 @@ function LegacyAdminStampCardDetailPage({
   
   // Handle async params in Next.js 15
   useEffect(() => {
-    params.then(({ cardId }) => {
-      setCardId(cardId)
-    })
+    if (params && typeof params.then === 'function') {
+      params.then(({ cardId }) => {
+        setCardId(cardId)
+      }).catch((error) => {
+        console.error('Error unwrapping params:', error)
+        setError('Failed to load card ID')
+      })
+    }
   }, [params])
-  // Initialize Supabase client
-  const supabase = createClient()
 
   const fetchCardDetails = useCallback(async () => {
     if (!cardId) return
@@ -98,80 +105,91 @@ function LegacyAdminStampCardDetailPage({
       setLoading(true)
       setError(null)
 
-      // Fetch stamp card with business info
-      const { data: cardData, error: cardError } = await supabase
-        .from('stamp_cards')
-        .select(`
-          id,
-          name,
-          total_stamps,
-          reward_description,
-          status,
-          created_at,
-          business_id,
-          businesses!inner(
-            id,
-            name,
-            contact_email,
-            description
-          )
-        `)
-        .eq('id', cardId)
-        .single()
-
-      if (cardError) {
-        throw cardError
+      // Fetch all cards from API and find the specific one
+      const response = await fetch('/api/admin/cards-simple')
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.status}`)
       }
+
+      const result = await response.json()
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch card data')
+      }
+
+      // Find the specific stamp card
+      const stampCards = result.data.stampCards || []
+      const cardData = stampCards.find((card: any) => card.id === cardId)
 
       if (!cardData) {
         throw new Error('Stamp card not found')
       }
 
-      setCard({
+      // Transform business data to match expected structure
+      const transformedCard = {
         ...cardData,
-        business: Array.isArray(cardData.businesses) ? cardData.businesses[0] : cardData.businesses
-      })
+        business: cardData.businesses ? (Array.isArray(cardData.businesses) ? cardData.businesses[0] : cardData.businesses) : {
+          id: cardData.business_id,
+          name: 'Unknown Business',
+          contact_email: '',
+          description: ''
+        }
+      }
 
-      // Fetch customers for this card
-      const { data: customersData, error: customersError } = await supabase
-        .from('customer_cards')
-        .select(`
-          id,
-          customer_id,
-          current_stamps,
-          created_at,
-          customers!inner(
-            email,
-            name
-          )
-        `)
-        .eq('stamp_card_id', cardId)
-        .order('created_at', { ascending: false })
+      setCard(transformedCard)
 
-      if (customersError) {
-      } else {
-        const processedCustomers = (customersData || []).map(customer => ({
-          ...customer,
-          customer: Array.isArray(customer.customers) ? customer.customers[0] : customer.customers
-        }))
-        setCustomers(processedCustomers)
-
-        // Calculate stats
-        const totalCustomers = processedCustomers.length
-        const totalStamps = processedCustomers.reduce((sum, c) => sum + c.current_stamps, 0)
-        const completedCards = processedCustomers.filter(c => c.current_stamps >= cardData.total_stamps).length
-        const averageStamps = totalCustomers > 0 ? totalStamps / totalCustomers : 0
-
-        // Mock recent activity (would come from session_usage table in production)
-        const recentActivity = Math.floor(Math.random() * 10) + 1
-
-        setStats({
-          totalCustomers,
-          totalStamps,
-          completedCards,
-          averageStamps,
-          recentActivity
-        })
+      // Fetch customers for this stamp card
+      try {
+        const customerCardsResponse = await fetch(`/api/admin/customer-cards?detailed=true&card_type=stamp`)
+        if (customerCardsResponse.ok) {
+          const customerCardsResult = await customerCardsResponse.json()
+          if (customerCardsResult.success) {
+            // Filter customer cards for this specific stamp card
+            const allCustomerCards = customerCardsResult.data || []
+            const filteredCustomerCards = allCustomerCards.filter((cc: any) => cc.stamp_card_id === cardId)
+            
+            // Transform to match expected Customer interface
+            const processedCustomers = filteredCustomerCards.map((cc: any) => ({
+              id: cc.id,
+              customer_id: cc.customer_id,
+              current_stamps: cc.current_stamps || 0,
+              created_at: cc.created_at,
+              customer: {
+                email: cc.customers?.email || 'Unknown',
+                name: cc.customers?.name || 'Unknown Customer'
+              }
+            }))
+            
+            setCustomers(processedCustomers)
+            
+            // Calculate real stats from customer cards data
+            const totalCustomers = processedCustomers.length
+            const totalStamps = processedCustomers.reduce((sum: number, c: any) => sum + (c.current_stamps || 0), 0)
+            const completedCards = processedCustomers.filter((c: any) => c.current_stamps >= cardData.total_stamps).length
+            const averageStamps = totalCustomers > 0 ? totalStamps / totalCustomers : 0
+            
+            const stats = {
+              totalCustomers,
+              totalStamps,
+              completedCards,
+              averageStamps,
+              recentActivity: 0 // TODO: Implement activity tracking from session_usage
+            }
+            
+            setStats(stats)
+          }
+        }
+      } catch (customerError) {
+        console.error('Error fetching customer cards:', customerError)
+        // Set empty data on error
+        setCustomers([])
+        const stats = {
+          totalCustomers: 0,
+          totalStamps: 0,
+          completedCards: 0,
+          averageStamps: 0,
+          recentActivity: 0
+        }
+        setStats(stats)
       }
 
     } catch (err) {
@@ -179,7 +197,7 @@ function LegacyAdminStampCardDetailPage({
     } finally {
       setLoading(false)
     }
-  }, [cardId, supabase])
+  }, [cardId])
 
   useEffect(() => {
     fetchCardDetails()
@@ -222,6 +240,66 @@ function LegacyAdminStampCardDetailPage({
 
   const getProgressPercentage = (current: number, total: number) => {
     return Math.min((current / total) * 100, 100)
+  }
+
+  const generateAppleWallet = async (customerCardId: string) => {
+    try {
+      const response = await fetch(`/api/wallet/apple/${customerCardId}`)
+      if (response.ok) {
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = 'wallet.pkpass'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+      } else {
+        throw new Error('Failed to generate Apple Wallet pass')
+      }
+    } catch (error) {
+      console.error('Apple Wallet generation error:', error)
+      alert('Failed to generate Apple Wallet pass')
+    }
+  }
+
+  const generateGoogleWallet = async (customerCardId: string) => {
+    try {
+      const response = await fetch(`/api/wallet/google/enhanced/${customerCardId}`)
+      if (response.ok) {
+        const result = await response.json()
+        if (result.success && result.data.googlePayUrl) {
+          window.open(result.data.googlePayUrl, '_blank')
+        } else {
+          throw new Error(result.error || 'Failed to generate Google Wallet pass')
+        }
+      } else {
+        throw new Error('Failed to generate Google Wallet pass')
+      }
+    } catch (error) {
+      console.error('Google Wallet generation error:', error)
+      alert('Failed to generate Google Wallet pass')
+    }
+  }
+
+  const generatePWAWallet = async (customerCardId: string) => {
+    try {
+      const response = await fetch(`/api/wallet/pwa/${customerCardId}`)
+      if (response.ok) {
+        const result = await response.json()
+        if (result.success && result.pwaUrl) {
+          window.open(result.pwaUrl, '_blank')
+        } else {
+          throw new Error(result.error || 'Failed to generate PWA wallet')
+        }
+      } else {
+        throw new Error('Failed to generate PWA wallet')
+      }
+    } catch (error) {
+      console.error('PWA Wallet generation error:', error)
+      alert('Failed to generate PWA wallet')
+    }
   }
 
   if (loading) {
@@ -471,6 +549,32 @@ function LegacyAdminStampCardDetailPage({
                       <div className="text-xs text-gray-500">
                         Joined {formatDate(customer.created_at)}
                       </div>
+                      <div className="flex space-x-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => generateAppleWallet(customer.id)}
+                          title="Generate Apple Wallet Pass"
+                        >
+                          <Apple className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => generateGoogleWallet(customer.id)}
+                          title="Generate Google Wallet Pass"
+                        >
+                          <Chrome className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => generatePWAWallet(customer.id)}
+                          title="Generate PWA Wallet"
+                        >
+                          <Globe className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -540,7 +644,11 @@ function LegacyAdminStampCardDetailPage({
     </AdminLayoutClient>
   )
 } 
-export default function AdminStampCardDetailPage() {
+export default function AdminStampCardDetailPage({ 
+  params 
+}: { 
+  params: Promise<{ cardId: string }> 
+}) {
   return (
     <ComponentErrorBoundary fallback={
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -557,7 +665,7 @@ export default function AdminStampCardDetailPage() {
       </div>
     }>
       <div className={modernStyles.layout.container}>
-        <LegacyAdminStampCardDetailPage />
+        <LegacyAdminStampCardDetailPage params={params} />
       </div>
     </ComponentErrorBoundary>
   )

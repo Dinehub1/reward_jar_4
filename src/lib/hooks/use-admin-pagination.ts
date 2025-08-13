@@ -158,7 +158,16 @@ export function useAdminPagination<T = any>(
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch data'
       setError(errorMessage)
-      console.error('Admin pagination error:', err)
+      console.error('Admin pagination error:', {
+        error: err,
+        table,
+        filters,
+        searchTerm,
+        orderBy
+      })
+      // Set empty data on error to prevent undefined access
+      setData([])
+      pagination.setTotalItems(0)
     } finally {
       setIsLoading(false)
     }
